@@ -27,7 +27,7 @@
 | 🏗️ Phase 1: Core Infrastructure | ✅ Complete | 100% | CLI entry point, Commander.js, bin executable |
 | 🎨 Phase 2: Prompts & Templates | ✅ Complete | 100% | Full interactive prompt system (6 prompt modules) |
 | 📚 Phase 3: Documentation System | ✅ Complete | 100% | 8-file NEXUS doc generator + manifest |
-| 🧪 Phase 4: Testing & CI/CD | ✅ Complete | 100% | 45 unit tests, GitHub Actions CI on Node 18/20/22 |
+| 🧪 Phase 4: Testing & CI/CD | ✅ Complete | 100% | 45 unit tests, GitHub Actions CI on Node 20/22 |
 | 🔮 Phase 5: Landing Pages | ✅ Complete | 100% | Branded landing pages for all 5 frameworks + favicon |
 | 🛡️ Phase 6: Repo Governance | ✅ Complete | 100% | CODEOWNERS, PR template, issue templates, commitlint |
 | ✨ Phase 7: Polish & Distribution | 🟡 In Progress | 30% | E2E tests, framework templates, npm publish remaining |
@@ -93,7 +93,7 @@ All landing pages include `public/nexus-logo.svg` (Neural Network logo) and `pub
 
 | File | Purpose |
 |------|---------|
-| `.github/workflows/ci.yml` | Lint + typecheck + test + build on Node 18/20/22 |
+| `.github/workflows/ci.yml` | Lint + typecheck + test + build on Node 20/22 |
 | `.github/CODEOWNERS` | Auto-assigns reviewers on PRs |
 | `.github/pull_request_template.md` | PR checklist enforcing quality standards |
 | `.github/ISSUE_TEMPLATE/bug_report.md` | Structured bug report form |
@@ -165,7 +165,7 @@ All landing pages include `public/nexus-logo.svg` (Neural Network logo) and `pub
 - ✅ Updated directory generators for Nuxt and Astro paths
 
 #### Phase 6: Repo Governance ✅
-- ✅ Created GitHub Actions CI workflow (lint + typecheck + test + build on Node 18/20/22)
+- ✅ Created GitHub Actions CI workflow (lint + typecheck + test + build on Node 20/22)
 - ✅ Created commitlint config enforcing conventional commits
 - ✅ Created CODEOWNERS file
 - ✅ Created PR template with quality checklist
@@ -178,7 +178,7 @@ All landing pages include `public/nexus-logo.svg` (Neural Network logo) and `pub
 ## ⚠️ Known Issues & Decisions Needed
 
 ### Technical Decisions Made ✅
-- ✅ Node.js 18+ as minimum version
+- ✅ Node.js 20+ as minimum version
 - ✅ Commander.js 12.x for CLI framework
 - ✅ @inquirer/prompts 7.x for interactive prompts (not legacy inquirer)
 - ✅ Mustache 4.x for template rendering
@@ -222,7 +222,7 @@ All landing pages include `public/nexus-logo.svg` (Neural Network logo) and `pub
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
-| Runtime | Node.js | 18+ (LTS) |
+| Runtime | Node.js | 20+ (LTS) |
 | Language | TypeScript | 5.7 (strict, ESM) |
 | CLI Framework | Commander.js | 12.x |
 | Interactive Prompts | @inquirer/prompts | 7.x |
@@ -235,7 +235,7 @@ All landing pages include `public/nexus-logo.svg` (Neural Network logo) and `pub
 | Testing | Vitest | 3.x |
 | Linting | ESLint | 8.x |
 | Formatting | Prettier | 3.x |
-| CI/CD | GitHub Actions | Node 18/20/22 matrix |
+| CI/CD | GitHub Actions | Node 20/22 matrix |
 | Commit Linting | commitlint | @commitlint/config-conventional |
 | Package | @nexus-framework/cli | 0.1.0 |
 | License | Apache 2.0 | — |

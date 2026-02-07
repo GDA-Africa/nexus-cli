@@ -35,7 +35,7 @@ Then read `.nexus/docs/07_implementation.md` for the technical architecture and 
 
 | Component | Technology |
 |-----------|-----------|
-| Runtime | Node.js 18+ |
+| Runtime | Node.js 20+ |
 | Language | TypeScript 5.7, strict mode, ESM (NodeNext) |
 | CLI | Commander.js 12.x |
 | Prompts | @inquirer/prompts 7.x |

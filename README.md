@@ -7,7 +7,7 @@
 **The open-source CLI by [GDA Africa](https://github.com/GDA-Africa) that generates production-ready, AI-optimized project structures — so you ship faster and smarter.**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Vitest](https://img.shields.io/badge/Vitest-45%2F45_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge)](https://github.com/GDA-Africa/nexus-cli/pulls)
@@ -197,7 +197,7 @@ Every new project starts with the same painful ritual: hours of boilerplate, fra
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Node.js** 18+ (LTS recommended)
+- **Node.js** 20+ (LTS recommended)
 - **npm** 9+, **yarn** 1.x+, or **pnpm** 8+
 - **Git** 2.x+
 
@@ -431,7 +431,7 @@ Plus `.nexus/index.md` dashboard, `.nexus/manifest.json` for machine navigation,
 
 | Component | Technology |
 |---|---|
-| **Runtime** | Node.js 18+ (LTS) |
+| **Runtime** | Node.js 20+ (LTS) |
 | **Language** | TypeScript 5.7 (strict mode, ESM) |
 | **CLI Framework** | Commander.js 12.x |
 | **Interactive Prompts** | @inquirer/prompts 7.x |

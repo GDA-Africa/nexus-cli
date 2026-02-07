@@ -42,7 +42,6 @@ Add these **required status checks** (from `.github/workflows/ci.yml`):
 
 | Status Check Name | Description |
 |---|---|
-| `Lint & Test (18)` | Node 18 — lint, typecheck, test, build |
 | `Lint & Test (20)` | Node 20 — lint, typecheck, test, build |
 | `Lint & Test (22)` | Node 22 — lint, typecheck, test, build |
 | `Commit Message Lint` | Enforces conventional commit messages |
@@ -88,7 +87,7 @@ gh api repos/GDA-Africa/nexus-cli/rulesets
 |---|---|
 | Direct pushes to `main` | ❌ Blocked — must use a PR |
 | Merging without review | ❌ Blocked — requires 1+ approval from CODEOWNERS |
-| Merging with failing tests | ❌ Blocked — CI must pass on Node 18, 20, 22 |
+| Merging with failing tests | ❌ Blocked — CI must pass on Node 20, 22 |
 | Merging with lint errors | ❌ Blocked — `yarn lint` runs in CI |
 | Non-conventional commit messages | ❌ Blocked — commitlint validates in CI |
 | Force pushing / rewriting history | ❌ Blocked — force pushes disabled |

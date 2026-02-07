@@ -1,7 +1,7 @@
 /** @type {import('eslint').Linter.Config} */
 module.exports = {
   root: true,
-  ignorePatterns: ['.eslintrc.cjs', 'commitlint.config.cjs'],
+  ignorePatterns: ['.eslintrc.cjs', 'commitlint.config.cjs', "scripts/**/*.mjs"],
   env: {
     node: true,
     es2022: true,

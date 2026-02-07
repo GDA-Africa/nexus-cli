@@ -29,7 +29,7 @@ This file is the single source of truth for the project's current state, what ha
 
 ## Tech Stack (Do Not Change Without Discussion)
 
-- **Runtime:** Node.js 18+
+- **Runtime:** Node.js 20+
 - **Language:** TypeScript 5.7, strict mode, ESM (NodeNext)
 - **CLI:** Commander.js 12.x
 - **Prompts:** @inquirer/prompts 7.x

@@ -22,5 +22,6 @@
     "exactOptionalPropertyTypes": false
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "tests", "templates"]
+  "exclude": ["node_modules", "dist", "tests", "templates"],
+  "ignorePatterns": ["scripts/**/*.mjs"]
 }

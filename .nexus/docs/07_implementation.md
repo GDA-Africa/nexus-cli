@@ -13,7 +13,7 @@
 ### Tech Stack
 
 **Core:**
-- **Runtime:** Node.js 18+ (LTS)
+- **Runtime:** Node.js 20+ (LTS)
 - **Language:** TypeScript 5.x (strict mode)
 - **Package Manager:** npm (for distribution), supports yarn/pnpm
 
