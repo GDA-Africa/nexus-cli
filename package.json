@@ -1,0 +1,90 @@
+{
+  "name": "@nexus-framework/cli",
+  "version": "0.1.0",
+  "description": "AI-Native Project Scaffolding for the Modern Era — generates production-ready, AI-optimized project structures",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "nexus": "./bin/nexus.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "bin"
+  ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/ --ext .ts",
+    "lint:fix": "eslint src/ --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "pre-commit": "npm run lint && npm run type-check && npm run test",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "cli",
+    "scaffolding",
+    "project-generator",
+    "ai-native",
+    "nextjs",
+    "react",
+    "svelte",
+    "typescript",
+    "developer-tools",
+    "gda-africa",
+    "nexus"
+  ],
+  "author": "Glenhalton Takor <nexus@glenhalton.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GDA-Africa/nexus-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GDA-Africa/nexus-cli/issues"
+  },
+  "homepage": "https://github.com/GDA-Africa/nexus-cli#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.3.2",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "execa": "^9.5.2",
+    "figlet": "^1.8.0",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^12.3.2",
+    "mustache": "^4.2.0",
+    "ora": "^8.1.1",
+    "update-notifier": "^7.3.1",
+    "validate-npm-package-name": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.7.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.7",
+    "@types/mustache": "^4.2.5",
+    "@types/node": "^22.13.1",
+    "@types/update-notifier": "^6.0.8",
+    "@types/validate-npm-package-name": "^4.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.22.0",
+    "@typescript-eslint/parser": "^8.22.0",
+    "@vitest/coverage-v8": "^3.0.5",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.31.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

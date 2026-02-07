@@ -1,0 +1,24 @@
+# NEXUS CLI — Code Owners
+# These owners are automatically requested for review on PRs.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+*                       @GDA-Africa/nexus-maintainers
+
+# Core CLI source
+/src/                   @GDA-Africa/nexus-maintainers
+/bin/                   @GDA-Africa/nexus-maintainers
+
+# Tests
+/tests/                 @GDA-Africa/nexus-maintainers
+
+# CI/CD and repo configuration
+/.github/               @GDA-Africa/nexus-maintainers
+/.eslintrc.cjs          @GDA-Africa/nexus-maintainers
+/tsconfig.json          @GDA-Africa/nexus-maintainers
+/vitest.config.ts       @GDA-Africa/nexus-maintainers
+/package.json           @GDA-Africa/nexus-maintainers
+
+# Documentation
+/docs/                  @GDA-Africa/nexus-maintainers
+/README.md              @GDA-Africa/nexus-maintainers
