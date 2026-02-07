@@ -72,7 +72,7 @@ export function complete(projectName: string): void {
   console.log(COLORS.primary(`    cd ${projectName}`));
   console.log(COLORS.primary('    npm run dev'));
   newline();
-  console.log(COLORS.dim('  Open docs/ to start filling in your project documentation.'));
+  console.log(COLORS.dim('  Open .nexus/docs/ to start filling in your project documentation.'));
   console.log(COLORS.dim('  AI tools will use these files to understand your project.'));
   newline();
   divider();

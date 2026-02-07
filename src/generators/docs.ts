@@ -30,7 +30,7 @@ export function generateDocs(config: NexusConfig): GeneratedFile[] {
 
 function generateVision(config: NexusConfig): GeneratedFile {
   return {
-    path: 'docs/01_vision.md',
+    path: '.nexus/docs/01_vision.md',
     content: `# Product Vision & Requirements
 
 **Project:** ${config.projectName}
@@ -91,7 +91,7 @@ TODO: Define your user personas.
 
 function generateArchitecture(config: NexusConfig): GeneratedFile {
   return {
-    path: 'docs/02_architecture.md',
+    path: '.nexus/docs/02_architecture.md',
     content: `# System Architecture
 
 **Project:** ${config.projectName}
@@ -139,7 +139,7 @@ TODO: Describe your data flow.
 
 function generateDataContracts(config: NexusConfig): GeneratedFile {
   return {
-    path: 'docs/03_data_contracts.md',
+    path: '.nexus/docs/03_data_contracts.md',
     content: `# Data Contracts
 
 **Project:** ${config.projectName}
@@ -174,7 +174,7 @@ TODO: Document data relationships.
 
 function generateApiContracts(config: NexusConfig): GeneratedFile {
   return {
-    path: 'docs/04_api_contracts.md',
+    path: '.nexus/docs/04_api_contracts.md',
     content: `# API Contracts
 
 **Project:** ${config.projectName}
@@ -213,7 +213,7 @@ function generateApiContracts(config: NexusConfig): GeneratedFile {
 
 function generateBusinessLogic(config: NexusConfig): GeneratedFile {
   return {
-    path: 'docs/05_business_logic.md',
+    path: '.nexus/docs/05_business_logic.md',
     content: `# Business Logic
 
 **Project:** ${config.projectName}
@@ -247,7 +247,7 @@ TODO: Document algorithms.
 
 function generateTestStrategy(config: NexusConfig): GeneratedFile {
   return {
-    path: 'docs/06_test_strategy.md',
+    path: '.nexus/docs/06_test_strategy.md',
     content: `# Test Strategy
 
 **Project:** ${config.projectName}
@@ -286,7 +286,7 @@ npm run test:coverage # With coverage report
 
 function generateImplementation(config: NexusConfig): GeneratedFile {
   return {
-    path: 'docs/07_implementation.md',
+    path: '.nexus/docs/07_implementation.md',
     content: `# Implementation Plan
 
 **Project:** ${config.projectName}
@@ -325,7 +325,7 @@ TODO: Create a file-by-file implementation plan.
 
 function generateDeployment(config: NexusConfig): GeneratedFile {
   return {
-    path: 'docs/08_deployment.md',
+    path: '.nexus/docs/08_deployment.md',
     content: `# Deployment
 
 **Project:** ${config.projectName}
@@ -376,14 +376,14 @@ function generateNexusIndex(config: NexusConfig): GeneratedFile {
 
 | Doc | Path | Purpose |
 |-----|------|---------|
-| Vision | \`docs/01_vision.md\` | Product requirements & user stories |
-| Architecture | \`docs/02_architecture.md\` | System design & tech stack |
-| Data Contracts | \`docs/03_data_contracts.md\` | Database schemas & validation |
-| API Contracts | \`docs/04_api_contracts.md\` | Endpoints & interfaces |
-| Business Logic | \`docs/05_business_logic.md\` | Rules, algorithms & flows |
-| Test Strategy | \`docs/06_test_strategy.md\` | Testing philosophy & coverage |
-| Implementation | \`docs/07_implementation.md\` | Build order & file structure |
-| Deployment | \`docs/08_deployment.md\` | Infrastructure & CI/CD |
+| Vision | \`.nexus/docs/01_vision.md\` | Product requirements & user stories |
+| Architecture | \`.nexus/docs/02_architecture.md\` | System design & tech stack |
+| Data Contracts | \`.nexus/docs/03_data_contracts.md\` | Database schemas & validation |
+| API Contracts | \`.nexus/docs/04_api_contracts.md\` | Endpoints & interfaces |
+| Business Logic | \`.nexus/docs/05_business_logic.md\` | Rules, algorithms & flows |
+| Test Strategy | \`.nexus/docs/06_test_strategy.md\` | Testing philosophy & coverage |
+| Implementation | \`.nexus/docs/07_implementation.md\` | Build order & file structure |
+| Deployment | \`.nexus/docs/08_deployment.md\` | Infrastructure & CI/CD |
 
 ---
 
@@ -391,11 +391,11 @@ function generateNexusIndex(config: NexusConfig): GeneratedFile {
 
 If you are an AI reading this project:
 
-1. **Start with** \`docs/01_vision.md\` to understand what this project does
-2. **Read** \`docs/02_architecture.md\` to understand the tech decisions
-3. **Reference** \`docs/03_data_contracts.md\` and \`docs/04_api_contracts.md\` for exact schemas
-4. **Follow** \`docs/07_implementation.md\` for build order
-5. **Run tests** after every change using the commands in \`docs/06_test_strategy.md\`
+1. **Start with** \`.nexus/docs/01_vision.md\` to understand what this project does
+2. **Read** \`.nexus/docs/02_architecture.md\` to understand the tech decisions
+3. **Reference** \`.nexus/docs/03_data_contracts.md\` and \`.nexus/docs/04_api_contracts.md\` for exact schemas
+4. **Follow** \`.nexus/docs/07_implementation.md\` for build order
+5. **Run tests** after every change using the commands in \`.nexus/docs/06_test_strategy.md\`
 `,
   };
 }

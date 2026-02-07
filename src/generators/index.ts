@@ -13,9 +13,11 @@ import type { NexusConfig } from '../types/config.js';
 import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
 import { logger, writeGeneratorResult, getInstallCommand, gitInit } from '../utils/index.js';
 
+import { generateAiConfig } from './ai-config.js';
 import { generateCiCd } from './ci-cd.js';
 import { generateConfigs } from './config.js';
 import { generateDocs } from './docs.js';
+import { generateLandingPage } from './landing-page.js';
 import {
   generateDirectories,
   generatePackageJson,
@@ -44,6 +46,8 @@ export async function generateProject(config: NexusConfig): Promise<void> {
       ...generateConfigs(config),
       ...generateTests(config),
       ...generateCiCd(config),
+      ...generateLandingPage(config),
+      ...generateAiConfig(config),
     ];
 
     // Write everything to disk

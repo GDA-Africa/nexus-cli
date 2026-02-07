@@ -31,3 +31,13 @@ yarn-error.log*
 # Test artifacts
 test-output/
 tmp/
+tests/**/*.js
+tests/**/*.d.ts
+tests/**/*.js.map
+tests/**/*.d.ts.map
+
+# Generated sample project
+nexus-sample/
+
+# Misc
+nexus-logo.png

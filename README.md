@@ -8,7 +8,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-25%2F25_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-45%2F45_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge)](https://github.com/GDA-Africa/nexus-cli/pulls)
 [![Status](https://img.shields.io/badge/Status-In_Development-yellow?style=for-the-badge)]()
@@ -115,7 +115,7 @@ Every new project starts with the same painful ritual: hours of boilerplate, fra
 │                YOUR NEW PROJECT  ✨                           │
 │                                                              │
 │  📁 src/           Source code with smart boilerplate        │
-│  📚 docs/          8 AI-optimized documentation files        │
+│  � .nexus/        Docs, AI config, manifest — one folder   │
 │  🧪 tests/         Unit, integration, and E2E scaffolding   │
 │  ⚙️  configs        TS, ESLint, Prettier, CI/CD              │
 │  📦 package.json   Dependencies installed & ready            │
@@ -148,10 +148,12 @@ Every new project starts with the same painful ritual: hours of boilerplate, fra
 │   ├── generators/
 │   │   ├── index.ts          # Generator orchestrator — runs all generators
 │   │   ├── structure.ts      # Folder structure, package.json, README, .gitignore
-│   │   ├── docs.ts           # 8 NEXUS doc files + .nexus/index.md + manifest
+│   │   ├── docs.ts           # 8 NEXUS doc files → .nexus/docs/ + index + manifest
 │   │   ├── config.ts         # tsconfig, ESLint, Prettier, EditorConfig
 │   │   ├── tests.ts          # Vitest config, example tests, test helpers
-│   │   └── ci-cd.ts          # GitHub Actions CI workflow
+│   │   ├── ci-cd.ts          # GitHub Actions CI workflow
+│   │   ├── landing-page.ts   # Framework-specific homepage + SVG logo/favicon
+│   │   └── ai-config.ts      # AI agent instructions → .nexus/ai/ + root pointers
 │   ├── types/
 │   │   ├── index.ts          # Re-exports for convenience
 │   │   ├── config.ts         # NexusConfig, NexusManifest, union types
@@ -167,17 +169,24 @@ Every new project starts with the same painful ritual: hours of boilerplate, fra
 ├── tests/
 │   └── unit/
 │       ├── validator.test.ts # 15 tests — name validation, sanitization
-│       └── generators.test.ts # 10 tests — structure, package.json, gitignore
-├── docs/
-│   ├── index.md              # Project index and navigation
-│   ├── 01_vision.md          # Product vision and requirements
-│   └── 07_implementation.md  # Technical architecture and build plan
+│       └── generators.test.ts # 30 tests — structure, package.json, gitignore, landing pages, ai-config
+├── .nexus/
+│   ├── docs/
+│   │   ├── index.md          # Project brain — status, module map, priorities
+│   │   ├── 01_vision.md      # Product vision and requirements
+│   │   └── 07_implementation.md # Technical architecture and build plan
+│   └── ai/
+│       └── instructions.md   # AI agent master instructions (single source of truth)
 ├── package.json              # Dependencies, scripts, and npm metadata
 ├── tsconfig.json             # TypeScript strict mode, ESM (NodeNext)
 ├── vitest.config.ts          # Test runner with coverage thresholds
 ├── .eslintrc.cjs             # ESLint + TypeScript + Prettier config
 ├── .prettierrc               # Code formatting rules
 ├── .gitignore                # Node, dist, IDE, OS ignores
+├── .cursorrules              # AI pointer → .nexus/ai/instructions.md (Cursor)
+├── .windsurfrules            # AI pointer → .nexus/ai/instructions.md (Windsurf)
+├── .clinerules               # AI pointer → .nexus/ai/instructions.md (Cline)
+├── AGENTS.md                 # AI pointer → .nexus/ai/instructions.md (Claude/Codex)
 ├── LICENSE                   # Apache 2.0
 ├── README_GUIDELINES.md      # GDA README standards reference
 └── README.md                 # You are here
@@ -318,9 +327,9 @@ npx vitest tests/unit/validator.test.ts
 | Suite | Tests | Covers |
 |---|---|---|
 | `tests/unit/validator.test.ts` | 15 | Project name validation, sanitization, empty input handling |
-| `tests/unit/generators.test.ts` | 10 | Directory generation, package.json output, .gitignore, README |
+| `tests/unit/generators.test.ts` | 30 | Directory generation, package.json, .gitignore, README, landing pages, ai-config |
 
-**Current status:** 25/25 tests passing ✅
+**Current status:** 45/45 tests passing ✅
 
 **Coverage Target:** 80%+ across all suites.
 
@@ -361,35 +370,35 @@ NEXUS-generated projects are designed to work seamlessly with AI-powered editors
 **Cursor / Copilot / Windsurf:**
 ```
 1. Open the generated project
-2. Point your AI to docs/  — it will read the structured documentation
-3. Ask it to implement features referencing the doc contracts
+2. AI tools auto-detect .nexus/ai/instructions.md and root pointer files
+3. Ask your AI to implement features referencing the doc contracts
 4. The AI now has full project context from day one
 ```
 
 **Example AI prompt with a NEXUS project:**
 ```
-Read docs/01_vision.md and docs/04_api_contracts.md.
+Read .nexus/docs/01_vision.md and .nexus/docs/04_api_contracts.md.
 Implement the user registration endpoint as specified
 in the API contract, following the architecture in
-docs/02_architecture.md.
+.nexus/docs/02_architecture.md.
 ```
 
 ### NEXUS Documentation System
 
-Every generated project includes **8 AI-optimized documentation files**:
+Every generated project includes **8 AI-optimized documentation files** under `.nexus/docs/`:
 
 | # | File | Purpose |
 |---|---|---|
-| 1 | `docs/01_vision.md` | Product requirements, user stories, success metrics |
-| 2 | `docs/02_architecture.md` | System design, tech stack decisions, data flow |
-| 3 | `docs/03_data_contracts.md` | Database schemas, validation rules, relationships |
-| 4 | `docs/04_api_contracts.md` | Endpoints, request/response interfaces, status codes |
-| 5 | `docs/05_business_logic.md` | Rules, algorithms, state machines, decision flows |
-| 6 | `docs/06_test_strategy.md` | Coverage targets, test types, testing philosophy |
-| 7 | `docs/07_implementation.md` | Build order, file-by-file implementation plan |
-| 8 | `docs/08_deployment.md` | Infrastructure, CI/CD, environment configuration |
+| 1 | `.nexus/docs/01_vision.md` | Product requirements, user stories, success metrics |
+| 2 | `.nexus/docs/02_architecture.md` | System design, tech stack decisions, data flow |
+| 3 | `.nexus/docs/03_data_contracts.md` | Database schemas, validation rules, relationships |
+| 4 | `.nexus/docs/04_api_contracts.md` | Endpoints, request/response interfaces, status codes |
+| 5 | `.nexus/docs/05_business_logic.md` | Rules, algorithms, state machines, decision flows |
+| 6 | `.nexus/docs/06_test_strategy.md` | Coverage targets, test types, testing philosophy |
+| 7 | `.nexus/docs/07_implementation.md` | Build order, file-by-file implementation plan |
+| 8 | `.nexus/docs/08_deployment.md` | Infrastructure, CI/CD, environment configuration |
 
-Plus a `.nexus/index.md` dashboard and `.nexus/manifest.json` for AI agent navigation.
+Plus `.nexus/index.md` dashboard, `.nexus/manifest.json` for machine navigation, and `.nexus/ai/instructions.md` for AI agent context.
 
 ---
 
@@ -400,11 +409,12 @@ Plus a `.nexus/index.md` dashboard and `.nexus/manifest.json` for AI agent navig
 - [x] Documentation system designed (8-file structure)
 - [x] Core CLI infrastructure (Commander.js + @inquirer/prompts)
 - [x] Interactive prompt system (project type, data strategy, patterns, framework, features)
-- [x] Generator engine (structure, docs, config, tests, CI/CD)
+- [x] Generator engine (structure, docs, config, tests, CI/CD, landing page, ai-config)
 - [x] Utility layer (logger, validator, package-manager, git, file-system)
 - [x] Type system (NexusConfig, NexusManifest, prompt and template types)
-- [x] Unit tests (25/25 passing — validators and generators)
+- [x] Unit tests (45/45 passing — validators and generators)
 - [x] ESLint + Prettier configured and passing
+- [x] Centralized `.nexus/` folder (docs, AI config, manifest — one folder to opt in/out)
 - [ ] End-to-end testing of full `nexus init` flow
 - [ ] Framework-specific templates (Next.js 15, React+Vite, SvelteKit)
 - [ ] Strategy pattern generators (PWA, Offline-First, i18n, Theming)

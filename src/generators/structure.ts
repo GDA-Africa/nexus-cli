@@ -14,8 +14,9 @@ export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
   const dirs: GeneratedDirectory[] = [
     { path: 'src' },
     { path: 'public' },
-    { path: 'docs' },
     { path: '.nexus' },
+    { path: '.nexus/docs' },
+    { path: '.nexus/ai' },
   ];
 
   // Test directories
@@ -50,6 +51,24 @@ export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
         { path: 'src/routes' },
         { path: 'src/lib' },
         { path: 'src/lib/components' },
+        { path: 'src/styles' },
+      );
+      break;
+    case 'nuxt':
+      dirs.push(
+        { path: 'src/lib' },
+        { path: 'src/components' },
+        { path: 'pages' },
+        { path: 'assets' },
+        { path: 'assets/css' },
+      );
+      break;
+    case 'astro':
+      dirs.push(
+        { path: 'src/pages' },
+        { path: 'src/layouts' },
+        { path: 'src/components' },
+        { path: 'src/styles' },
       );
       break;
     default:
@@ -168,16 +187,16 @@ This project uses the **NEXUS Documentation System** — 8 structured markdown f
 
 | Doc | Purpose |
 |-----|---------|
-| \`docs/01_vision.md\` | Product requirements & user stories |
-| \`docs/02_architecture.md\` | System design & tech stack |
-| \`docs/03_data_contracts.md\` | Database schemas & validation |
-| \`docs/04_api_contracts.md\` | Endpoints & interfaces |
-| \`docs/05_business_logic.md\` | Rules, algorithms & flows |
-| \`docs/06_test_strategy.md\` | Testing philosophy & coverage |
-| \`docs/07_implementation.md\` | Build order & file structure |
-| \`docs/08_deployment.md\` | Infrastructure & CI/CD |
+| \`.nexus/docs/01_vision.md\` | Product requirements & user stories |
+| \`.nexus/docs/02_architecture.md\` | System design & tech stack |
+| \`.nexus/docs/03_data_contracts.md\` | Database schemas & validation |
+| \`.nexus/docs/04_api_contracts.md\` | Endpoints & interfaces |
+| \`.nexus/docs/05_business_logic.md\` | Rules, algorithms & flows |
+| \`.nexus/docs/06_test_strategy.md\` | Testing philosophy & coverage |
+| \`.nexus/docs/07_implementation.md\` | Build order & file structure |
+| \`.nexus/docs/08_deployment.md\` | Infrastructure & CI/CD |
 
-**Start here:** Open \`docs/01_vision.md\` and describe what you're building.
+**Start here:** Open \`.nexus/docs/01_vision.md\` and describe what you're building.
 
 ## Project Info
 
