@@ -353,9 +353,10 @@ describe('generateAiConfig', () => {
     for (const toolPath of toolFiles) {
       const file = files.find((f) => f.path === toolPath);
       expect(file).toBeDefined();
-      // Every file should have the onboarding trigger
+      // Every file should have the full onboarding protocol embedded
       expect(file!.content).toContain('status: template');
-      expect(file!.content).toContain('.nexus/ai/instructions.md');
+      expect(file!.content).toContain('Onboarding Protocol');
+      expect(file!.content).toContain('Scan the codebase');
       // Every file should have project identity
       expect(file!.content).toContain('Test App');
       expect(file!.content).toContain('Next.js');
@@ -366,18 +367,25 @@ describe('generateAiConfig', () => {
     }
   });
 
-  it('should keep tool files lean — shorter than master instructions', () => {
+  it('should embed full assertive content in tool files — not just pointers', () => {
     const files = generateAiConfig(baseConfig);
-    const master = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
     const cursor = files.find((f) => f.path === '.cursorrules')!;
-    // Tool files should be significantly shorter than master
-    expect(cursor.content.length).toBeLessThan(master.content.length);
+    // Tool files must have full brain rules and onboarding embedded directly
+    // because AI tools ignore cross-file pointers too often
+    expect(cursor.content).toContain('READ `.nexus/docs/index.md` FIRST. EVERY TIME. NO EXCEPTIONS.');
+    expect(cursor.content).toContain('Onboarding Protocol');
+    expect(cursor.content).toContain('Scan the codebase');
+    expect(cursor.content).toContain('Build the project brain');
   });
 
-  it('should still reference .nexus/ai/instructions.md for full details', () => {
+  it('should embed full workflow in tool files — no cross-file pointers for critical behavior', () => {
     const files = generateAiConfig(baseConfig);
     const cursor = files.find((f) => f.path === '.cursorrules');
-    expect(cursor!.content).toContain('.nexus/ai/instructions.md');
+    // Tool files must be self-contained — agents ignore cross-file pointers
+    expect(cursor!.content).toContain('Before EVERY task');
+    expect(cursor!.content).toContain('After EVERY task');
+    expect(cursor!.content).toContain('NEVER do this');
+    expect(cursor!.content).toContain('Build the project brain');
   });
 
   it('should include .nexus/ai directory in generated directories', () => {
@@ -649,16 +657,17 @@ describe('generateAiConfig — index.md brain references', () => {
     expect(cursor.content).toContain('enhancements');
   });
 
-  it('should include Step 6 (build the project brain) in master instructions only', () => {
+  it('should include full onboarding protocol in both master and tool files', () => {
     const files = generateAiConfig(baseConfig);
-    // Master file keeps the full onboarding with Step 6
+    // Master file has the full onboarding
     const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
     expect(instructions.content).toContain('Build the project brain');
 
-    // Tool files have a lean onboarding trigger instead
+    // Tool files ALSO embed the full onboarding — never rely on cross-file pointers
     const cursor = files.find((f) => f.path === '.cursorrules')!;
-    expect(cursor.content).toContain('Populate the docs BEFORE doing anything else');
-    expect(cursor.content).toContain('.nexus/ai/instructions.md');
+    expect(cursor.content).toContain('Build the project brain');
+    expect(cursor.content).toContain('STOP. If ANY .nexus/docs/ file has status: template');
+    expect(cursor.content).toContain('Scan the codebase');
   });
 
   it('should instruct agents to build implementation plan from vision', () => {
