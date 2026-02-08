@@ -57,13 +57,13 @@ This file is the single source of truth for the project's current state, what ha
 
 ## What's Already Built (Don't Recreate)
 
-- Full CLI with `nexus init` command
+- Full CLI with `nexus init` and `nexus adopt` commands
 - Interactive prompt system (6 modules)
 - Generator engine (8 modules including landing page + ai-config)
 - Type system (4 modules)
-- Utility layer (5 modules)
-- 45 unit tests (all passing)
-- AI config generation (`.nexus/ai/` + root pointer files)
+- Utility layer (6 modules including project-detector)
+- 73 unit tests (all passing)
+- AI config generation (`.nexus/ai/` + root pointer files + onboarding protocol)
 - Centralized `.nexus/` folder (docs, AI config, manifest)
 - GitHub Actions CI, commitlint, CODEOWNERS, PR/issue templates
 

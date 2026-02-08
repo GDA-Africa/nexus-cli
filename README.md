@@ -8,7 +8,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-45%2F45_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-73%2F73_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge)](https://github.com/GDA-Africa/nexus-cli/pulls)
 [![Status](https://img.shields.io/badge/Status-In_Development-yellow?style=for-the-badge)]()
@@ -54,6 +54,7 @@ Every new project starts with the same painful ritual: hours of boilerplate, fra
 - 📚 **NEXUS Doc System** — 8 structured markdown files AI agents understand
 - 🎯 **Smart Defaults** — Best practices baked in based on your choices
 - 🧪 **Test Infrastructure** — Vitest config, example tests, and helpers from the start
+- 🏗️ **Adopt Existing Projects** — Add NEXUS docs & AI config to any project with `--adopt`
 
 </td>
 <td width="50%">
@@ -137,7 +138,8 @@ Every new project starts with the same painful ritual: hours of boilerplate, fra
 │   ├── index.ts              # Public API exports for programmatic usage
 │   ├── version.ts            # Single source of truth for CLI version
 │   ├── commands/
-│   │   └── init.ts           # `nexus init` — main scaffolding command
+│   │   ├── init.ts           # `nexus init` — main scaffolding command
+│   │   └── adopt.ts          # `nexus adopt` — add NEXUS to existing projects
 │   ├── prompts/
 │   │   ├── index.ts          # Prompt orchestrator — assembles NexusConfig
 │   │   ├── project-type.ts   # Web / API / Monorepo selection
@@ -165,11 +167,13 @@ Every new project starts with the same painful ritual: hours of boilerplate, fra
 │       ├── validator.ts      # Project name validation and sanitization
 │       ├── package-manager.ts # npm / yarn / pnpm detection
 │       ├── git.ts            # Git init and initial commit helpers
-│       └── file-system.ts    # fs-extra wrappers and Mustache rendering
+│       ├── file-system.ts    # fs-extra wrappers and Mustache rendering
+│       └── project-detector.ts # Detect existing projects for --adopt mode
 ├── tests/
 │   └── unit/
 │       ├── validator.test.ts # 15 tests — name validation, sanitization
-│       └── generators.test.ts # 30 tests — structure, package.json, gitignore, landing pages, ai-config
+│       ├── generators.test.ts # 30 tests — structure, package.json, gitignore, landing pages, ai-config
+│       └── adopt.test.ts     # 28 tests — project detection, frontmatter, AI onboarding
 ├── .nexus/
 │   ├── docs/
 │   │   ├── index.md          # Project brain — status, module map, priorities
@@ -260,6 +264,52 @@ npm run dev
 
 ---
 
+## 🏗️ Adopt an Existing Project
+
+Already have a project? NEXUS can add its documentation system and AI configuration to any existing codebase without modifying your source code.
+
+```bash
+# Navigate to your existing project
+cd my-existing-app
+
+# Add NEXUS docs & AI config
+nexus adopt
+
+# Or target a specific directory
+nexus adopt ./path/to/project
+```
+
+> **Tip:** `nexus init --adopt` also works as a shorthand — both reach the same code path. If you run `nexus init` in a directory that already has a project, NEXUS will detect it and suggest `nexus adopt` instead.
+
+### What `nexus adopt` does
+
+| Generated | What It Contains |
+|---|---|
+| `.nexus/docs/` | 8 structured documentation files with `status: template` frontmatter |
+| `.nexus/ai/` | AI agent instructions (single source of truth) |
+| `.cursorrules`, `.windsurfrules`, `.clinerules` | AI tool pointers |
+| `AGENTS.md` | Claude / Codex pointer |
+| `.github/copilot-instructions.md` | GitHub Copilot config |
+
+### What `nexus adopt` does NOT do
+
+- ❌ Does **not** modify any of your existing source code
+- ❌ Does **not** create `package.json`, `tsconfig.json`, or any config files
+- ❌ Does **not** install dependencies or initialize git
+
+### Auto-Population by AI Agents
+
+After adopting, open your AI coding tool (Copilot, Cursor, Windsurf, etc.) and start working as usual. The AI agent will:
+
+1. **Detect** that NEXUS docs have `status: template` in their frontmatter
+2. **Scan your codebase** to auto-populate architecture, data contracts, API routes, test strategy, and deployment info
+3. **Ask you questions** for things it can't infer from code (product vision, business rules, success metrics)
+4. **Update the frontmatter** to `status: populated` as each doc is filled in
+
+Once all docs are populated, the onboarding flow completes and the agent works normally with full project context.
+
+---
+
 ## 📡 API Reference
 
 NEXUS CLI exposes a programmatic API for advanced usage and tooling integration.
@@ -276,6 +326,8 @@ await generateProject(config);
 | Command | Description |
 |---|---|
 | `nexus init [project-name]` | Initialize a new NEXUS project with interactive setup |
+| `nexus adopt [path]` | Add NEXUS docs & AI config to an existing project |
+| `nexus init --adopt` | Shorthand alias for `nexus adopt` |
 | `nexus --version` | Display the CLI version |
 | `nexus --help` | Display available commands and options |
 
@@ -328,8 +380,9 @@ npx vitest tests/unit/validator.test.ts
 |---|---|---|
 | `tests/unit/validator.test.ts` | 15 | Project name validation, sanitization, empty input handling |
 | `tests/unit/generators.test.ts` | 30 | Directory generation, package.json, .gitignore, README, landing pages, ai-config |
+| `tests/unit/adopt.test.ts` | 28 | Project detection, frontmatter status, AI onboarding protocol |
 
-**Current status:** 45/45 tests passing ✅
+**Current status:** 73/73 tests passing ✅
 
 **Coverage Target:** 80%+ across all suites.
 

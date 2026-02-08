@@ -158,6 +158,46 @@ This project includes 8 structured documentation files designed for both humans 
 
 ---
 
+## 🚀 Onboarding — Auto-Populate Documentation
+
+Each NEXUS doc has YAML frontmatter with a \`status\` field:
+- \`template\` — the doc is still in its default scaffolded state (has TODO placeholders)
+- \`populated\` — the doc has been filled in by a human or AI agent
+
+### If you see \`status: template\` docs, do this FIRST:
+
+**Before doing any other task the user asks**, check the NEXUS docs:
+
+1. **Scan the codebase** — read \`package.json\`, \`tsconfig.json\`, source files in \`src/\`,
+   route definitions, data models, and test files to understand the project.
+
+2. **Auto-fill what you can infer** from the code:
+   - \`02_architecture.md\` — tech stack, directory structure, data flow
+   - \`03_data_contracts.md\` — schemas, types, validation from source code
+   - \`04_api_contracts.md\` — routes, endpoints, request/response shapes
+   - \`06_test_strategy.md\` — existing test setup, coverage, test patterns
+   - \`07_implementation.md\` — current build state, what exists vs. what's planned
+   - \`08_deployment.md\` — CI/CD config, environment variables, deploy targets
+
+3. **Ask the user** for things you cannot infer from code:
+   - \`01_vision.md\` — product vision, user personas, success metrics
+   - \`05_business_logic.md\` — business rules, algorithms, decision logic
+   - Any section where you have low confidence
+
+4. **Update the frontmatter** of each doc you fill in:
+   \`\`\`yaml
+   status: populated
+   confidence: high    # or medium/low
+   last_updated: "YYYY-MM-DD"
+   \`\`\`
+
+5. **Then proceed** with whatever task the user originally requested.
+
+This onboarding flow only applies when docs have \`status: template\`.
+Once all docs are \`populated\`, skip this section and work normally.
+
+---
+
 ## Workflow
 
 When implementing a feature:

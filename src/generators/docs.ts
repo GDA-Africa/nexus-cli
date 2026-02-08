@@ -2,11 +2,42 @@
  * NEXUS CLI - Documentation Generator
  *
  * Generates the 8-file NEXUS documentation system plus the .nexus index and manifest.
+ *
+ * Each document includes YAML frontmatter with a `status` field:
+ *   - `template`  — doc is in its default/scaffolded state (has TODO placeholders)
+ *   - `populated` — doc has been filled in (by a human or AI agent)
+ *
+ * AI agents are instructed (via .nexus/ai/instructions.md) to check this
+ * status and auto-populate template docs from codebase analysis.
  */
 
 import type { NexusConfig, NexusManifest } from '../types/config.js';
 import type { GeneratedFile } from '../types/templates.js';
 import { version } from '../version.js';
+
+/* ──────────────────────────────────────────────────────────────
+ * Frontmatter helper
+ * ────────────────────────────────────────────────────────────── */
+
+/**
+ * Generate YAML frontmatter block for a NEXUS doc.
+ *
+ * @param docId   - e.g. "01_vision", "02_architecture"
+ * @param title   - human-readable title
+ */
+function frontmatter(docId: string, title: string): string {
+  const now = new Date().toISOString().split('T')[0];
+  return `---
+nexus_doc: true
+id: "${docId}"
+title: "${title}"
+status: template
+confidence: low
+last_updated: "${now}"
+---
+
+`;
+}
 
 /**
  * Generate all NEXUS documentation files for a new project.
@@ -31,7 +62,7 @@ export function generateDocs(config: NexusConfig): GeneratedFile[] {
 function generateVision(config: NexusConfig): GeneratedFile {
   return {
     path: '.nexus/docs/01_vision.md',
-    content: `# Product Vision & Requirements
+    content: `${frontmatter('01_vision', 'Product Vision & Requirements')}# Product Vision & Requirements
 
 **Project:** ${config.projectName}
 **Created:** ${new Date().toISOString().split('T')[0]}
@@ -92,7 +123,7 @@ TODO: Define your user personas.
 function generateArchitecture(config: NexusConfig): GeneratedFile {
   return {
     path: '.nexus/docs/02_architecture.md',
-    content: `# System Architecture
+    content: `${frontmatter('02_architecture', 'System Architecture')}# System Architecture
 
 **Project:** ${config.projectName}
 **Framework:** ${config.frontendFramework}
@@ -140,7 +171,7 @@ TODO: Describe your data flow.
 function generateDataContracts(config: NexusConfig): GeneratedFile {
   return {
     path: '.nexus/docs/03_data_contracts.md',
-    content: `# Data Contracts
+    content: `${frontmatter('03_data_contracts', 'Data Contracts')}# Data Contracts
 
 **Project:** ${config.projectName}
 **Data Strategy:** ${config.dataStrategy}
@@ -175,7 +206,7 @@ TODO: Document data relationships.
 function generateApiContracts(config: NexusConfig): GeneratedFile {
   return {
     path: '.nexus/docs/04_api_contracts.md',
-    content: `# API Contracts
+    content: `${frontmatter('04_api_contracts', 'API Contracts')}# API Contracts
 
 **Project:** ${config.projectName}
 
@@ -214,7 +245,7 @@ function generateApiContracts(config: NexusConfig): GeneratedFile {
 function generateBusinessLogic(config: NexusConfig): GeneratedFile {
   return {
     path: '.nexus/docs/05_business_logic.md',
-    content: `# Business Logic
+    content: `${frontmatter('05_business_logic', 'Business Logic')}# Business Logic
 
 **Project:** ${config.projectName}
 
@@ -248,7 +279,7 @@ TODO: Document algorithms.
 function generateTestStrategy(config: NexusConfig): GeneratedFile {
   return {
     path: '.nexus/docs/06_test_strategy.md',
-    content: `# Test Strategy
+    content: `${frontmatter('06_test_strategy', 'Test Strategy')}# Test Strategy
 
 **Project:** ${config.projectName}
 **Framework:** ${config.testFramework}
@@ -287,7 +318,7 @@ npm run test:coverage # With coverage report
 function generateImplementation(config: NexusConfig): GeneratedFile {
   return {
     path: '.nexus/docs/07_implementation.md',
-    content: `# Implementation Plan
+    content: `${frontmatter('07_implementation', 'Implementation Plan')}# Implementation Plan
 
 **Project:** ${config.projectName}
 
@@ -326,7 +357,7 @@ TODO: Create a file-by-file implementation plan.
 function generateDeployment(config: NexusConfig): GeneratedFile {
   return {
     path: '.nexus/docs/08_deployment.md',
-    content: `# Deployment
+    content: `${frontmatter('08_deployment', 'Deployment')}# Deployment
 
 **Project:** ${config.projectName}
 

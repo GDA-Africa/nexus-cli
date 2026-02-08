@@ -4,7 +4,7 @@
 **Status:** 🟢 CORE BUILT → READY FOR FRAMEWORK TEMPLATES  
 **Last Updated:** February 8, 2026 00:00 UTC  
 **Version:** 0.1.0  
-**Coverage:** Unit: 45/45 passing | Integration: Pending | E2E: Pending
+**Coverage:** Unit: 73/73 passing | Integration: Pending | E2E: Pending
 
 ---
 
@@ -41,11 +41,11 @@
 | Module | Files | Status | Description |
 |--------|-------|--------|-------------|
 | **Entry Points** | `cli.ts`, `index.ts`, `version.ts` | ✅ | Commander.js CLI, public API exports, version 0.1.0 |
-| **Commands** | `commands/init.ts` | ✅ | `nexus init [name]` — shows banner, runs prompts, generates project |
+| **Commands** | `commands/init.ts`, `commands/adopt.ts` | ✅ | `nexus init` — scaffolding; `nexus adopt` — add NEXUS to existing projects |
 | **Prompts** | `prompts/index.ts` + 5 modules | ✅ | Project type, data strategy, patterns, frameworks, features |
-| **Generators** | `generators/index.ts` + 7 modules | ✅ | Structure, docs, config, tests, CI/CD, landing page, ai-config |
+| **Generators** | `generators/index.ts` + 7 modules | ✅ | Structure, docs, config, tests, CI/CD, landing page, ai-config; `adoptProject()` for existing projects |
 | **Types** | `types/config.ts` + 3 modules | ✅ | NexusConfig, NexusManifest, GeneratedFile, TemplateContext |
-| **Utils** | `utils/index.ts` + 5 modules | ✅ | Logger, validator, package-manager, git, file-system |
+| **Utils** | `utils/index.ts` + 6 modules | ✅ | Logger, validator, package-manager, git, file-system, project-detector |
 
 ### Prompt Modules (src/prompts/)
 
@@ -67,7 +67,7 @@
 | `tests.ts` | vitest.config.ts, example unit test, test helpers |
 | `ci-cd.ts` | .github/workflows/ci.yml |
 | `landing-page.ts` | Framework-specific homepage + nexus-logo.svg + favicon.svg |
-| `ai-config.ts` | AI agent instructions → `.nexus/ai/` + root pointer files |
+| `ai-config.ts` | AI agent instructions → `.nexus/ai/` + root pointer files + onboarding protocol |
 
 ### Landing Page Support
 
@@ -87,7 +87,8 @@ All landing pages include `public/nexus-logo.svg` (Neural Network logo) and `pub
 |------|-------|--------|
 | `tests/unit/validator.test.ts` | 15 | Project name validation, sanitization, empty input |
 | `tests/unit/generators.test.ts` | 30 | Structure, package.json, gitignore, README, landing pages, ai-config generator |
-| **Total** | **45** | **All passing ✅** |
+| `tests/unit/adopt.test.ts` | 28 | Project detection, frontmatter status, AI onboarding protocol |
+| **Total** | **73** | **All passing ✅** |
 
 ### Repo Governance (.github/)
 
@@ -138,6 +139,21 @@ All landing pages include `public/nexus-logo.svg` (Neural Network logo) and `pub
 ---
 
 ## 🔄 Recent Progress
+
+### February 8, 2026 — Adopt Feature
+
+#### Phase 7b: `nexus adopt` command ✅
+- ✅ Created `src/commands/adopt.ts` — standalone `nexus adopt [path]` command
+- ✅ Created `src/utils/project-detector.ts` — detects existing projects, frameworks, test tools, package managers
+- ✅ Updated `src/commands/init.ts` — `--adopt` flag delegates to adoptCommand; detects existing projects and suggests `nexus adopt`
+- ✅ Updated `src/cli.ts` — registered `nexus adopt [path]` as standalone command + `--adopt` flag on init
+- ✅ Updated `src/generators/index.ts` — `adoptProject()` generates only `.nexus/` + AI config files
+- ✅ Updated `src/generators/docs.ts` — all 8 docs now have YAML frontmatter with `status: template`
+- ✅ Updated `src/generators/ai-config.ts` — added onboarding protocol for AI agents to auto-populate template docs
+- ✅ Updated `src/utils/logger.ts` — `adoptComplete()` success message with next-step instructions
+- ✅ Created `tests/unit/adopt.test.ts` — 28 new tests (project detection, frontmatter, AI onboarding)
+- ✅ Updated README.md with adopt feature docs, CLI commands table, test count
+- ✅ Total: 73/73 tests passing, zero TS errors, zero lint errors
 
 ### February 7, 2026 — Session Summary
 
@@ -253,7 +269,7 @@ yarn install
 # 2. Build
 yarn build
 
-# 3. Run tests (45/45 passing)
+# 3. Run tests (73/73 passing)
 yarn test
 
 # 4. Lint (zero errors)
@@ -296,7 +312,7 @@ npx tsc --noEmit
 **If you're an AI reading this:**
 
 1. **Core CLI is fully built** — don't recreate existing files
-2. **45 unit tests are passing** — don't break them
+2. **73 unit tests are passing** — don't break them
 3. **Follow the implementation plan** in `.nexus/docs/07_implementation.md`
 4. **Use the tech stack specified** — don't substitute without reason
 5. **Test after each change** — `yarn test`, `yarn lint`, `npx tsc --noEmit`
@@ -307,7 +323,7 @@ npx tsc --noEmit
 **Current codebase health:**
 - TypeScript: ✅ Zero errors
 - ESLint: ✅ Zero errors
-- Tests: ✅ 45/45 passing
+- Tests: ✅ 73/73 passing
 - Build: ✅ Compiles to dist/
 - CLI: ✅ Executable via `node bin/nexus.js`
 

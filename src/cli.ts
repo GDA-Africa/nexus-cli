@@ -6,6 +6,7 @@
 
 import { Command } from 'commander';
 
+import { adoptCommand } from './commands/adopt.js';
 import { initCommand } from './commands/init.js';
 import { version } from './version.js';
 
@@ -19,8 +20,16 @@ program
 program
   .command('init [project-name]')
   .description('Initialize a new NEXUS project with interactive setup')
-  .action(async (projectName?: string) => {
-    await initCommand(projectName);
+  .option('--adopt', 'Shorthand: same as `nexus adopt` (add NEXUS to an existing project)')
+  .action(async (projectName: string | undefined, options: { adopt?: boolean }) => {
+    await initCommand(projectName, { adopt: options.adopt ?? false });
+  });
+
+program
+  .command('adopt [path]')
+  .description('Add NEXUS docs & AI config to an existing project (no scaffolding)')
+  .action(async (targetPath: string | undefined) => {
+    await adoptCommand(targetPath);
   });
 
 // Default to help if no command is given

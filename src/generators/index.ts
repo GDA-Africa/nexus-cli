@@ -2,6 +2,7 @@
  * NEXUS CLI - Generator Orchestrator
  *
  * Coordinates all generators to produce a complete project.
+ * Also provides `adoptProject()` for adding .nexus/ to existing projects.
  */
 
 import path from 'node:path';
@@ -12,6 +13,7 @@ import ora from 'ora';
 import type { NexusConfig } from '../types/config.js';
 import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
 import { logger, writeGeneratorResult, getInstallCommand, gitInit } from '../utils/index.js';
+import type { ProjectInfo } from '../utils/project-detector.js';
 
 import { generateAiConfig } from './ai-config.js';
 import { generateCiCd } from './ci-cd.js';
@@ -85,4 +87,97 @@ export async function generateProject(config: NexusConfig): Promise<void> {
     spinner.fail('Project generation failed.');
     throw err;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Adopt mode — add .nexus/ to an existing project
+ * ────────────────────────────────────────────────────────────── */
+
+/**
+ * Add NEXUS documentation and AI config to an existing project.
+ *
+ * This generates only:
+ *   - .nexus/docs/ (8 documentation files + index + manifest)
+ *   - .nexus/ai/   (AI agent instructions)
+ *   - Root AI pointer files (.cursorrules, AGENTS.md, etc.)
+ *
+ * It does NOT scaffold source code, configs, tests, or landing pages.
+ */
+export async function adoptProject(
+  targetDir: string,
+  projectInfo: ProjectInfo,
+): Promise<void> {
+  const spinner = ora('Generating NEXUS documentation & AI config...').start();
+
+  try {
+    // Build a minimal NexusConfig from detected project info
+    const config = buildAdoptConfig(targetDir, projectInfo);
+
+    // Directories to create
+    const directories: GeneratedDirectory[] = [
+      { path: '.nexus' },
+      { path: '.nexus/docs' },
+      { path: '.nexus/ai' },
+      { path: '.github' },
+    ];
+
+    // Files to generate — docs + AI config only
+    const files: GeneratedFile[] = [
+      ...generateDocs(config),
+      ...generateAiConfig(config),
+    ];
+
+    // Write to disk
+    await writeGeneratorResult(targetDir, files, directories);
+    spinner.succeed('NEXUS documentation & AI config generated.');
+  } catch (err) {
+    spinner.fail('Adopt failed.');
+    throw err;
+  }
+}
+
+/**
+ * Build a NexusConfig from detected ProjectInfo.
+ *
+ * Maps detected values to the closest NexusConfig equivalents,
+ * using sensible defaults for anything not detected.
+ */
+function buildAdoptConfig(
+  targetDir: string,
+  info: ProjectInfo,
+): NexusConfig {
+  return {
+    projectName: info.name ?? path.basename(targetDir),
+    projectType: 'web',
+    dataStrategy: 'cloud-first',
+    appPatterns: [],
+    frontendFramework: mapFramework(info.framework),
+    backendStrategy: 'integrated',
+    backendFramework: 'none',
+    testFramework: mapTestFramework(info.testFramework),
+    packageManager: mapPackageManager(info.packageManager),
+    git: true,
+    installDeps: false,
+  };
+}
+
+function mapFramework(detected: string | null): NexusConfig['frontendFramework'] {
+  const valid = ['nextjs', 'react-vite', 'sveltekit', 'nuxt', 'remix', 'astro'] as const;
+  type FW = (typeof valid)[number];
+  if (detected && (valid as readonly string[]).includes(detected)) {
+    return detected as FW;
+  }
+  return 'nextjs'; // safe default
+}
+
+function mapTestFramework(detected: string | null): NexusConfig['testFramework'] {
+  if (detected === 'vitest') return 'vitest';
+  if (detected === 'jest') return 'jest';
+  return 'vitest'; // default
+}
+
+function mapPackageManager(detected: string | null): NexusConfig['packageManager'] {
+  if (detected === 'yarn') return 'yarn';
+  if (detected === 'pnpm') return 'pnpm';
+  return 'npm';
 }
