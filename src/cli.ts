@@ -8,6 +8,8 @@ import { Command } from 'commander';
 
 import { adoptCommand } from './commands/adopt.js';
 import { initCommand } from './commands/init.js';
+import { repairCommand } from './commands/repair.js';
+import { upgradeCommand } from './commands/upgrade.js';
 import { version } from './version.js';
 
 const program = new Command();
@@ -30,6 +32,20 @@ program
   .description('Add NEXUS docs & AI config to an existing project (no scaffolding)')
   .action(async (targetPath: string | undefined) => {
     await adoptCommand(targetPath);
+  });
+
+program
+  .command('upgrade [path]')
+  .description('Upgrade NEXUS ecosystem to latest templates (preserves project knowledge)')
+  .action(async (targetPath: string | undefined) => {
+    await upgradeCommand(targetPath);
+  });
+
+program
+  .command('repair [path]')
+  .description('Repair missing or corrupted .nexus/ files (preserves everything valid)')
+  .action(async (targetPath: string | undefined) => {
+    await repairCommand(targetPath);
   });
 
 // Default to help if no command is given
