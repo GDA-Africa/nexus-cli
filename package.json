@@ -1,6 +1,6 @@
 {
   "name": "@nexus-framework/cli",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "AI-Native Project Scaffolding for the Modern Era — generates production-ready, AI-optimized project structures",
   "type": "module",
   "main": "dist/index.js",
