@@ -1,10 +1,10 @@
 # NEXUS CLI - Implementation Plan
 
-**Project:** NEXUS CLI  
-**Tech Stack:** Node.js + TypeScript  
+**Project:** NEXUS CLI (`@nexus-framework/cli`)  
+**Tech Stack:** Node.js 20+ / TypeScript 5.7 (strict, ESM)  
 **Target:** Cross-platform CLI (Mac, Windows, Linux)  
-**Timeline:** 4-6 weeks to MVP  
-**Last Updated:** February 7, 2025  
+**Status:** 🟢 Published on npm — v0.1.3  
+**Last Updated:** February 8, 2026  
 
 ---
 
@@ -14,32 +14,23 @@
 
 **Core:**
 - **Runtime:** Node.js 20+ (LTS)
-- **Language:** TypeScript 5.x (strict mode)
-- **Package Manager:** npm (for distribution), supports yarn/pnpm
+- **Language:** TypeScript 5.7 (strict mode, ESM with NodeNext)
+- **Package Manager:** yarn (dev), npm (distribution)
 
 **CLI Framework:**
-- **Commander.js** - Command parsing and routing
-- **Inquirer.js** - Interactive prompts
-- **Chalk** - Terminal colors
-- **Ora** - Loading spinners
-- **Boxen** - Nice boxes for messages
-- **Figlet** - ASCII art for branding
+- **Commander.js 12.x** — Command parsing and routing
+- **@inquirer/prompts 7.x** — Interactive prompts (functional API, not legacy inquirer)
 
-**File System:**
-- **fs-extra** - Enhanced file system operations
-- **glob** - Pattern matching for templates
-- **mustache** or **handlebars** - Template rendering
-
-**Utilities:**
-- **execa** - Running shell commands (npm install, git init)
-- **validate-npm-package-name** - Package name validation
-- **update-notifier** - Check for CLI updates
-- **semver** - Version comparisons
+**Template Engine:**
+- **Mustache 4.x** — Template rendering for generated files
 
 **Testing:**
-- **Vitest** - Unit tests
-- **Mock-fs** - File system mocking
-- **Snapshot testing** - For generated files
+- **Vitest 3.x** — Unit tests (179 passing)
+- **In-memory testing** — generators return `GeneratedFile[]`, no disk I/O in tests
+
+**Linting & Formatting:**
+- **ESLint 8.x** — Code linting
+- **Prettier 3.x** — Code formatting
 
 ---
 
@@ -48,9 +39,10 @@
 @nexus-framework/cli/
 ├── src/
 │   ├── commands/
-│   │   ├── init.ts           # Main command - project initialization
-│   │   ├── upgrade.ts        # Upgrade to Pro (future)
-│   │   └── validate.ts       # Validate existing project (future)
+│   │   ├── init.ts           # nexus init — scaffold new project
+│   │   ├── adopt.ts          # nexus adopt — add NEXUS to existing project
+│   │   ├── upgrade.ts        # nexus upgrade — regenerate with latest templates
+│   │   └── repair.ts         # nexus repair — fix missing/corrupted files
 │   ├── prompts/
 │   │   ├── index.ts          # Main prompt orchestration
 │   │   ├── project-type.ts   # Project type questions
@@ -59,49 +51,51 @@
 │   │   ├── frameworks.ts     # Tech stack questions
 │   │   └── features.ts       # Additional features
 │   ├── generators/
-│   │   ├── index.ts          # Main generator orchestrator
+│   │   ├── index.ts          # Orchestrator + reconcile system
 │   │   ├── structure.ts      # Folder structure generator
-│   │   ├── docs.ts           # Documentation generator
+│   │   ├── docs.ts           # Documentation + knowledge generator
 │   │   ├── config.ts         # Config files generator
 │   │   ├── tests.ts          # Test structure generator
-│   │   └── ci-cd.ts          # CI/CD templates generator
-│   ├── templates/
-│   │   ├── base/             # Common files all projects need
-│   │   ├── frontend/
-│   │   │   ├── nextjs/
-│   │   │   ├── react-vite/
-│   │   │   ├── sveltekit/
-│   │   │   └── ...
-│   │   ├── backend/
-│   │   │   ├── express/
-│   │   │   ├── fastify/
-│   │   │   └── ...
-│   │   ├── monorepo/
-│   │   │   └── turborepo/
-│   │   ├── docs/             # Documentation templates
-│   │   └── ci-cd/            # CI/CD templates
+│   │   ├── ci-cd.ts          # CI/CD templates generator
+│   │   ├── landing-page.ts   # Framework-specific landing pages
+│   │   └── ai-config.ts      # AI agent instruction generator
 │   ├── utils/
+│   │   ├── index.ts          # Barrel exports
 │   │   ├── logger.ts         # Pretty logging
 │   │   ├── validator.ts      # Input validation
 │   │   ├── package-manager.ts # Detect & use npm/yarn/pnpm
 │   │   ├── git.ts            # Git operations
-│   │   └── file-system.ts    # File operations helpers
+│   │   ├── file-system.ts    # File operations (readFile, writeFile, fileExists)
+│   │   └── project-detector.ts # Detect existing project frameworks
 │   ├── types/
-│   │   ├── config.ts         # Configuration types
+│   │   ├── index.ts          # Barrel exports
+│   │   ├── config.ts         # NexusConfig, NexusManifest, union types
 │   │   ├── prompts.ts        # Prompt answer types
-│   │   └── templates.ts      # Template types
-│   ├── cli.ts                # CLI entry point
-│   └── index.ts              # Main export
-├── templates/                # Template files
+│   │   └── templates.ts      # Template types (GeneratedFile, etc.)
+│   ├── cli.ts                # CLI entry point (Commander.js, 4 commands)
+│   ├── index.ts              # Public API exports
+│   └── version.ts            # Version constant (single source of truth)
 ├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
+│   └── unit/
+│       ├── validator.test.ts   # 15 tests
+│       ├── generators.test.ts  # 84 tests
+│       ├── adopt.test.ts       # 42 tests
+│       └── upgrade.test.ts     # 38 tests (upgrade + repair)
 ├── bin/
 │   └── nexus.js              # Executable entry point
+├── .nexus/                   # NEXUS docs for this project
+│   ├── docs/
+│   │   ├── index.md          # Project brain
+│   │   ├── 01_vision.md      # Vision & requirements
+│   │   └── 07_implementation.md  # This file
+│   ├── ai/
+│   │   └── instructions.md   # Master AI instructions
+│   └── knowledge.md          # Progressive knowledge base
 ├── package.json
 ├── tsconfig.json
 ├── vitest.config.ts
+├── AGENTS.md                 # Claude/Codex pointer
+├── CONTRIBUTING.md
 └── README.md
 ```
 

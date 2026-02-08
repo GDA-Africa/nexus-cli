@@ -1,10 +1,10 @@
 # NEXUS CLI - Vision & Product Requirements
 
-**Project:** NEXUS CLI (Free Tier)  
-**Version:** 1.0.0  
-**Status:** 🟡 In Development  
-**Target Release:** March 2025  
-**Last Updated:** February 7, 2025  
+**Project:** NEXUS CLI (`@nexus-framework/cli`)  
+**Version:** 0.1.3  
+**Status:** � Live on npm  
+**First Release:** February 7, 2026  
+**Last Updated:** February 8, 2026  
 
 ---
 

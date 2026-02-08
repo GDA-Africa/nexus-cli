@@ -13,7 +13,7 @@ This file is the single source of truth for the project's current state, what ha
 ## Project Overview
 
 - **Name:** NEXUS CLI (`@nexus-framework/cli`)
-- **Version:** 0.1.0
+- **Version:** 0.1.3
 - **Purpose:** AI-native project scaffolding tool by GDA Africa
 - **License:** Apache 2.0
 
@@ -22,6 +22,7 @@ This file is the single source of truth for the project's current state, what ha
 | File | What It Tells You |
 |------|-------------------|
 | `.nexus/docs/index.md` | **START HERE** — Full project status, what's built, what's next |
+| `.nexus/knowledge.md` | Progressive knowledge base — scan before every task |
 | `.nexus/docs/01_vision.md` | Product requirements, user stories, success metrics |
 | `.nexus/docs/07_implementation.md` | Technical architecture, build phases, file-by-file plan |
 | `CONTRIBUTING.md` | Commit standards, PR process, code style |
@@ -57,14 +58,16 @@ This file is the single source of truth for the project's current state, what ha
 
 ## What's Already Built (Don't Recreate)
 
-- Full CLI with `nexus init` and `nexus adopt` commands
+- Full CLI with `nexus init`, `nexus adopt`, `nexus upgrade`, `nexus repair` commands
 - Interactive prompt system (6 modules)
 - Generator engine (8 modules including landing page + ai-config)
+- Reconcile system for upgrade/repair (smart file strategy + corruption detection)
+- Progressive knowledge system (knowledge.md)
 - Type system (4 modules)
-- Utility layer (6 modules including project-detector)
-- 73 unit tests (all passing)
+- Utility layer (7 modules including project-detector, readFile, fileExists)
+- 179 unit tests (all passing)
 - AI config generation (`.nexus/ai/` + root pointer files + onboarding protocol)
-- Centralized `.nexus/` folder (docs, AI config, manifest)
+- Centralized `.nexus/` folder (docs, AI config, manifest, knowledge base)
 - GitHub Actions CI, commitlint, CODEOWNERS, PR/issue templates
 
 ## Current Priorities
