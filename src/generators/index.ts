@@ -12,7 +12,7 @@ import ora from 'ora';
 
 import type { NexusConfig } from '../types/config.js';
 import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
-import { logger, writeGeneratorResult, getInstallCommand, gitInit, toDisplayName } from '../utils/index.js';
+import { logger, writeGeneratorResult, readFile, fileExists, writeFile, ensureDirectory, getInstallCommand, gitInit, toDisplayName } from '../utils/index.js';
 import type { ProjectInfo } from '../utils/project-detector.js';
 
 import { generateAiConfig } from './ai-config.js';
@@ -134,6 +134,217 @@ export async function adoptProject(
     spinner.fail('Adopt failed.');
     throw err;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Upgrade & Repair — regenerate .nexus/ while preserving knowledge
+ *
+ * Two modes share the same core logic:
+ *
+ *   UPGRADE — Replace scaffolding files with latest CLI templates.
+ *             Populate missing files. Preserve populated docs and
+ *             knowledge. Used when the CLI version has changed.
+ *
+ *   REPAIR  — Restore missing or corrupted files only. Do NOT
+ *             touch files that are structurally valid — even if
+ *             they're old templates. Used to fix a broken .nexus/
+ *             without changing template versions.
+ *
+ * File strategy per mode:
+ *
+ *   File category      | UPGRADE         | REPAIR
+ *   ───────────────────┼─────────────────┼────────────────
+ *   ALWAYS_REPLACE     | Replace         | Only if missing/corrupt
+ *   ALWAYS_PRESERVE    | Preserve        | Only if missing/corrupt
+ *   SMART (docs)       | Replace if      | Only if missing/corrupt
+ *                      | status:template |
+ * ────────────────────────────────────────────────────────────── */
+
+/** Reconcile mode: upgrade replaces scaffolding; repair only fixes broken files */
+export type ReconcileMode = 'upgrade' | 'repair';
+
+/** Files that are ALWAYS safe to replace during upgrade (generated scaffolding) */
+const ALWAYS_REPLACE: ReadonlySet<string> = new Set([
+  '.nexus/ai/instructions.md',
+  '.nexus/index.md',
+  '.nexus/manifest.json',
+  '.cursorrules',
+  '.windsurfrules',
+  '.clinerules',
+  'AGENTS.md',
+  '.github/copilot-instructions.md',
+]);
+
+/** Files that must NEVER be overwritten during upgrade (accumulated knowledge) */
+const ALWAYS_PRESERVE: ReadonlySet<string> = new Set([
+  '.nexus/docs/knowledge.md',
+]);
+
+/**
+ * Determine whether an existing file has been populated by a user or agent.
+ * Checks YAML frontmatter for `status: populated`.
+ */
+export function isPopulated(content: string): boolean {
+  return /^---[\s\S]*?status:\s*populated[\s\S]*?---/m.test(content);
+}
+
+/**
+ * Determine whether a NEXUS file is structurally corrupted.
+ *
+ * A file is considered corrupted if:
+ *   - It's empty or only whitespace
+ *   - It's a .nexus/docs/ file that should have YAML frontmatter but doesn't
+ *   - It's a JSON file that doesn't parse
+ */
+export function isCorrupted(filePath: string, content: string): boolean {
+  // Empty or whitespace-only
+  if (content.trim().length === 0) return true;
+
+  // JSON files must parse
+  if (filePath.endsWith('.json')) {
+    try {
+      JSON.parse(content);
+      return false;
+    } catch {
+      return true;
+    }
+  }
+
+  // .nexus/docs/ markdown files should have YAML frontmatter (except knowledge.md)
+  if (filePath.startsWith('.nexus/docs/') && !filePath.endsWith('knowledge.md')) {
+    if (!content.startsWith('---')) return true;
+    // Frontmatter must close
+    const secondDashes = content.indexOf('---', 3);
+    if (secondDashes === -1) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Core reconcile logic shared by upgrade and repair.
+ *
+ * @param targetDir - Absolute path to the project root
+ * @param config    - The NexusConfig (from manifest)
+ * @param mode      - 'upgrade' (replace scaffolding + fix) or 'repair' (fix only)
+ * @returns Summary of what was replaced, preserved, created, and repaired
+ */
+export async function reconcileNexusFiles(
+  targetDir: string,
+  config: NexusConfig,
+  mode: ReconcileMode,
+): Promise<ReconcileResult> {
+  // Ensure directories exist
+  const directories: GeneratedDirectory[] = [
+    { path: '.nexus' },
+    { path: '.nexus/docs' },
+    { path: '.nexus/ai' },
+    { path: '.github' },
+  ];
+
+  for (const dir of directories) {
+    await ensureDirectory(path.join(targetDir, dir.path));
+  }
+
+  // Generate all files with fresh templates
+  const freshFiles: GeneratedFile[] = [
+    ...generateDocs(config),
+    ...generateAiConfig(config),
+  ];
+
+  const result: ReconcileResult = {
+    replaced: [],
+    preserved: [],
+    created: [],
+    repaired: [],
+  };
+
+  for (const file of freshFiles) {
+    const fullPath = path.join(targetDir, file.path);
+    const exists = await fileExists(fullPath);
+
+    // ── Missing file → always create ──
+    if (!exists) {
+      await writeFile(fullPath, file.content);
+      result.created.push(file.path);
+      continue;
+    }
+
+    // ── File exists — read it ──
+    const existingContent = await readFile(fullPath);
+    const content = existingContent ?? '';
+    const corrupted = isCorrupted(file.path, content);
+
+    // ── Corrupted → always repair (both modes) ──
+    if (corrupted) {
+      await writeFile(fullPath, file.content);
+      result.repaired.push(file.path);
+      continue;
+    }
+
+    // ── From here: file exists and is structurally valid ──
+
+    if (mode === 'repair') {
+      // Repair mode: valid files are left untouched
+      result.preserved.push(file.path);
+      continue;
+    }
+
+    // ── Upgrade mode: apply the upgrade strategy ──
+
+    if (ALWAYS_REPLACE.has(file.path)) {
+      await writeFile(fullPath, file.content);
+      result.replaced.push(file.path);
+      continue;
+    }
+
+    if (ALWAYS_PRESERVE.has(file.path)) {
+      result.preserved.push(file.path);
+      continue;
+    }
+
+    // Smart check for docs with frontmatter
+    if (isPopulated(content)) {
+      result.preserved.push(file.path);
+    } else {
+      await writeFile(fullPath, file.content);
+      result.replaced.push(file.path);
+    }
+  }
+
+  return result;
+}
+
+/** Result summary from a reconcile (upgrade or repair) operation */
+export interface ReconcileResult {
+  /** Files that were overwritten with latest templates (upgrade only) */
+  replaced: string[];
+  /** Files that were preserved (populated docs, knowledge base, valid files in repair) */
+  preserved: string[];
+  /** New files that didn't exist before */
+  created: string[];
+  /** Files that were corrupted and restored */
+  repaired: string[];
+}
+
+/**
+ * Upgrade the NEXUS ecosystem — replace scaffolding with latest + fix broken.
+ */
+export async function upgradeProject(
+  targetDir: string,
+  config: NexusConfig,
+): Promise<ReconcileResult> {
+  return reconcileNexusFiles(targetDir, config, 'upgrade');
+}
+
+/**
+ * Repair the NEXUS ecosystem — fix missing/corrupted files only.
+ */
+export async function repairProject(
+  targetDir: string,
+  config: NexusConfig,
+): Promise<ReconcileResult> {
+  return reconcileNexusFiles(targetDir, config, 'repair');
 }
 
 /**

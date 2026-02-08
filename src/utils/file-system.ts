@@ -1,7 +1,7 @@
 /**
  * NEXUS CLI - File System Utility
  *
- * Wrappers around fs-extra for project generation.
+ * Wrappers around fs-extra for project generation and upgrade.
  */
 
 import path from 'node:path';
@@ -24,6 +24,29 @@ export async function ensureDirectory(dirPath: string): Promise<void> {
 export async function writeFile(filePath: string, content: string): Promise<void> {
   await fs.ensureDir(path.dirname(filePath));
   await fs.writeFile(filePath, content, 'utf-8');
+}
+
+/**
+ * Read a file's content. Returns null if the file doesn't exist.
+ */
+export async function readFile(filePath: string): Promise<string | null> {
+  try {
+    return await fs.readFile(filePath, 'utf-8');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if a file exists at the given path.
+ */
+export async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.isFile();
+  } catch {
+    return false;
+  }
 }
 
 /**

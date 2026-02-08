@@ -8,6 +8,7 @@ import { generateDirectories, generatePackageJson, generateGitignore, generateRe
 import { generateLandingPage } from '../../src/generators/landing-page.js';
 import { generateConfigs } from '../../src/generators/config.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
+import { generateDocs } from '../../src/generators/docs.js';
 import type { NexusConfig } from '../../src/types/config.js';
 
 const baseConfig: NexusConfig = {
@@ -345,17 +346,16 @@ describe('generateAiConfig', () => {
     expect(paths).toContain('.github/copilot-instructions.md');
   });
 
-  it('should embed full project-aware content in ALL tool files (not just pointers)', () => {
+  it('should embed project-aware content in ALL tool files', () => {
     const files = generateAiConfig(baseConfig);
     const toolFiles = ['.cursorrules', '.windsurfrules', '.clinerules', 'AGENTS.md', '.github/copilot-instructions.md'];
 
     for (const toolPath of toolFiles) {
       const file = files.find((f) => f.path === toolPath);
       expect(file).toBeDefined();
-      // Every file should have the onboarding protocol
-      expect(file!.content).toContain('CRITICAL');
+      // Every file should have the onboarding trigger
       expect(file!.content).toContain('status: template');
-      expect(file!.content).toContain('status: populated');
+      expect(file!.content).toContain('.nexus/ai/instructions.md');
       // Every file should have project identity
       expect(file!.content).toContain('Test App');
       expect(file!.content).toContain('Next.js');
@@ -364,6 +364,14 @@ describe('generateAiConfig', () => {
       // Every file should be substantial (not a thin pointer)
       expect(file!.content.length).toBeGreaterThan(500);
     }
+  });
+
+  it('should keep tool files lean — shorter than master instructions', () => {
+    const files = generateAiConfig(baseConfig);
+    const master = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    const cursor = files.find((f) => f.path === '.cursorrules')!;
+    // Tool files should be significantly shorter than master
+    expect(cursor.content.length).toBeLessThan(master.content.length);
   });
 
   it('should still reference .nexus/ai/instructions.md for full details', () => {
@@ -453,6 +461,315 @@ describe('generateConfigs — framework config files', () => {
       const tsconfig = files.find((f) => f.path === 'tsconfig.json');
       const parsed = JSON.parse(tsconfig!.content);
       expect(parsed.compilerOptions.moduleResolution).toBe('Bundler');
+    }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════
+ * Pattern-Aware Business Logic
+ * ══════════════════════════════════════════════════════════════ */
+
+describe('generateDocs — pattern-aware business logic', () => {
+  it('should generate base business logic doc without pattern sections when no patterns', () => {
+    const files = generateDocs(baseConfig); // appPatterns: []
+    const biz = files.find((f) => f.path === '.nexus/docs/05_business_logic.md')!;
+    expect(biz).toBeDefined();
+    expect(biz.content).toContain('Business Logic');
+    // Should NOT have any pattern-specific sections
+    expect(biz.content).not.toContain('Sync & Conflict Resolution');
+    expect(biz.content).not.toContain('Real-Time System');
+    expect(biz.content).not.toContain('PWA');
+    expect(biz.content).not.toContain('Theming System');
+    expect(biz.content).not.toContain('Internationalization');
+    expect(biz.content).not.toContain('White Label');
+  });
+
+  it('should add offline-first section when pattern is selected', () => {
+    const config = { ...baseConfig, appPatterns: ['offline-first' as const] };
+    const files = generateDocs(config);
+    const biz = files.find((f) => f.path === '.nexus/docs/05_business_logic.md')!;
+    expect(biz.content).toContain('Sync & Conflict Resolution');
+  });
+
+  it('should add real-time section when pattern is selected', () => {
+    const config = { ...baseConfig, appPatterns: ['real-time' as const] };
+    const files = generateDocs(config);
+    const biz = files.find((f) => f.path === '.nexus/docs/05_business_logic.md')!;
+    expect(biz.content).toContain('Real-Time System');
+  });
+
+  it('should add PWA section when pattern is selected', () => {
+    const config = { ...baseConfig, appPatterns: ['pwa' as const] };
+    const files = generateDocs(config);
+    const biz = files.find((f) => f.path === '.nexus/docs/05_business_logic.md')!;
+    expect(biz.content).toContain('PWA');
+    expect(biz.content).toContain('Service Worker');
+  });
+
+  it('should add theming section when pattern is selected', () => {
+    const config = { ...baseConfig, appPatterns: ['theming' as const] };
+    const files = generateDocs(config);
+    const biz = files.find((f) => f.path === '.nexus/docs/05_business_logic.md')!;
+    expect(biz.content).toContain('Theming System');
+  });
+
+  it('should add i18n section when pattern is selected', () => {
+    const config = { ...baseConfig, appPatterns: ['i18n' as const] };
+    const files = generateDocs(config);
+    const biz = files.find((f) => f.path === '.nexus/docs/05_business_logic.md')!;
+    expect(biz.content).toContain('Internationalization');
+  });
+
+  it('should add white-label section when pattern is selected', () => {
+    const config = { ...baseConfig, appPatterns: ['white-label' as const] };
+    const files = generateDocs(config);
+    const biz = files.find((f) => f.path === '.nexus/docs/05_business_logic.md')!;
+    expect(biz.content).toContain('White Label');
+    expect(biz.content).toContain('Multi-Tenant');
+  });
+
+  it('should add multiple pattern sections when multiple patterns selected', () => {
+    const config = { ...baseConfig, appPatterns: ['offline-first' as const, 'real-time' as const, 'pwa' as const] };
+    const files = generateDocs(config);
+    const biz = files.find((f) => f.path === '.nexus/docs/05_business_logic.md')!;
+    expect(biz.content).toContain('Sync & Conflict Resolution');
+    expect(biz.content).toContain('Real-Time System');
+    expect(biz.content).toContain('PWA');
+    // Should NOT have unselected patterns
+    expect(biz.content).not.toContain('Theming System');
+    expect(biz.content).not.toContain('Internationalization');
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════
+ * Project Index — The AI Agent's Brain
+ * ══════════════════════════════════════════════════════════════ */
+
+describe('generateDocs — project index (AI brain)', () => {
+  it('should generate .nexus/docs/index.md', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md');
+    expect(index).toBeDefined();
+  });
+
+  it('should have frontmatter with status: template', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md')!;
+    expect(index.content).toContain('nexus_doc: true');
+    expect(index.content).toContain('status: template');
+  });
+
+  it('should contain the project brain header', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md')!;
+    expect(index.content).toContain('THIS IS THE AI AGENT');
+    expect(index.content).toContain('BRAIN');
+  });
+
+  it('should contain the project name and framework', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md')!;
+    expect(index.content).toContain('Test App');
+    expect(index.content).toContain('Next.js');
+  });
+
+  it('should contain all required brain sections', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md')!;
+    expect(index.content).toContain('Current Objective');
+    expect(index.content).toContain('Project Status Matrix');
+    expect(index.content).toContain('Feature Backlog');
+    expect(index.content).toContain('What Has Been Built');
+    expect(index.content).toContain('Progress Log');
+    expect(index.content).toContain("What's Next");
+    expect(index.content).toContain('AI Agent Operating Rules');
+  });
+
+  it('should contain operating rules that prevent aimless behavior', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md')!;
+    expect(index.content).toContain('READ this file before EVERY task');
+    expect(index.content).toContain('UPDATE this file after EVERY task');
+    expect(index.content).toContain('DON\'T ask "what enhancements would you like?"');
+    expect(index.content).toContain('feature backlog is your roadmap');
+  });
+
+  it('should contain the data strategy in prioritized next steps', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md')!;
+    expect(index.content).toContain('cloud-first');
+  });
+
+  it('should include a Progress Log section with initial entry', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md')!;
+    expect(index.content).toContain('Project Created');
+    expect(index.content).toContain('Scaffolded with NEXUS CLI');
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════
+ * AI Instructions — index.md as brain
+ * ══════════════════════════════════════════════════════════════ */
+
+describe('generateAiConfig — index.md brain references', () => {
+  it('should reference .nexus/docs/index.md as brain in master instructions', () => {
+    const files = generateAiConfig(baseConfig);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('.nexus/docs/index.md');
+    expect(instructions.content).toContain('BRAIN');
+  });
+
+  it('should reference .nexus/docs/index.md as brain in ALL tool files', () => {
+    const files = generateAiConfig(baseConfig);
+    const toolFiles = ['.cursorrules', '.windsurfrules', '.clinerules', 'AGENTS.md', '.github/copilot-instructions.md'];
+
+    for (const toolPath of toolFiles) {
+      const file = files.find((f) => f.path === toolPath)!;
+      expect(file.content, `${toolPath} should reference index.md`).toContain('.nexus/docs/index.md');
+      expect(file.content, `${toolPath} should mention BRAIN`).toContain('BRAIN');
+    }
+  });
+
+  it('should include "read before every task" rule in tool files', () => {
+    const files = generateAiConfig(baseConfig);
+    const toolFiles = ['.cursorrules', '.windsurfrules', '.clinerules', 'AGENTS.md', '.github/copilot-instructions.md'];
+
+    for (const toolPath of toolFiles) {
+      const file = files.find((f) => f.path === toolPath)!;
+      expect(file.content).toContain('Before EVERY task');
+      expect(file.content).toContain('After EVERY task');
+    }
+  });
+
+  it('should include "never ask for enhancements" rule in tool files', () => {
+    const files = generateAiConfig(baseConfig);
+    const cursor = files.find((f) => f.path === '.cursorrules')!;
+    expect(cursor.content).toContain('NEVER ask');
+    expect(cursor.content).toContain('enhancements');
+  });
+
+  it('should include Step 6 (build the project brain) in master instructions only', () => {
+    const files = generateAiConfig(baseConfig);
+    // Master file keeps the full onboarding with Step 6
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Build the project brain');
+
+    // Tool files have a lean onboarding trigger instead
+    const cursor = files.find((f) => f.path === '.cursorrules')!;
+    expect(cursor.content).toContain('Populate the docs BEFORE doing anything else');
+    expect(cursor.content).toContain('.nexus/ai/instructions.md');
+  });
+
+  it('should instruct agents to build implementation plan from vision', () => {
+    const files = generateAiConfig(baseConfig);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Build the implementation plan');
+    expect(instructions.content).toContain('01_vision.md');
+  });
+
+  it('should include after-task workflow (update index, suggest next)', () => {
+    const files = generateAiConfig(baseConfig);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Update `.nexus/docs/index.md`');
+    expect(instructions.content).toContain('Progress Log');
+    expect(instructions.content).toContain('Suggest the next task');
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════
+ * Progressive Knowledge Base
+ * ══════════════════════════════════════════════════════════════ */
+
+describe('generateDocs — progressive knowledge base', () => {
+  it('should generate .nexus/docs/knowledge.md', () => {
+    const files = generateDocs(baseConfig);
+    const knowledge = files.find((f) => f.path === '.nexus/docs/knowledge.md');
+    expect(knowledge).toBeDefined();
+  });
+
+  it('should contain project name and Knowledge Base title', () => {
+    const files = generateDocs(baseConfig);
+    const knowledge = files.find((f) => f.path === '.nexus/docs/knowledge.md')!;
+    expect(knowledge.content).toContain('Test App');
+    expect(knowledge.content).toContain('Knowledge Base');
+  });
+
+  it('should contain category reference table', () => {
+    const files = generateDocs(baseConfig);
+    const knowledge = files.find((f) => f.path === '.nexus/docs/knowledge.md')!;
+    expect(knowledge.content).toContain('architecture');
+    expect(knowledge.content).toContain('bug-fix');
+    expect(knowledge.content).toContain('pattern');
+    expect(knowledge.content).toContain('package');
+    expect(knowledge.content).toContain('performance');
+    expect(knowledge.content).toContain('convention');
+    expect(knowledge.content).toContain('gotcha');
+  });
+
+  it('should have an initial seed entry', () => {
+    const files = generateDocs(baseConfig);
+    const knowledge = files.find((f) => f.path === '.nexus/docs/knowledge.md')!;
+    expect(knowledge.content).toContain('[convention]');
+    expect(knowledge.content).toContain('NEXUS CLI');
+  });
+
+  it('should explain when to add vs when NOT to add entries', () => {
+    const files = generateDocs(baseConfig);
+    const knowledge = files.find((f) => f.path === '.nexus/docs/knowledge.md')!;
+    expect(knowledge.content).toContain('When to add');
+    expect(knowledge.content).toContain('When NOT to add');
+  });
+
+  it('should describe progressive/append-only nature', () => {
+    const files = generateDocs(baseConfig);
+    const knowledge = files.find((f) => f.path === '.nexus/docs/knowledge.md')!;
+    expect(knowledge.content).toContain('never delete entries');
+  });
+});
+
+describe('knowledge base — brain and instruction references', () => {
+  it('should reference knowledge.md in index.md operating rules', () => {
+    const files = generateDocs(baseConfig);
+    const index = files.find((f) => f.path === '.nexus/docs/index.md')!;
+    expect(index.content).toContain('knowledge.md');
+    expect(index.content).toContain('Learn as you go');
+  });
+
+  it('should reference knowledge.md in .nexus/index.md doc map', () => {
+    const files = generateDocs(baseConfig);
+    const nexusIndex = files.find((f) => f.path === '.nexus/index.md')!;
+    expect(nexusIndex.content).toContain('knowledge.md');
+    expect(nexusIndex.content).toContain('Knowledge Base');
+  });
+
+  it('should reference knowledge.md in master AI instructions', () => {
+    const files = generateAiConfig(baseConfig);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('knowledge.md');
+    expect(instructions.content).toContain('KNOWLEDGE BASE');
+  });
+
+  it('should include knowledge.md scanning in master before-task workflow', () => {
+    const files = generateAiConfig(baseConfig);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Scan `.nexus/docs/knowledge.md`');
+  });
+
+  it('should include knowledge.md appending in master after-task workflow', () => {
+    const files = generateAiConfig(baseConfig);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Learn');
+    expect(instructions.content).toContain('append an entry to `.nexus/docs/knowledge.md`');
+  });
+
+  it('should reference knowledge.md in tool files', () => {
+    const files = generateAiConfig(baseConfig);
+    const toolFiles = ['.cursorrules', '.windsurfrules', '.clinerules', 'AGENTS.md', '.github/copilot-instructions.md'];
+
+    for (const toolPath of toolFiles) {
+      const file = files.find((f) => f.path === toolPath)!;
+      expect(file.content, `${toolPath} should reference knowledge.md`).toContain('knowledge.md');
     }
   });
 });
