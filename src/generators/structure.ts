@@ -83,29 +83,20 @@ export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
  * Generate the project's package.json content.
  */
 export function generatePackageJson(config: NexusConfig): GeneratedFile {
+  const scripts = getFrameworkScripts(config);
+  const { dependencies, devDependencies } = getFrameworkDependencies(config);
+
   const pkg: Record<string, unknown> = {
     name: config.projectName,
     version: '0.1.0',
     private: true,
     type: 'module',
-    scripts: {
-      dev: 'echo "TODO: configure dev script"',
-      build: 'echo "TODO: configure build script"',
-      start: 'echo "TODO: configure start script"',
-      lint: 'eslint . --ext .ts,.tsx',
-      format: 'prettier --write .',
-      'type-check': 'tsc --noEmit',
-    },
-    dependencies: {},
-    devDependencies: {
-      typescript: '^5.7.0',
-      '@types/node': '^22.0.0',
-      eslint: '^8.57.0',
-      prettier: '^3.4.0',
-    },
+    scripts,
+    dependencies,
+    devDependencies,
   };
 
-  // Add test scripts
+  // Add test scripts & dependencies
   if (config.testFramework === 'vitest') {
     (pkg.scripts as Record<string, string>).test = 'vitest run';
     (pkg.scripts as Record<string, string>)['test:watch'] = 'vitest';
@@ -122,6 +113,169 @@ export function generatePackageJson(config: NexusConfig): GeneratedFile {
     path: 'package.json',
     content: JSON.stringify(pkg, null, 2) + '\n',
   };
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Framework-specific scripts
+ * ────────────────────────────────────────────────────────────── */
+
+function getFrameworkScripts(config: NexusConfig): Record<string, string> {
+  const base: Record<string, string> = {
+    lint: 'eslint . --ext .ts,.tsx',
+    format: 'prettier --write .',
+    'type-check': 'tsc --noEmit',
+  };
+
+  switch (config.frontendFramework) {
+    case 'nextjs':
+      return {
+        dev: 'next dev',
+        build: 'next build',
+        start: 'next start',
+        ...base,
+      };
+    case 'react-vite':
+      return {
+        dev: 'vite',
+        build: 'tsc -b && vite build',
+        preview: 'vite preview',
+        ...base,
+      };
+    case 'sveltekit':
+      return {
+        dev: 'vite dev',
+        build: 'vite build',
+        preview: 'vite preview',
+        ...base,
+      };
+    case 'nuxt':
+      return {
+        dev: 'nuxt dev',
+        build: 'nuxt build',
+        preview: 'nuxt preview',
+        generate: 'nuxt generate',
+        ...base,
+      };
+    case 'remix':
+      return {
+        dev: 'remix vite:dev',
+        build: 'remix vite:build',
+        start: 'remix-serve ./build/server/index.js',
+        ...base,
+      };
+    case 'astro':
+      return {
+        dev: 'astro dev',
+        build: 'astro build',
+        preview: 'astro preview',
+        ...base,
+      };
+    default:
+      return {
+        dev: 'echo "TODO: configure dev script"',
+        build: 'tsc',
+        start: 'node dist/index.js',
+        ...base,
+      };
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Framework-specific dependencies
+ * ────────────────────────────────────────────────────────────── */
+
+function getFrameworkDependencies(config: NexusConfig): {
+  dependencies: Record<string, string>;
+  devDependencies: Record<string, string>;
+} {
+  const baseDev: Record<string, string> = {
+    typescript: '^5.7.0',
+    '@types/node': '^22.0.0',
+    eslint: '^8.57.0',
+    prettier: '^3.4.0',
+  };
+
+  switch (config.frontendFramework) {
+    case 'nextjs':
+      return {
+        dependencies: {
+          next: '^15.0.0',
+          react: '^19.0.0',
+          'react-dom': '^19.0.0',
+        },
+        devDependencies: {
+          ...baseDev,
+          '@types/react': '^19.0.0',
+          '@types/react-dom': '^19.0.0',
+        },
+      };
+    case 'react-vite':
+      return {
+        dependencies: {
+          react: '^19.0.0',
+          'react-dom': '^19.0.0',
+        },
+        devDependencies: {
+          ...baseDev,
+          vite: '^6.0.0',
+          '@vitejs/plugin-react': '^4.3.0',
+          '@types/react': '^19.0.0',
+          '@types/react-dom': '^19.0.0',
+        },
+      };
+    case 'sveltekit':
+      return {
+        dependencies: {},
+        devDependencies: {
+          ...baseDev,
+          '@sveltejs/kit': '^2.0.0',
+          '@sveltejs/adapter-auto': '^3.0.0',
+          '@sveltejs/vite-plugin-svelte': '^4.0.0',
+          svelte: '^5.0.0',
+          vite: '^6.0.0',
+        },
+      };
+    case 'nuxt':
+      return {
+        dependencies: {},
+        devDependencies: {
+          ...baseDev,
+          nuxt: '^3.14.0',
+          vue: '^3.5.0',
+        },
+      };
+    case 'remix':
+      return {
+        dependencies: {
+          '@remix-run/node': '^2.0.0',
+          '@remix-run/react': '^2.0.0',
+          '@remix-run/serve': '^2.0.0',
+          react: '^19.0.0',
+          'react-dom': '^19.0.0',
+        },
+        devDependencies: {
+          ...baseDev,
+          '@remix-run/dev': '^2.0.0',
+          vite: '^6.0.0',
+          '@types/react': '^19.0.0',
+          '@types/react-dom': '^19.0.0',
+        },
+      };
+    case 'astro':
+      return {
+        dependencies: {
+          astro: '^4.0.0',
+        },
+        devDependencies: {
+          ...baseDev,
+        },
+      };
+    default:
+      return {
+        dependencies: {},
+        devDependencies: baseDev,
+      };
+  }
 }
 
 /**
@@ -170,7 +324,7 @@ yarn-error.log*
  * Generate a basic README for the created project.
  */
 export function generateReadme(config: NexusConfig): GeneratedFile {
-  const content = `# ${config.projectName}
+  const content = `# ${config.displayName}
 
 > Generated with [NEXUS CLI](https://github.com/GDA-Africa/nexus-cli) 🔮
 

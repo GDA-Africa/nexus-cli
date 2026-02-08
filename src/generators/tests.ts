@@ -51,7 +51,7 @@ function generateExampleVitestTest(config: NexusConfig): GeneratedFile {
     path: 'tests/unit/example.test.ts',
     content: `import { describe, it, expect } from 'vitest';
 
-describe('${config.projectName}', () => {
+describe('${config.displayName}', () => {
   it('should pass a basic sanity check', () => {
     expect(true).toBe(true);
   });

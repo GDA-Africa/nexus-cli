@@ -1,159 +1,128 @@
-<div align="center">
+# 📝 GDA README Standards
 
-# 📐 GDA README Standards & Guidelines
-
-### The Definitive Reference for Writing World-Class README Files
-
-**Every GDA Africa repository must ship with a README that reflects the quality, professionalism, and ambition of the organization. This document defines the exact structure, style, and standards to follow.**
-
----
-
-*If the README isn't excellent, the project isn't ready.*
-
-</div>
+> **Version 2.0** — Optimized for npm-first impressions and CLI tools.
+>
+> These guidelines govern how READMEs are written across all GDA Africa projects.
+> The goal: a developer lands on your npm page or GitHub repo and **understands what
+> your project does, how to use it, and why they should care** — in under 60 seconds.
 
 ---
 
-## Table of Contents
+## 🧠 Philosophy
 
-1. [Philosophy](#-philosophy)
-2. [Required Sections (Ordered)](#-required-sections-ordered)
-3. [Section-by-Section Specification](#-section-by-section-specification)
-4. [Visual & Formatting Rules](#-visual--formatting-rules)
-5. [Badge Standards](#-badge-standards)
-6. [Markdown Patterns & Components](#-markdown-patterns--components)
-7. [Tone & Voice](#-tone--voice)
-8. [Anti-Patterns (What NOT to Do)](#-anti-patterns-what-not-to-do)
-9. [Checklist Before Merging](#-checklist-before-merging)
-10. [Reference Template](#-reference-template)
+1. **npm is your storefront.** Most developers discover packages on npm, not GitHub. The README must sell the project in the first scroll.
+2. **Scan-first.** Assume the reader will skim. Headers, tables, badges, bold text, and emoji are your primary tools. Paragraphs are secondary.
+3. **Copy-paste ready.** Every command and code block must work when pasted directly. No `<placeholders>` in the final README.
+4. **Right-sized.** Include what the reader *needs*. A CLI tool doesn't need an API Reference section. A library doesn't need a deployment section. Choose sections that match your project type.
+5. **Always current.** Outdated test counts, unchecked roadmap items that are done, and stale badges erode trust. Update the README with every release.
 
 ---
 
-## 💡 Philosophy
+## 📋 Section Menu
 
-A GDA README is not just documentation — it is the **front door** of the project. It must:
+Not every project needs every section. Use this table to pick the right ones.
 
-- **Sell the project** in the first 5 seconds (hero section)
-- **Explain the "why"** before the "how" (motivation before mechanics)
-- **Be scannable** — a busy developer should find any answer in under 10 seconds
-- **Be complete** — nothing should require asking the team a question
-- **Be beautiful** — visual structure, tables, emoji section headers, and diagrams are mandatory
-- **Reflect GDA's brand** — professional, ambitious, Africa-forward
+| # | Section | CLI Tool | Library | API / Fullstack | Required? |
+|---|---------|:--------:|:-------:|:---------------:|-----------|
+| 1 | [Hero Header](#1-hero-header) | ✅ | ✅ | ✅ | **Always** |
+| 2 | [About GDA Africa](#2-about-gda-africa) | ✅ | ✅ | ✅ | **Always** |
+| 3 | [Why \<Project\>?](#3-why-project) | ✅ | ✅ | ✅ | **Always** |
+| 4 | [Features](#4-features) | ✅ | ✅ | ✅ | **Always** |
+| 5 | [Quick Start](#5-quick-start) | ✅ | ✅ | ✅ | **Always** |
+| 6 | [Usage / Commands](#6-usage--commands) | ✅ | ✅ | — | When applicable |
+| 7 | [What You Get](#7-what-you-get) | ✅ | — | — | Generators/scaffolders |
+| 8 | [API Reference](#8-api-reference) | — | ✅ | ✅ | Libraries & APIs only |
+| 9 | [Architecture](#9-architecture) | — | — | ✅ | Complex systems only |
+| 10 | [Roadmap](#10-roadmap) | ✅ | ✅ | ✅ | **Always** |
+| 11 | [Tech Stack](#11-tech-stack) | optional | optional | ✅ | APIs & complex projects |
+| 12 | [Contributing](#12-contributing) | ✅ | ✅ | ✅ | **Always** (keep brief) |
+| 13 | [Footer](#13-footer) | ✅ | ✅ | ✅ | **Always** |
 
-> **Rule of thumb:** If someone reads only the README and nothing else, they should be able to understand, install, use, test, deploy, and contribute to the project.
-
----
-
-## 📋 Required Sections (Ordered)
-
-Every GDA README **must** include the following sections in this exact order. Optional sections are marked with `*`.
-
-| # | Section | Purpose |
-|---|---|---|
-| 1 | **Hero Header** | Centered title, tagline, badges, one-liner |
-| 2 | **About GDA Africa** | Organization context and project's role |
-| 3 | **Why \<Project\>?** | Problem/solution table — the business case |
-| 4 | **Features** | Two-column table with grouped capabilities |
-| 5 | **Architecture** | ASCII or visual diagram of system design |
-| 6 | **Project Structure** | Annotated file tree |
-| 7 | **Quick Start** | Prerequisites → Clone → Configure → Run → Verify |
-| 8 | **API Reference** | Endpoints, schemas, status codes, multi-language examples |
-| 9 | **Security** | Table of security layers and implementations |
-| 10 | **Testing** | Commands + test suite coverage table |
-| 11 | **Deployment** | Step-by-step production deployment |
-| 12 | **Integration Guide*** | How other projects/teams connect to this service |
-| 13 | **Roadmap** | Checkbox-style progress tracker |
-| 14 | **Tech Stack** | Clean table of all technologies used |
-| 15 | **Footer** | Centered GDA branding and contact line |
-
-> **Do not skip sections.** If a section doesn't apply yet (e.g., no API endpoints), include the header with a note like *"Coming in v2 — see [Roadmap](#-roadmap)."*
+**Sections intentionally NOT required for CLI tools:** Project Structure (internal detail, not user-facing), Security (generic for scaffolders), Deployment (users `npm install`, they don't deploy your CLI), Integration Guide (bake it into Usage instead).
 
 ---
 
-## 📝 Section-by-Section Specification
+## Section Specifications
 
 ### 1. Hero Header
 
-The first thing anyone sees. It must be **centered** and contain exactly:
+The first thing a developer sees on npm. Must convey **what**, **who**, and **why** instantly.
 
 ```markdown
 <div align="center">
 
-# 📦 Project Name
+# <emoji> <Project Name>
 
-### Short Descriptive Subtitle
+### <Subtitle — 3-6 words>
 
-**A one-sentence pitch mentioning [GDA Africa](https://github.com/GDA-Africa) and the project's core value.**
+**<One-sentence pitch mentioning [GDA Africa](https://github.com/GDA-Africa) and the core value.>**
 
-[![Badge1](shield-url)](link)
-[![Badge2](shield-url)](link)
+[![Badge](https://img.shields.io/badge/...)]()
 ...
 
 ---
 
-*A memorable italicized tagline — one line, punchy, quotable.*
+*<Tagline — punchy, under 10 words.>*
 
 </div>
 ```
 
 **Rules:**
-- Title uses a single relevant emoji + the project name
-- Subtitle is an `h3` (`###`) — no more than 6 words
-- Pitch sentence is **bold**, mentions GDA Africa as a link, and states the value proposition
-- Minimum 3 badges, maximum 7 (see [Badge Standards](#-badge-standards))
-- Tagline is italicized, separated by `---`, and under 10 words
-- The entire block is wrapped in `<div align="center">`
+- Title: single relevant emoji + project name
+- Subtitle: `h3`, no more than 6 words
+- Pitch: **bold**, mentions GDA Africa as a link, states value proposition
+- 3–5 badges (see [Badge Standards](#-badge-standards))
+- Tagline: italicized, separated by `---`, under 10 words
+- Entire block wrapped in `<div align="center">`
 
 ---
 
 ### 2. About GDA Africa
 
-A short paragraph (2–4 sentences) explaining GDA's mission and how this specific project fits into the larger ecosystem. This grounds the reader in organizational context.
+2–3 sentences. Ground the reader in organizational context.
 
 ```markdown
 ## 🌍 About GDA Africa
 
-**GDA (Glenhalton Digital Agency)** is building the digital infrastructure for Africa's
-next generation of products and services. <Project> is <role within GDA> — <what it does
-for the organization>.
+**GDA (Glenhalton Digital Agency)** is building the digital infrastructure for
+Africa's next generation of products and services. <Project> is <role> — <what it does>.
 ```
 
 **Rules:**
-- Always use the `🌍` emoji for this section
-- Always bold "GDA (Glenhalton Digital Agency)" on first mention
-- Connect the specific project to GDA's larger mission
-- Keep it under 4 sentences — this is context, not a manifesto
+- Always `🌍` emoji
+- Bold "GDA (Glenhalton Digital Agency)" on first mention
+- Connect the project to GDA's mission
+- Max 3 sentences — context, not a manifesto
 
 ---
 
 ### 3. Why \<Project\>?
 
-A **problem → solution table** that makes the value proposition immediately scannable.
+Problem → solution table. The reader decides to keep reading (or bounce) here.
 
 ```markdown
-## 🎯 Why <Project>?
+## 🎯 Why NEXUS?
 
 <One sentence framing the problem space.>
 
 | Problem | <Project> Solution |
 |---|---|
-| 🔐 Problem description | Solution description |
-| 📧 Problem description | Solution description |
-| ...                     | ...                  |
+| 🔐 Problem | **Solution** |
+| ...        | ...          |
 ```
 
 **Rules:**
-- Always use the `🎯` emoji
-- Open with one framing sentence before the table
-- Table must have 4–6 rows
-- Each problem row starts with a relevant emoji
-- Solutions are concise — one line each, no paragraphs
+- Always `🎯` emoji
+- One framing sentence, then the table
+- 3–5 rows (not 6+ — trim to the strongest points)
+- Each problem row starts with an emoji
+- Solutions are bold and concise — one line, no paragraphs
 
 ---
 
 ### 4. Features
 
-A **two-column HTML table** grouping features into logical categories.
+Two-column HTML table for scannability.
 
 ```markdown
 ## ✨ Features
@@ -164,14 +133,12 @@ A **two-column HTML table** grouping features into logical categories.
 
 ### Category A
 - ⚡ **Feature** — Brief description
-- 🔒 **Feature** — Brief description
 
 </td>
 <td width="50%">
 
 ### Category B
 - 🏗️ **Feature** — Brief description
-- 🗄️ **Feature** — Brief description
 
 </td>
 </tr>
@@ -179,330 +146,180 @@ A **two-column HTML table** grouping features into logical categories.
 ```
 
 **Rules:**
-- Always use `✨` emoji
-- Exactly two columns, each `width="50%"`
-- Each column has an `h3` category title
-- Each feature: emoji + **bold name** + ` — ` + description
+- Always `✨` emoji
+- Two columns, each `width="50%"`
 - 4–6 features per column
-- Category names should contrast (e.g., "Core Capabilities" vs "Production Ready", "Developer Experience" vs "Operations")
+- Each feature: emoji + **bold name** + ` — ` + short description
 
 ---
 
-### 5. Architecture
+### 5. Quick Start
 
-An **ASCII box-and-arrow diagram** showing the system's high-level data flow.
-
-```markdown
-## 🏗️ Architecture
-
-```
-┌─────────────────────────┐
-│     COMPONENT NAME      │
-│   Supporting detail      │
-└───────────┬─────────────┘
-            │  Protocol / Action
-            ▼
-┌─────────────────────────┐
-│     NEXT COMPONENT      │
-└─────────────────────────┘
-```
-```
-
-**Rules:**
-- Always use `🏗️` emoji
-- Use Unicode box-drawing characters (`┌ ─ ┐ │ └ ┘ ┬ ▼ →`)
-- Show the full data flow from user/client to final destination
-- Label every arrow with the protocol or action (e.g., `HTTPS POST`, `SMTP/STARTTLS`)
-- Include internal sub-components where the architecture has meaningful layers
-- Keep it readable at 70–80 character width (fits GitHub without horizontal scroll)
-
----
-
-### 6. Project Structure
-
-An **annotated file tree** showing every meaningful file and directory.
-
-```markdown
-## 📁 Project Structure
-
-```
-project-name/
-├── src/
-│   ├── main.py              # Entry point — brief description
-│   └── utils.py             # Brief description
-├── tests/
-│   └── test_main.py         # Brief description
-├── deploy/
-│   └── Dockerfile           # Brief description
-├── requirements.txt         # Dependencies
-└── README.md                # You are here
-```
-```
-
-**Rules:**
-- Always use `📁` emoji
-- Use `├──`, `└──`, and `│` tree characters
-- Every file gets a `# inline comment` explaining its purpose
-- Group by directory with blank lines between logical groups
-- Include only source-controlled files (no `.env`, `node_modules`, `__pycache__`)
-
----
-
-### 7. Quick Start
-
-A numbered, copy-paste-ready setup guide.
+**For CLI tools / npm packages:** Lead with the install command — that's what visitors want.
 
 ```markdown
 ## 🚀 Quick Start
 
-### Prerequisites
-- **Runtime** (version)
-- **Package manager**
-- Any external services needed
+### Install
 
-### 1. Clone & Setup
-```bash
-git clone https://github.com/GDA-Africa/<repo>.git
-cd <repo>
-<environment setup commands>
-<dependency install commands>
+\`\`\`bash
+npm install -g <package-name>
+\`\`\`
+
+### Create a Project
+
+\`\`\`bash
+<main command>
+\`\`\`
+
+### Run It
+
+\`\`\`bash
+cd my-project
+npm run dev
+\`\`\`
 ```
 
-### 2. Configure Environment
-```env
-KEY=value
-ANOTHER_KEY=value
-```
+**For libraries / APIs:** Use the 4-step Clone → Configure → Run → Verify format.
 
-### 3. Run the Server
-```bash
-<development run command>
-<production run command>
-```
+**Rules:**
+- Always `🚀` emoji
+- npm packages: **install command first** — no clone/build steps for end users
+- Every code block is copy-pasteable
+- Show the interactive experience or output if it's impressive
+- Keep it under 30 lines total
 
-### 4. Verify
-```bash
-<health check command>
-# → expected output
-```
+---
+
+### 6. Usage / Commands
+
+For CLI tools: a compact command reference. For libraries: core usage examples.
+
+```markdown
+## 📖 Usage
+
+| Command | Description |
+|---|---|
+| \`tool init [name]\` | Does X |
+| \`tool adopt [path]\` | Does Y |
+| \`tool --version\` | Display version |
+| \`tool --help\` | Show help |
 ```
 
 **Rules:**
-- Always use `🚀` emoji
-- Prerequisites listed as a bullet list with **bold** names and versions
-- Exactly 4 sub-steps: Clone → Configure → Run → Verify
-- Every command block is copy-pasteable (no `<placeholders>` in actual README — use realistic defaults)
-- Include both development and production run commands
-- Verify step shows the exact expected output as a comment
-- Link to Swagger/docs UI if applicable
+- Always `📖` emoji
+- CLI tools: table format, one row per command
+- Libraries: 2–3 short code examples showing the most common patterns
+- Don't duplicate Quick Start content
+
+---
+
+### 7. What You Get
+
+For generators / scaffolders: show what the tool produces.
+
+```markdown
+## 📦 What You Get
+
+<Short sentence: "Every generated project includes:">
+
+| Output | Description |
+|---|---|
+| \`src/\` | Source code with framework boilerplate |
+| \`.nexus/docs/\` | 8 AI-optimized documentation files |
+| \`tests/\` | Test infrastructure and example tests |
+| ... | ... |
+```
+
+**Rules:**
+- Always `📦` emoji
+- Table format with output path + description
+- Only include this for tools that generate files/projects
+- 6–10 rows max — the highlights, not every single file
 
 ---
 
 ### 8. API Reference
 
-Every endpoint fully documented with schemas, status codes, and **multi-language examples**.
-
-```markdown
-## 📡 API Reference
-
-### Base URL
-| Environment | URL |
-|---|---|
-| Production | `https://...` |
-| Development | `http://localhost:PORT` |
-
----
-
-### `METHOD /path` — Human Name
-
-Description of what the endpoint does.
-
-**Request:**
-```json
-{ ... }
-```
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `field` | `type` | ✅/❌ | Description |
-
-**Responses:**
-| Status | Description |
-|---|---|
-| `200 OK` | Success response |
-| `400 Bad Request` | Validation error |
-
-**Example — cURL:**
-```bash
-curl -X POST ...
-```
-
-**Example — Python:**
-```python
-import httpx
-...
-```
-
-**Example — JavaScript:**
-```javascript
-const response = await fetch(...)
-...
-```
-```
+**Only for libraries and APIs.** Not for CLI tools.
 
 **Rules:**
-- Always use `📡` emoji
-- Start with a Base URL table (production + development)
-- Each endpoint: method + path in backtick code format as an `h3`
-- Request body shown as formatted JSON
-- Field table with Type, Required (✅/❌ emoji), and Description columns
-- Response table covering all status codes
-- **Minimum 3 language examples**: cURL, Python, JavaScript
-- Separate endpoints with `---` horizontal rules
+- Always `📡` emoji
+- Each endpoint: method + path as `h3`
+- Request body as JSON, fields as table
+- Response status table
+- 2+ language examples (cURL + one other)
 
 ---
 
-### 9. Security
+### 9. Architecture
 
-A **table** mapping security layers to their implementations.
-
-```markdown
-## 🔐 Security
-
-| Layer | Implementation |
-|---|---|
-| **Layer Name** | How it's implemented — one sentence. |
-```
+**Only for complex systems** (APIs, microservices, multi-layer apps). Skip for CLI tools and simple libraries.
 
 **Rules:**
-- Always use `🔐` emoji
-- Table format only — no paragraphs
-- Cover: authentication, encryption (in-transit & at-rest), input validation, audit logging, secrets management
-- Bold the layer name in the left column
-- Be specific about implementations (e.g., "TLS 1.2+ via Let's Encrypt" not just "encryption")
+- Always `🏗️` emoji
+- Unicode box-drawing characters
+- 70–80 char width max
+- Label every arrow
 
 ---
 
-### 10. Testing
+### 10. Roadmap
 
-Commands and a coverage table explaining what each suite tests.
-
-```markdown
-## 🧪 Testing
-
-<One sentence about the testing philosophy (e.g., TDD).>
-
-```bash
-# Run all tests
-<command>
-
-# Run with coverage
-<command>
-
-# Run specific suite
-<command> tests/test_specific.py
-```
-
-### Test Coverage
-
-| Suite | Covers |
-|---|---|
-| `test_file.py` | What this suite validates |
-```
-
-**Rules:**
-- Always use `🧪` emoji
-- State the testing philosophy (TDD, BDD, etc.) in one sentence
-- Show the 3 most common test commands (all, coverage, specific)
-- Include a table mapping every test file to what it covers
-- Commands must be copy-pasteable
-
----
-
-### 11. Deployment
-
-Step-by-step production deployment.
-
-```markdown
-## 🚢 Deployment
-
-### <Method Name>
-```bash
-<deployment command>
-```
-
-<Numbered list explaining what the command/script does.>
-
-### Environment Variables (Production)
-
-| Variable | Description | Default |
-|---|---|---|
-| `VAR_NAME` | What it controls | `default` or `—` |
-```
-
-**Rules:**
-- Always use `🚢` emoji
-- If a deployment script exists, show the single command first, then explain the steps
-- Always include an environment variable table with Variable, Description, and Default columns
-- Use `—` (em dash) for variables with no default (required values)
-
----
-
-### 12. Integration Guide (if applicable)
-
-How other projects connect to this service.
-
-**Rules:**
-- Always use `🔌` emoji
-- Include at least one copy-paste code example
-- Link to a separate detailed `integration.md` if the guide is extensive
-- Show the most common integration pattern first
-
----
-
-### 13. Roadmap
-
-A checkbox-style progress list.
+Checkbox progress list. Keep it tight.
 
 ```markdown
 ## 🗺️ Roadmap
 
 - [x] Completed feature
-- [x] Another completed feature
 - [ ] Planned feature
-- [ ] Future feature
 ```
 
 **Rules:**
-- Always use `🗺️` emoji
-- Completed items first (`[x]`), then planned (`[ ]`)
-- 8–15 items total
-- Each item is a single line — no nested descriptions
-- Order planned items by priority (most likely next → most distant)
+- Always `🗺️` emoji
+- Completed first, then planned
+- 8–12 items total
+- Single line per item
+- **Update checkboxes with every release** — stale roadmaps destroy credibility
 
 ---
 
-### 14. Tech Stack
+### 11. Tech Stack
 
-A clean two-column table.
+Clean two-column table. Optional for CLI tools (readers care about what the tool *does*, not what it's built *with*).
+
+**Rules:**
+- Always `🛠️` emoji
+- Bold the component name
+- Include versions
+
+---
+
+### 12. Contributing
+
+Brief — point to `CONTRIBUTING.md` for details.
 
 ```markdown
-## 🛠️ Tech Stack
+## 🤝 Contributing
 
-| Component | Technology |
-|---|---|
-| **Category** | Specific technology + version |
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+\`\`\`bash
+git clone https://github.com/GDA-Africa/<repo>.git
+cd <repo> && yarn install
+yarn lint && yarn test
+\`\`\`
 ```
 
 **Rules:**
-- Always use `🛠️` emoji
-- Bold the component/category name
-- Include version numbers where applicable
-- Cover: runtime, framework(s), database, ORM, testing, server, deployment
+- Always `🤝` emoji
+- Link to `CONTRIBUTING.md`
+- Show the 3-command setup (clone, install, test)
+- Don't repeat the full contribution guide in the README
 
 ---
 
-### 15. Footer
+### 13. Footer
 
 Centered GDA branding.
 
@@ -513,7 +330,7 @@ Centered GDA branding.
 
 **Built with ❤️ by [GDA Africa](https://github.com/GDA-Africa)** — Powering Africa's Digital Future
 
-*<Project> is <brief context>. For questions, reach out to the GDA engineering team.*
+*<One-sentence project context.>*
 
 ---
 
@@ -521,147 +338,66 @@ Centered GDA branding.
 ```
 
 **Rules:**
-- Always centered with `<div align="center">`
-- Always includes the "Built with ❤️ by GDA Africa" line with link
-- Always includes the tagline "Powering Africa's Digital Future"
-- Second italicized line provides project-specific context
-- Wrapped in `---` horizontal rules above and below
+- Centered with `<div align="center">`
+- "Built with ❤️ by GDA Africa" + "Powering Africa's Digital Future"
+- Second line: italicized, project-specific
 
 ---
 
-## 🎨 Visual & Formatting Rules
+## 🎨 Formatting Rules
 
 ### Spacing
-- **Two blank lines** before every `## h2` section header (GitHub collapses to one, but two in source improves readability)
-- **One blank line** after every section header before content
-- **Horizontal rule** (`---`) between every major section
-- **No trailing whitespace** on any line
+- Two blank lines before `## h2` headers in source
+- One blank line after every header before content
+- `---` between major sections
 
 ### Headers
-- `#` (h1) — Used **only once**, in the hero title
-- `##` (h2) — Major sections (always with emoji prefix)
-- `###` (h3) — Sub-sections within a major section
-- `####` (h4) — Rare, only if a sub-section genuinely needs sub-parts
+- `#` — used **once**, in the hero
+- `##` — major sections (always with emoji prefix)
+- `###` — sub-sections
+- `####` — rarely, only when genuinely needed
 
-### Emoji Usage
-- Every `##` section header **must** start with an emoji
-- Use **consistent** emojis (see the required sections table above for the canonical emoji per section)
-- Feature lists use emojis as **bullet decorators**
-- Do **not** use emoji in `###` or lower headers
-- Do **not** use emoji in table cells except the Problem column of the "Why" table
+### Emoji
+- Every `##` header starts with an emoji
+- Feature lists use emoji as bullet decorators
+- No emoji in `###` or lower headers
+- No emoji in table cells (except Problem column in "Why" table)
 
 ### Tables
-- Prefer tables over bullet lists for structured/comparable data
-- Always use `|---|---|` separator (no colons for alignment — keep it simple)
-- Bold the left column when it serves as a label/category
-- Use ✅ and ❌ for boolean/required fields
+- Prefer tables over bullet lists for structured data
+- Bold the left column when it's a label
+- Use ✅/❌ for boolean fields
 
 ### Code Blocks
-- Always specify the language hint (```bash, ```python, ```json, ```env, etc.)
-- Commands must be copy-pasteable — no `<placeholder>` values in the actual README
-- Show expected output as `# → comment` on the line after the command
-- Multi-step commands: comment each step with `#`
+- Always specify language hint (`bash`, `typescript`, `json`, etc.)
+- Commands must be copy-pasteable
+- Show expected output as `# → comment`
 
 ---
 
 ## 🏷️ Badge Standards
 
-Use [Shields.io](https://shields.io) badges with the `for-the-badge` style for consistency.
-
-### Badge Format
-
-```markdown
-[![Label](https://img.shields.io/badge/Label-Value-COLOR?style=for-the-badge&logo=LOGO&logoColor=white)](LINK)
-```
+Use [Shields.io](https://shields.io) with `for-the-badge` style.
 
 ### Required Badges (in order)
 
-| Badge | Purpose |
+| Badge | Example |
 |---|---|
-| **Primary Language** | Python, TypeScript, Go, etc. |
-| **Framework** | FastAPI, Next.js, Express, etc. |
-| **Secondary Framework*** | If dual-stack (e.g., Flask for WSGI compat) |
-| **Database/ORM*** | If the project has persistence |
-| **Testing/Quality** | TDD, Jest, Pytest, etc. |
-| **License** | Proprietary, MIT, Apache, etc. |
+| **Primary Language** | TypeScript, Python |
+| **Framework/Runtime** | Node.js, Next.js, FastAPI |
+| **Tests** | `105 Passing` (update with releases!) |
+| **License** | Apache 2.0, MIT |
+| **PRs Welcome** | Always include for open source |
 
 ### Color Reference
 
-| Technology | Hex Color |
+| Technology | Hex |
 |---|---|
-| Python | `3776AB` |
 | TypeScript | `3178C6` |
-| JavaScript | `F7DF1E` |
-| FastAPI | `009688` |
-| Flask | `000000` |
+| Python | `3776AB` |
+| Node.js | `339933` |
 | Next.js | `000000` |
 | React | `61DAFB` |
-| Node.js | `339933` |
-| SQLAlchemy | `D71F00` |
-| PostgreSQL | `4169E1` |
-| Docker | `2496ED` |
-| Pytest / TDD | `green` |
-| MIT License | `blue` |
-
----
-
-## 🧩 Markdown Patterns & Components
-
-### Two-Column Feature Table
-
-```html
-<table>
-<tr>
-<td width="50%">
-
-### Column Title
-- ⚡ **Feature** — Description
-- 🔒 **Feature** — Description
-
-</td>
-<td width="50%">
-
-### Column Title
-- 🏗️ **Feature** — Description
-- 🗄️ **Feature** — Description
-
-</td>
-</tr>
-</table>
-```
-
-### Problem/Solution Table
-
-```markdown
-| Problem | Solution |
-|---|---|
-| 🔐 Problem | Solution |
-| 📧 Problem | Solution |
-```
-
-### Environment Variable Table
-
-```markdown
-| Variable | Description | Default |
-|---|---|---|
-| `VAR` | Description | `value` or — |
-```
-
-### API Field Table
-
-```markdown
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `field` | `string` | ✅ | Description |
-| `field` | `number` | ❌ | Description |
-```
-
-### Roadmap Checklist
-
-```markdown
-- [x] Completed item
-- [ ] Planned item
-```
 
 ---
 
@@ -670,252 +406,45 @@ Use [Shields.io](https://shields.io) badges with the `for-the-badge` style for c
 | ✅ Do | ❌ Don't |
 |---|---|
 | Professional but approachable | Overly casual or slangy |
-| Confident and direct | Apologetic or hedging ("this might work...") |
-| Action-oriented ("Run the server", "Configure your environment") | Passive ("The server can be run...") |
-| Concise — one idea per sentence | Verbose paragraphs that bury the point |
-| Use "you" to address the reader | Use "we" or "I" (except in the footer) |
-| Bold key terms on first use | Bold everything (dilutes emphasis) |
-| Celebrate what's built (✅ completed roadmap items) | Apologize for what's missing |
-
-### Writing Principles
-
-1. **Scan-first** — Assume the reader will skim. Tables, bold text, emoji, and headers are your primary communication tools. Paragraphs are secondary.
-2. **Copy-paste ready** — Every command, config block, and code example must work when pasted directly. No placeholders in the final README.
-3. **Show, don't tell** — Instead of saying "the API is easy to use", show a 5-line cURL example.
-4. **Complete on its own** — The README should never require reading another file to get started. Link to other docs for depth, but the README covers the full happy path.
+| Confident and direct | Apologetic or hedging |
+| Action-oriented ("Install", "Run", "Create") | Passive ("can be installed...") |
+| Concise — one idea per sentence | Verbose paragraphs |
+| Use "you" to address the reader | Use "we" or "I" (except footer) |
+| Celebrate what's built | Apologize for what's missing |
 
 ---
 
-## 🚫 Anti-Patterns (What NOT to Do)
+## 🚫 Anti-Patterns
 
-| Anti-Pattern | Why It's Bad | Do This Instead |
-|---|---|---|
-| One-paragraph README | Looks abandoned, provides no structure | Use the full section template |
-| No badges | Looks unprofessional, harder to scan | Minimum 3 shields.io badges |
-| Placeholder values in commands | Reader can't copy-paste | Use realistic defaults |
-| Giant code blocks with no explanation | Reader doesn't know what they're looking at | Add a sentence before every code block |
-| Missing API examples | Forces reader to guess the format | Provide cURL + Python + JS examples |
-| "TODO" items in the README | Looks unfinished | Use the Roadmap section with checkboxes |
-| Wall of text with no formatting | Unreadable, reader bounces | Use tables, headers, lists, and horizontal rules |
-| Outdated information | Erodes trust in the project | Update the README with every feature change |
-| No architecture diagram | Reader can't understand the system | Use ASCII box diagrams |
-| Emoji overload (every word) | Distracting, unprofessional | One emoji per section header, features as bullet prefix |
+| Anti-Pattern | Do This Instead |
+|---|---|
+| 500+ line README for a CLI tool | Keep it under 250 lines — trim to essentials |
+| Full project structure tree | Skip it — users don't need your internal file layout |
+| Internal type/interface tables | Only expose what users interact with directly |
+| Security section for scaffolding tools | Remove — it's not relevant to the user |
+| Deployment section for npm packages | Users `npm install`, they don't deploy your tool |
+| Outdated test counts or roadmap items | Update with every release |
+| Clone/build Quick Start for an npm package | Lead with `npm install -g` |
+| Giant ASCII architecture diagram | Only for complex multi-service systems |
 
 ---
 
-## ✅ Checklist Before Merging
-
-Use this checklist before any PR that modifies the README:
+## ✅ Pre-Merge Checklist
 
 ```
-[ ] Hero header is centered with title, subtitle, pitch, badges, and tagline
-[ ] "About GDA Africa" section connects project to organization mission
-[ ] "Why <Project>" has a problem/solution table with 4–6 rows
-[ ] Features use a two-column HTML table layout
-[ ] Architecture diagram uses ASCII box-drawing characters
-[ ] Project structure tree is annotated and up to date
-[ ] Quick Start has 4 steps: Clone → Configure → Run → Verify
-[ ] API Reference covers every endpoint with schemas and 3+ language examples
-[ ] Security section is a table covering auth, encryption, validation, logging
-[ ] Testing section shows commands and maps every test file to coverage
-[ ] Deployment section includes env var table with defaults
-[ ] Roadmap uses checkbox-style list with completed and planned items
-[ ] Tech Stack table covers all technologies with versions
-[ ] Footer is centered with GDA branding and tagline
-[ ] All commands are copy-pasteable (no raw placeholders)
+[ ] Hero: centered, title, subtitle, pitch, badges, tagline
+[ ] About GDA: connects project to mission (2-3 sentences)
+[ ] Why: problem/solution table (3-5 rows)
+[ ] Features: two-column HTML table
+[ ] Quick Start: starts with install command (for npm packages)
+[ ] Roadmap: checkboxes updated, no stale items
+[ ] Footer: centered GDA branding
+[ ] All commands copy-pasteable
 [ ] All code blocks have language hints
-[ ] Every ## section has an emoji prefix
-[ ] Shields.io badges use `for-the-badge` style
-[ ] No spelling or grammar errors
-[ ] File renders correctly on GitHub (check preview)
+[ ] Every ## section has emoji prefix
+[ ] Badge test count matches actual count
+[ ] Renders correctly on GitHub and npm
 ```
-
----
-
-## 📄 Reference Template
-
-Below is a **copy-paste skeleton** for starting a new GDA project README. Replace all `<bracketed>` values with project-specific content.
-
-````markdown
-<div align="center">
-
-# <emoji> <Project Name>
-
-### <Short Subtitle — 3-6 Words>
-
-**<One-sentence pitch mentioning [GDA Africa](https://github.com/GDA-Africa) and core value.>**
-
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-Proprietary-blue?style=for-the-badge)]()
-
----
-
-*<Tagline — punchy, under 10 words.>*
-
-</div>
-
----
-
-## 🌍 About GDA Africa
-
-**GDA (Glenhalton Digital Agency)** is building the digital infrastructure for Africa's
-next generation of products and services. <Project> is <role> — <what it does>.
-
----
-
-## 🎯 Why <Project>?
-
-<Framing sentence.>
-
-| Problem | <Project> Solution |
-|---|---|
-| 🔐 Problem | Solution |
-| 📧 Problem | Solution |
-| 📉 Problem | Solution |
-| 🛠️ Problem | Solution |
-
----
-
-## ✨ Features
-
-<table>
-<tr>
-<td width="50%">
-
-### Core Capabilities
-- ⚡ **Feature** — Description
-- 🔒 **Feature** — Description
-
-</td>
-<td width="50%">
-
-### Production Ready
-- 🏗️ **Feature** — Description
-- 🗄️ **Feature** — Description
-
-</td>
-</tr>
-</table>
-
----
-
-## 🏗️ Architecture
-
-```
-<ASCII diagram>
-```
-
----
-
-## 📁 Project Structure
-
-```
-<annotated file tree>
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- **Runtime** (version)
-
-### 1. Clone & Setup
-```bash
-git clone https://github.com/GDA-Africa/<repo>.git
-cd <repo>
-```
-
-### 2. Configure Environment
-```env
-KEY=value
-```
-
-### 3. Run
-```bash
-<run command>
-```
-
-### 4. Verify
-```bash
-<health check>
-# → expected output
-```
-
----
-
-## 📡 API Reference
-
-### Base URL
-| Environment | URL |
-|---|---|
-| Production | `https://...` |
-| Development | `http://localhost:PORT` |
-
-### `POST /endpoint` — Description
-
-**Request:**
-```json
-{ "field": "value" }
-```
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `field` | `string` | ✅ | Description |
-
-**Responses:**
-| Status | Description |
-|---|---|
-| `200 OK` | Success |
-
----
-
-## 🔐 Security
-
-| Layer | Implementation |
-|---|---|
-| **Auth** | Details |
-| **Encryption** | Details |
-
----
-
-## 🧪 Testing
-
-```bash
-pytest
-pytest --cov=.
-```
-
-| Suite | Covers |
-|---|---|
-| `test_file.py` | What it tests |
-
----
-
-## 🚢 Deployment
-
-```bash
-./deploy.sh
-```
-
-| Variable | Description | Default |
-|---|---|---|
-| `VAR` | Description | `value` |
-
----
-
-## 🗺️ Roadmap
-
-- [x] Completed
-- [ ] Planned
-
----
-
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|---|---|
-| **Runtime** | Language + version |
 
 ---
 
@@ -923,22 +452,7 @@ pytest --cov=.
 
 ---
 
-**Built with ❤️ by [GDA Africa](https://github.com/GDA-Africa)** — Powering Africa's Digital Future
-
-*<Project context line.>*
-
----
-
-</div>
-````
-
----
-
-<div align="center">
-
----
-
-**GDA README Standards v1.0** — Maintained by the GDA Engineering Team
+**GDA README Standards v2.0** — Maintained by the GDA Engineering Team
 
 *Every repo is a first impression. Make it count.*
 

@@ -64,7 +64,7 @@ function generateVision(config: NexusConfig): GeneratedFile {
     path: '.nexus/docs/01_vision.md',
     content: `${frontmatter('01_vision', 'Product Vision & Requirements')}# Product Vision & Requirements
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 **Created:** ${new Date().toISOString().split('T')[0]}
 **Status:** 🟡 In Development
 
@@ -125,7 +125,7 @@ function generateArchitecture(config: NexusConfig): GeneratedFile {
     path: '.nexus/docs/02_architecture.md',
     content: `${frontmatter('02_architecture', 'System Architecture')}# System Architecture
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 **Framework:** ${config.frontendFramework}
 **Data Strategy:** ${config.dataStrategy}
 
@@ -173,7 +173,7 @@ function generateDataContracts(config: NexusConfig): GeneratedFile {
     path: '.nexus/docs/03_data_contracts.md',
     content: `${frontmatter('03_data_contracts', 'Data Contracts')}# Data Contracts
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 **Data Strategy:** ${config.dataStrategy}
 
 ---
@@ -208,7 +208,7 @@ function generateApiContracts(config: NexusConfig): GeneratedFile {
     path: '.nexus/docs/04_api_contracts.md',
     content: `${frontmatter('04_api_contracts', 'API Contracts')}# API Contracts
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 
 ---
 
@@ -247,7 +247,7 @@ function generateBusinessLogic(config: NexusConfig): GeneratedFile {
     path: '.nexus/docs/05_business_logic.md',
     content: `${frontmatter('05_business_logic', 'Business Logic')}# Business Logic
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 
 ---
 
@@ -281,7 +281,7 @@ function generateTestStrategy(config: NexusConfig): GeneratedFile {
     path: '.nexus/docs/06_test_strategy.md',
     content: `${frontmatter('06_test_strategy', 'Test Strategy')}# Test Strategy
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 **Framework:** ${config.testFramework}
 
 ---
@@ -320,7 +320,7 @@ function generateImplementation(config: NexusConfig): GeneratedFile {
     path: '.nexus/docs/07_implementation.md',
     content: `${frontmatter('07_implementation', 'Implementation Plan')}# Implementation Plan
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 
 ---
 
@@ -359,7 +359,7 @@ function generateDeployment(config: NexusConfig): GeneratedFile {
     path: '.nexus/docs/08_deployment.md',
     content: `${frontmatter('08_deployment', 'Deployment')}# Deployment
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 
 ---
 
@@ -397,7 +397,7 @@ function generateNexusIndex(config: NexusConfig): GeneratedFile {
     path: '.nexus/index.md',
     content: `# NEXUS Project Index
 
-**Project:** ${config.projectName}
+**Project:** ${config.displayName}
 **Generated:** ${new Date().toISOString().split('T')[0]}
 **CLI Version:** ${version}
 

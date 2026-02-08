@@ -25,6 +25,7 @@ import type { NexusConfig } from '../../src/types/config.js';
 
 const baseConfig: NexusConfig = {
   projectName: 'test-app',
+  displayName: 'Test App',
   projectType: 'web',
   dataStrategy: 'cloud-first',
   appPatterns: [],

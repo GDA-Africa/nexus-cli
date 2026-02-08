@@ -62,11 +62,14 @@ export function banner(version: string): void {
 }
 
 /** Print final success with next steps */
-export function complete(projectName: string): void {
+export function complete(projectName: string, displayName?: string): void {
+  const prettyName = displayName ?? projectName;
   newline();
   divider();
   newline();
   console.log(COLORS.success.bold('  ✅ Project created successfully!'));
+  newline();
+  console.log(COLORS.bold(`  ${prettyName}`));
   newline();
   console.log(COLORS.bold('  Next steps:'));
   console.log(COLORS.primary(`    cd ${projectName}`));
@@ -80,13 +83,13 @@ export function complete(projectName: string): void {
 }
 
 /** Print adopt-mode completion with next steps */
-export function adoptComplete(projectName: string): void {
+export function adoptComplete(displayName: string): void {
   newline();
   divider();
   newline();
   console.log(COLORS.success.bold('  ✅ NEXUS adopted successfully!'));
   newline();
-  console.log(COLORS.bold(`  "${projectName}" now has NEXUS documentation & AI config.`));
+  console.log(COLORS.bold(`  "${displayName}" now has NEXUS documentation & AI config.`));
   newline();
   console.log(COLORS.bold('  What happens next:'));
   console.log(COLORS.primary('    1. Open your AI coding tool (Copilot, Cursor, Windsurf, etc.)'));

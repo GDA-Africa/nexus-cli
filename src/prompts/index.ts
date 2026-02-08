@@ -8,7 +8,7 @@ import { input } from '@inquirer/prompts';
 
 import type { NexusConfig } from '../types/config.js';
 import { detectPackageManager } from '../utils/package-manager.js';
-import { validateProjectName, sanitizeProjectName } from '../utils/validator.js';
+import { validateProjectName, toSlug, toDisplayName } from '../utils/validator.js';
 
 import { promptDataStrategy } from './data-strategy.js';
 import { promptFeatures } from './features.js';
@@ -19,30 +19,33 @@ import { promptProjectType } from './project-type.js';
 /**
  * Run the full interactive prompt flow and return a complete NexusConfig.
  *
+ * Users can enter free-text names like "Todo List App" — we derive the
+ * slug ("todo-list-app") automatically for the folder & package.json name.
+ *
  * @param initialName - Optional project name passed via CLI argument
  */
 export async function runPrompts(initialName?: string): Promise<NexusConfig> {
-  // 1. Project name
-  let projectName: string;
+  // 1. Project name (free-text)
+  let rawName: string;
   if (!initialName) {
-    projectName = await input({
+    rawName = await input({
       message: 'Project name:',
-      default: 'my-nexus-app',
+      default: 'My Nexus App',
       validate: (val: string) => {
         const result = validateProjectName(val);
         return result.valid ? true : (result.message ?? 'Invalid name');
       },
     });
   } else {
-    // Validate the provided name
     const validation = validateProjectName(initialName);
     if (!validation.valid) {
       throw new Error(validation.message ?? 'Invalid project name.');
     }
-    projectName = initialName;
+    rawName = initialName;
   }
 
-  projectName = sanitizeProjectName(projectName);
+  const projectName = toSlug(rawName);
+  const displayName = toDisplayName(rawName);
 
   // 2. Project type
   const projectType = await promptProjectType();
@@ -62,6 +65,7 @@ export async function runPrompts(initialName?: string): Promise<NexusConfig> {
   // Assemble config
   const config: NexusConfig = {
     projectName,
+    displayName,
     projectType,
     dataStrategy,
     appPatterns,

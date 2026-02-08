@@ -30,7 +30,10 @@ export type PackageManager = 'npm' | 'yarn' | 'pnpm';
 
 /** Full project configuration resolved from user prompts */
 export interface NexusConfig {
+  /** Slug used for folder name & package.json name (e.g. "todo-list-app") */
   projectName: string;
+  /** Human-readable project name for titles & headings (e.g. "Todo List App") */
+  displayName: string;
   projectType: ProjectType;
   dataStrategy: DataStrategy;
   appPatterns: AppPattern[];

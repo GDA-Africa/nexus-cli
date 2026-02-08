@@ -12,7 +12,7 @@ import ora from 'ora';
 
 import type { NexusConfig } from '../types/config.js';
 import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
-import { logger, writeGeneratorResult, getInstallCommand, gitInit } from '../utils/index.js';
+import { logger, writeGeneratorResult, getInstallCommand, gitInit, toDisplayName } from '../utils/index.js';
 import type { ProjectInfo } from '../utils/project-detector.js';
 
 import { generateAiConfig } from './ai-config.js';
@@ -82,7 +82,7 @@ export async function generateProject(config: NexusConfig): Promise<void> {
     }
 
     // Done!
-    logger.complete(config.projectName);
+    logger.complete(config.projectName, config.displayName);
   } catch (err) {
     spinner.fail('Project generation failed.');
     throw err;
@@ -146,8 +146,10 @@ function buildAdoptConfig(
   targetDir: string,
   info: ProjectInfo,
 ): NexusConfig {
+  const slug = info.name ?? path.basename(targetDir);
   return {
-    projectName: info.name ?? path.basename(targetDir),
+    projectName: slug,
+    displayName: toDisplayName(slug),
     projectType: 'web',
     dataStrategy: 'cloud-first',
     appPatterns: [],

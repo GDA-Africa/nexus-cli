@@ -58,19 +58,54 @@ const NEXUS_FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" he
 function landingCSS(): string {
   return `*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{color-scheme:dark}
-body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:#0a0a0a;color:#ededed;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.nexus-landing{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;min-height:100vh;gap:2rem}
-.nexus-logo{width:160px;height:160px;animation:pulse 3s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.85;transform:scale(1.04)}}
-.nexus-title{font-size:clamp(2.5rem,6vw,4rem);font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,#00D9FF 0%,#00FF87 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.nexus-subtitle{font-size:clamp(1rem,2.5vw,1.35rem);color:#888;max-width:520px;line-height:1.6}
-.nexus-meta{display:flex;gap:1.5rem;flex-wrap:wrap;justify-content:center;margin-top:.5rem}
-.nexus-badge{font-size:.85rem;padding:.35rem .85rem;border-radius:9999px;border:1px solid #222;color:#aaa;background:#111}
-.nexus-links{display:flex;gap:1rem;margin-top:1rem}
-.nexus-links a{color:#00D9FF;text-decoration:none;font-weight:600;padding:.6rem 1.4rem;border-radius:.5rem;border:1px solid #00D9FF33;transition:all .2s}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:#0a0a0a;color:#ededed;min-height:100vh}
+
+/* ── Layout ── */
+.nexus-page{max-width:720px;margin:0 auto;padding:3rem 1.5rem;display:flex;flex-direction:column;align-items:center;gap:2.5rem}
+
+/* ── Hero ── */
+.nexus-hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:1rem}
+.nexus-logo{width:140px;height:140px;animation:float 4s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.nexus-title{font-size:clamp(2.5rem,6vw,3.5rem);font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,#00D9FF 0%,#00FF87 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nexus-subtitle{font-size:clamp(.95rem,2.2vw,1.15rem);color:#888;max-width:480px;line-height:1.6}
+
+/* ── Badge row ── */
+.nexus-meta{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center}
+.nexus-badge{font-size:.8rem;padding:.3rem .75rem;border-radius:9999px;border:1px solid #222;color:#aaa;background:#111;transition:border-color .2s}
+.nexus-badge:hover{border-color:#00D9FF44}
+
+/* ── Cards ── */
+.nexus-card{width:100%;background:#111;border:1px solid #1a1a1a;border-radius:1rem;padding:1.5rem;transition:border-color .25s}
+.nexus-card:hover{border-color:#00D9FF33}
+.nexus-card h2{font-size:1.1rem;font-weight:700;color:#ddd;margin-bottom:1rem}
+
+/* ── Logo sizes row ── */
+.nexus-sizes{display:flex;align-items:flex-end;justify-content:center;gap:2rem;flex-wrap:wrap}
+.nexus-size-item{display:flex;flex-direction:column;align-items:center;gap:.5rem}
+.nexus-size-item svg{opacity:.85;transition:opacity .2s,transform .2s}
+.nexus-size-item:hover svg{opacity:1;transform:scale(1.06)}
+.nexus-size-label{font-size:.75rem;color:#555;font-family:monospace}
+
+/* ── Brand colors ── */
+.nexus-colors{display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem}
+.nexus-color-swatch{display:flex;flex-direction:column;align-items:center;gap:.4rem}
+.nexus-color-block{width:100%;aspect-ratio:1;border-radius:.625rem;transition:transform .2s}
+.nexus-color-block:hover{transform:scale(1.08)}
+.nexus-color-hex{font-size:.7rem;font-family:monospace;color:#666}
+.nexus-color-name{font-size:.65rem;color:#444}
+
+/* ── Links row ── */
+.nexus-links{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.nexus-links a{color:#00D9FF;text-decoration:none;font-weight:600;font-size:.9rem;padding:.55rem 1.3rem;border-radius:.5rem;border:1px solid #00D9FF33;transition:all .2s}
 .nexus-links a:hover{background:#00D9FF15;border-color:#00D9FF}
-.nexus-footer{position:fixed;bottom:1.5rem;font-size:.8rem;color:#555}
-.nexus-footer a{color:#00D9FF;text-decoration:none}`;
+
+/* ── Footer ── */
+.nexus-footer{text-align:center;font-size:.78rem;color:#444;padding-top:.5rem}
+.nexus-footer a{color:#00D9FF;text-decoration:none}
+
+/* ── Responsive ── */
+@media(max-width:480px){.nexus-colors{grid-template-columns:repeat(3,1fr)}.nexus-sizes{gap:1.25rem}}`;
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -93,7 +128,7 @@ export function generateLandingPage(config: NexusConfig): GeneratedFile[] {
   }
 
   // Framework-specific landing page + CSS
-  const pageFiles = getLandingPageForFramework(config.frontendFramework, config.projectName);
+  const pageFiles = getLandingPageForFramework(config.frontendFramework, config.displayName);
   files.push(...pageFiles);
 
   return files;
@@ -131,27 +166,67 @@ function getLandingPageForFramework(
 function nextjsLandingPage(projectName: string): GeneratedFile[] {
   const page = `import Image from "next/image";
 
+const brandColors = [
+  { hex: "#00D9FF", name: "Primary Cyan" },
+  { hex: "#00FF87", name: "Success Green" },
+  { hex: "#5352ED", name: "Info Blue" },
+  { hex: "#A55EEA", name: "Purple Accent" },
+  { hex: "#FF4757", name: "Error Red" },
+];
+
 export default function Home() {
   return (
-    <div className="nexus-landing">
-      <Image
-        className="nexus-logo"
-        src="/nexus-logo.svg"
-        alt="NEXUS Logo"
-        width={160}
-        height={160}
-        priority
-      />
-      <h1 className="nexus-title">${projectName}</h1>
-      <p className="nexus-subtitle">
-        Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding tool by GDA Africa.
-        Your project is ready. Start building something amazing.
-      </p>
-      <div className="nexus-meta">
-        <span className="nexus-badge">Next.js 15</span>
-        <span className="nexus-badge">TypeScript</span>
-        <span className="nexus-badge">NEXUS Docs</span>
+    <div className="nexus-page">
+      {/* ── Hero ── */}
+      <section className="nexus-hero">
+        <Image
+          className="nexus-logo"
+          src="/nexus-logo.svg"
+          alt="NEXUS Logo"
+          width={140}
+          height={140}
+          priority
+        />
+        <h1 className="nexus-title">${projectName}</h1>
+        <p className="nexus-subtitle">
+          Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding
+          tool by GDA Africa. Your project is ready.
+        </p>
+        <div className="nexus-meta">
+          <span className="nexus-badge">Next.js 15</span>
+          <span className="nexus-badge">TypeScript</span>
+          <span className="nexus-badge">NEXUS Docs</span>
+        </div>
+      </section>
+
+      {/* ── Size Variations ── */}
+      <div className="nexus-card">
+        <h2>✦ Size Variations</h2>
+        <div className="nexus-sizes">
+          {[48, 96, 160].map((s) => (
+            <div className="nexus-size-item" key={s}>
+              <Image src="/nexus-logo.svg" alt="logo" width={s} height={s} />
+              <span className="nexus-size-label">{s}px</span>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* ── Brand Colors ── */}
+      <div className="nexus-card">
+        <h2>🎨 Brand Colors</h2>
+        <div className="nexus-colors">
+          {brandColors.map((c) => (
+            <div className="nexus-color-swatch" key={c.hex}>
+              <div className="nexus-color-block" style={{ background: c.hex }} />
+              <span className="nexus-color-hex">{c.hex}</span>
+              <span className="nexus-color-name">{c.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Links ── */}
       <div className="nexus-links">
         <a href="https://github.com/GDA-Africa/nexus-cli" target="_blank" rel="noopener noreferrer">
           Documentation
@@ -160,6 +235,7 @@ export default function Home() {
           GDA Africa
         </a>
       </div>
+
       <footer className="nexus-footer">
         Scaffolded with 🔮 <a href="https://github.com/GDA-Africa/nexus-cli">NEXUS CLI</a> by{" "}
         <a href="https://github.com/GDA-Africa">GDA Africa</a>
@@ -211,18 +287,56 @@ function reactViteLandingPage(projectName: string): GeneratedFile[] {
 
 function App() {
   return (
-    <div className="nexus-landing">
-      <img className="nexus-logo" src="/nexus-logo.svg" alt="NEXUS Logo" width={160} height={160} />
-      <h1 className="nexus-title">${projectName}</h1>
-      <p className="nexus-subtitle">
-        Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding tool by GDA Africa.
-        Your project is ready. Start building something amazing.
-      </p>
-      <div className="nexus-meta">
-        <span className="nexus-badge">React + Vite</span>
-        <span className="nexus-badge">TypeScript</span>
-        <span className="nexus-badge">NEXUS Docs</span>
+    <div className="nexus-page">
+      {/* ── Hero ── */}
+      <section className="nexus-hero">
+        <img className="nexus-logo" src="/nexus-logo.svg" alt="NEXUS Logo" width={140} height={140} />
+        <h1 className="nexus-title">${projectName}</h1>
+        <p className="nexus-subtitle">
+          Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding
+          tool by GDA Africa. Your project is ready.
+        </p>
+        <div className="nexus-meta">
+          <span className="nexus-badge">React + Vite</span>
+          <span className="nexus-badge">TypeScript</span>
+          <span className="nexus-badge">NEXUS Docs</span>
+        </div>
+      </section>
+
+      {/* ── Size Variations ── */}
+      <div className="nexus-card">
+        <h2>✦ Size Variations</h2>
+        <div className="nexus-sizes">
+          {[48, 96, 160].map((s) => (
+            <div className="nexus-size-item" key={s}>
+              <img src="/nexus-logo.svg" alt="logo" width={s} height={s} />
+              <span className="nexus-size-label">{s}px</span>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* ── Brand Colors ── */}
+      <div className="nexus-card">
+        <h2>🎨 Brand Colors</h2>
+        <div className="nexus-colors">
+          {[
+            { hex: "#00D9FF", name: "Primary Cyan" },
+            { hex: "#00FF87", name: "Success Green" },
+            { hex: "#5352ED", name: "Info Blue" },
+            { hex: "#A55EEA", name: "Purple Accent" },
+            { hex: "#FF4757", name: "Error Red" },
+          ].map((c) => (
+            <div className="nexus-color-swatch" key={c.hex}>
+              <div className="nexus-color-block" style={{ background: c.hex }} />
+              <span className="nexus-color-hex">{c.hex}</span>
+              <span className="nexus-color-name">{c.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Links ── */}
       <div className="nexus-links">
         <a href="https://github.com/GDA-Africa/nexus-cli" target="_blank" rel="noopener noreferrer">
           Documentation
@@ -231,6 +345,7 @@ function App() {
           GDA Africa
         </a>
       </div>
+
       <footer className="nexus-footer">
         Scaffolded with 🔮 <a href="https://github.com/GDA-Africa/nexus-cli">NEXUS CLI</a> by{" "}
         <a href="https://github.com/GDA-Africa">GDA Africa</a>
@@ -284,21 +399,60 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 
 function sveltekitLandingPage(projectName: string): GeneratedFile[] {
   const page = `<script lang="ts">
-  // ${projectName} — Landing Page
+  const brandColors = [
+    { hex: "#00D9FF", name: "Primary Cyan" },
+    { hex: "#00FF87", name: "Success Green" },
+    { hex: "#5352ED", name: "Info Blue" },
+    { hex: "#A55EEA", name: "Purple Accent" },
+    { hex: "#FF4757", name: "Error Red" },
+  ];
+  const sizes = [48, 96, 160];
 </script>
 
-<div class="nexus-landing">
-  <img class="nexus-logo" src="/nexus-logo.svg" alt="NEXUS Logo" width="160" height="160" />
-  <h1 class="nexus-title">${projectName}</h1>
-  <p class="nexus-subtitle">
-    Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding tool by GDA Africa.
-    Your project is ready. Start building something amazing.
-  </p>
-  <div class="nexus-meta">
-    <span class="nexus-badge">SvelteKit</span>
-    <span class="nexus-badge">TypeScript</span>
-    <span class="nexus-badge">NEXUS Docs</span>
+<div class="nexus-page">
+  <!-- Hero -->
+  <section class="nexus-hero">
+    <img class="nexus-logo" src="/nexus-logo.svg" alt="NEXUS Logo" width="140" height="140" />
+    <h1 class="nexus-title">${projectName}</h1>
+    <p class="nexus-subtitle">
+      Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding
+      tool by GDA Africa. Your project is ready.
+    </p>
+    <div class="nexus-meta">
+      <span class="nexus-badge">SvelteKit</span>
+      <span class="nexus-badge">TypeScript</span>
+      <span class="nexus-badge">NEXUS Docs</span>
+    </div>
+  </section>
+
+  <!-- Size Variations -->
+  <div class="nexus-card">
+    <h2>✦ Size Variations</h2>
+    <div class="nexus-sizes">
+      {#each sizes as s}
+        <div class="nexus-size-item">
+          <img src="/nexus-logo.svg" alt="logo" width={s} height={s} />
+          <span class="nexus-size-label">{s}px</span>
+        </div>
+      {/each}
+    </div>
   </div>
+
+  <!-- Brand Colors -->
+  <div class="nexus-card">
+    <h2>🎨 Brand Colors</h2>
+    <div class="nexus-colors">
+      {#each brandColors as c}
+        <div class="nexus-color-swatch">
+          <div class="nexus-color-block" style="background:{c.hex}"></div>
+          <span class="nexus-color-hex">{c.hex}</span>
+          <span class="nexus-color-name">{c.name}</span>
+        </div>
+      {/each}
+    </div>
+  </div>
+
+  <!-- Links -->
   <div class="nexus-links">
     <a href="https://github.com/GDA-Africa/nexus-cli" target="_blank" rel="noopener noreferrer">
       Documentation
@@ -307,6 +461,7 @@ function sveltekitLandingPage(projectName: string): GeneratedFile[] {
       GDA Africa
     </a>
   </div>
+
   <footer class="nexus-footer">
     Scaffolded with 🔮 <a href="https://github.com/GDA-Africa/nexus-cli">NEXUS CLI</a> by
     <a href="https://github.com/GDA-Africa">GDA Africa</a>
@@ -362,18 +517,46 @@ function nuxtLandingPage(projectName: string): GeneratedFile[] {
 `;
 
   const indexPage = `<template>
-  <div class="nexus-landing">
-    <img class="nexus-logo" src="/nexus-logo.svg" alt="NEXUS Logo" width="160" height="160" />
-    <h1 class="nexus-title">${projectName}</h1>
-    <p class="nexus-subtitle">
-      Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding tool by GDA Africa.
-      Your project is ready. Start building something amazing.
-    </p>
-    <div class="nexus-meta">
-      <span class="nexus-badge">Nuxt 3</span>
-      <span class="nexus-badge">TypeScript</span>
-      <span class="nexus-badge">NEXUS Docs</span>
+  <div class="nexus-page">
+    <!-- Hero -->
+    <section class="nexus-hero">
+      <img class="nexus-logo" src="/nexus-logo.svg" alt="NEXUS Logo" width="140" height="140" />
+      <h1 class="nexus-title">${projectName}</h1>
+      <p class="nexus-subtitle">
+        Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding
+        tool by GDA Africa. Your project is ready.
+      </p>
+      <div class="nexus-meta">
+        <span class="nexus-badge">Nuxt 3</span>
+        <span class="nexus-badge">TypeScript</span>
+        <span class="nexus-badge">NEXUS Docs</span>
+      </div>
+    </section>
+
+    <!-- Size Variations -->
+    <div class="nexus-card">
+      <h2>✦ Size Variations</h2>
+      <div class="nexus-sizes">
+        <div v-for="s in [48, 96, 160]" :key="s" class="nexus-size-item">
+          <img src="/nexus-logo.svg" alt="logo" :width="s" :height="s" />
+          <span class="nexus-size-label">{{ s }}px</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Brand Colors -->
+    <div class="nexus-card">
+      <h2>🎨 Brand Colors</h2>
+      <div class="nexus-colors">
+        <div v-for="c in brandColors" :key="c.hex" class="nexus-color-swatch">
+          <div class="nexus-color-block" :style="{ background: c.hex }" />
+          <span class="nexus-color-hex">{{ c.hex }}</span>
+          <span class="nexus-color-name">{{ c.name }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Links -->
     <div class="nexus-links">
       <a href="https://github.com/GDA-Africa/nexus-cli" target="_blank" rel="noopener noreferrer">
         Documentation
@@ -382,6 +565,7 @@ function nuxtLandingPage(projectName: string): GeneratedFile[] {
         GDA Africa
       </a>
     </div>
+
     <footer class="nexus-footer">
       Scaffolded with 🔮 <a href="https://github.com/GDA-Africa/nexus-cli">NEXUS CLI</a> by
       <a href="https://github.com/GDA-Africa">GDA Africa</a>
@@ -390,6 +574,14 @@ function nuxtLandingPage(projectName: string): GeneratedFile[] {
 </template>
 
 <script setup lang="ts">
+const brandColors = [
+  { hex: "#00D9FF", name: "Primary Cyan" },
+  { hex: "#00FF87", name: "Success Green" },
+  { hex: "#5352ED", name: "Info Blue" },
+  { hex: "#A55EEA", name: "Purple Accent" },
+  { hex: "#FF4757", name: "Error Red" },
+];
+
 useHead({
   title: "${projectName}",
   meta: [{ name: "description", content: "Generated with NEXUS CLI by GDA Africa" }],
@@ -428,21 +620,62 @@ export default defineNuxtConfig({
 function astroLandingPage(projectName: string): GeneratedFile[] {
   const indexAstro = `---
 import Layout from "../layouts/Layout.astro";
+
+const brandColors = [
+  { hex: "#00D9FF", name: "Primary Cyan" },
+  { hex: "#00FF87", name: "Success Green" },
+  { hex: "#5352ED", name: "Info Blue" },
+  { hex: "#A55EEA", name: "Purple Accent" },
+  { hex: "#FF4757", name: "Error Red" },
+];
+const sizes = [48, 96, 160];
 ---
 
 <Layout title="${projectName}">
-  <div class="nexus-landing">
-    <img class="nexus-logo" src="/nexus-logo.svg" alt="NEXUS Logo" width="160" height="160" />
-    <h1 class="nexus-title">${projectName}</h1>
-    <p class="nexus-subtitle">
-      Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding tool by GDA Africa.
-      Your project is ready. Start building something amazing.
-    </p>
-    <div class="nexus-meta">
-      <span class="nexus-badge">Astro</span>
-      <span class="nexus-badge">TypeScript</span>
-      <span class="nexus-badge">NEXUS Docs</span>
+  <div class="nexus-page">
+    <!-- Hero -->
+    <section class="nexus-hero">
+      <img class="nexus-logo" src="/nexus-logo.svg" alt="NEXUS Logo" width="140" height="140" />
+      <h1 class="nexus-title">${projectName}</h1>
+      <p class="nexus-subtitle">
+        Built with <strong>NEXUS CLI</strong> — the AI-native project scaffolding
+        tool by GDA Africa. Your project is ready.
+      </p>
+      <div class="nexus-meta">
+        <span class="nexus-badge">Astro</span>
+        <span class="nexus-badge">TypeScript</span>
+        <span class="nexus-badge">NEXUS Docs</span>
+      </div>
+    </section>
+
+    <!-- Size Variations -->
+    <div class="nexus-card">
+      <h2>✦ Size Variations</h2>
+      <div class="nexus-sizes">
+        {sizes.map((s) => (
+          <div class="nexus-size-item">
+            <img src="/nexus-logo.svg" alt="logo" width={s} height={s} />
+            <span class="nexus-size-label">{s}px</span>
+          </div>
+        ))}
+      </div>
     </div>
+
+    <!-- Brand Colors -->
+    <div class="nexus-card">
+      <h2>🎨 Brand Colors</h2>
+      <div class="nexus-colors">
+        {brandColors.map((c) => (
+          <div class="nexus-color-swatch">
+            <div class="nexus-color-block" style={\`background:\${c.hex}\`} />
+            <span class="nexus-color-hex">{c.hex}</span>
+            <span class="nexus-color-name">{c.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Links -->
     <div class="nexus-links">
       <a href="https://github.com/GDA-Africa/nexus-cli" target="_blank" rel="noopener noreferrer">
         Documentation
@@ -451,6 +684,7 @@ import Layout from "../layouts/Layout.astro";
         GDA Africa
       </a>
     </div>
+
     <footer class="nexus-footer">
       Scaffolded with 🔮 <a href="https://github.com/GDA-Africa/nexus-cli">NEXUS CLI</a> by
       <a href="https://github.com/GDA-Africa">GDA Africa</a>

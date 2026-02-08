@@ -17,7 +17,7 @@ import { generateProject } from '../generators/index.js';
 import { runPrompts } from '../prompts/index.js';
 import { logger } from '../utils/logger.js';
 import { isExistingProject } from '../utils/project-detector.js';
-import { validateProjectName } from '../utils/validator.js';
+import { validateProjectName, toSlug } from '../utils/validator.js';
 import { version } from '../version.js';
 
 import { adoptCommand } from './adopt.js';
@@ -56,9 +56,10 @@ export async function initCommand(
     }
 
     // Check if the target directory is an existing project
-    const targetDir = path.resolve(process.cwd(), projectName);
+    const slug = toSlug(projectName);
+    const targetDir = path.resolve(process.cwd(), slug);
     if (isExistingProject(targetDir)) {
-      showAdoptSuggestion(projectName);
+      showAdoptSuggestion(slug);
       process.exit(1);
     }
   }
@@ -74,7 +75,7 @@ export async function initCommand(
     const config = await runPrompts(projectName);
 
     logger.newline();
-    logger.nexus(`Creating "${config.projectName}" with ${config.frontendFramework}...`);
+    logger.nexus(`Creating "${config.displayName}" with ${config.frontendFramework}...`);
     logger.newline();
 
     // Generate the project

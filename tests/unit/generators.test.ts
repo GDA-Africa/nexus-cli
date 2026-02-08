@@ -6,11 +6,13 @@ import { describe, it, expect } from 'vitest';
 
 import { generateDirectories, generatePackageJson, generateGitignore, generateReadme } from '../../src/generators/structure.js';
 import { generateLandingPage } from '../../src/generators/landing-page.js';
+import { generateConfigs } from '../../src/generators/config.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
 import type { NexusConfig } from '../../src/types/config.js';
 
 const baseConfig: NexusConfig = {
   projectName: 'test-app',
+  displayName: 'Test App',
   projectType: 'web',
   dataStrategy: 'cloud-first',
   appPatterns: [],
@@ -76,6 +78,82 @@ describe('generatePackageJson', () => {
     expect(parsed.devDependencies.vitest).toBeDefined();
     expect(parsed.scripts.test).toContain('vitest');
   });
+
+  it('should include Next.js dependencies for nextjs framework', () => {
+    const file = generatePackageJson(baseConfig);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.dependencies.next).toBeDefined();
+    expect(parsed.dependencies.react).toBeDefined();
+    expect(parsed.dependencies['react-dom']).toBeDefined();
+    expect(parsed.devDependencies['@types/react']).toBeDefined();
+    expect(parsed.devDependencies['@types/react-dom']).toBeDefined();
+  });
+
+  it('should include React + Vite dependencies for react-vite framework', () => {
+    const config = { ...baseConfig, frontendFramework: 'react-vite' as const };
+    const file = generatePackageJson(config);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.dependencies.react).toBeDefined();
+    expect(parsed.dependencies['react-dom']).toBeDefined();
+    expect(parsed.devDependencies.vite).toBeDefined();
+    expect(parsed.devDependencies['@vitejs/plugin-react']).toBeDefined();
+  });
+
+  it('should include SvelteKit dependencies for sveltekit framework', () => {
+    const config = { ...baseConfig, frontendFramework: 'sveltekit' as const };
+    const file = generatePackageJson(config);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.devDependencies['@sveltejs/kit']).toBeDefined();
+    expect(parsed.devDependencies.svelte).toBeDefined();
+    expect(parsed.devDependencies.vite).toBeDefined();
+  });
+
+  it('should include Nuxt dependencies for nuxt framework', () => {
+    const config = { ...baseConfig, frontendFramework: 'nuxt' as const };
+    const file = generatePackageJson(config);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.devDependencies.nuxt).toBeDefined();
+    expect(parsed.devDependencies.vue).toBeDefined();
+  });
+
+  it('should include Astro dependencies for astro framework', () => {
+    const config = { ...baseConfig, frontendFramework: 'astro' as const };
+    const file = generatePackageJson(config);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.dependencies.astro).toBeDefined();
+  });
+
+  it('should have real framework scripts (not TODO placeholders)', () => {
+    const file = generatePackageJson(baseConfig);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.scripts.dev).not.toContain('TODO');
+    expect(parsed.scripts.build).not.toContain('TODO');
+  });
+
+  it('should set correct scripts for nextjs', () => {
+    const file = generatePackageJson(baseConfig);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.scripts.dev).toBe('next dev');
+    expect(parsed.scripts.build).toBe('next build');
+    expect(parsed.scripts.start).toBe('next start');
+  });
+
+  it('should set correct scripts for react-vite', () => {
+    const config = { ...baseConfig, frontendFramework: 'react-vite' as const };
+    const file = generatePackageJson(config);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.scripts.dev).toBe('vite');
+    expect(parsed.scripts.build).toBe('tsc -b && vite build');
+    expect(parsed.scripts.preview).toBe('vite preview');
+  });
+
+  it('should always include base tooling devDependencies', () => {
+    const file = generatePackageJson(baseConfig);
+    const parsed = JSON.parse(file.content);
+    expect(parsed.devDependencies.typescript).toBeDefined();
+    expect(parsed.devDependencies.eslint).toBeDefined();
+    expect(parsed.devDependencies.prettier).toBeDefined();
+  });
 });
 
 describe('generateGitignore', () => {
@@ -88,7 +166,7 @@ describe('generateGitignore', () => {
 describe('generateReadme', () => {
   it('should include the project name', () => {
     const file = generateReadme(baseConfig);
-    expect(file.content).toContain('test-app');
+    expect(file.content).toContain('Test App');
   });
 
   it('should include the NEXUS doc system table', () => {
@@ -126,7 +204,7 @@ describe('generateLandingPage', () => {
     const files = generateLandingPage(baseConfig);
     const page = files.find((f) => f.path === 'src/app/page.tsx');
     expect(page).toBeDefined();
-    expect(page!.content).toContain('test-app');
+    expect(page!.content).toContain('Test App');
     expect(page!.content).toContain('NEXUS CLI');
   });
 
@@ -206,6 +284,39 @@ describe('generateLandingPage', () => {
     expect(astroPaths).toContain('src/layouts');
     expect(astroPaths).toContain('src/styles');
   });
+
+  it('should include brand explorer content (size variations + brand colors) in all frameworks', () => {
+    const frameworks = ['nextjs', 'react-vite', 'sveltekit', 'nuxt', 'astro'] as const;
+    const mainFiles: Record<string, string> = {
+      nextjs: 'src/app/page.tsx',
+      'react-vite': 'src/App.tsx',
+      sveltekit: 'src/routes/+page.svelte',
+      nuxt: 'pages/index.vue',
+      astro: 'src/pages/index.astro',
+    };
+
+    for (const fw of frameworks) {
+      const config = { ...baseConfig, frontendFramework: fw };
+      const files = generateLandingPage(config);
+      const mainFile = files.find((f) => f.path === mainFiles[fw]);
+      expect(mainFile, `main file for ${fw}`).toBeDefined();
+      // Brand colors card
+      expect(mainFile!.content).toContain('#00D9FF');
+      expect(mainFile!.content).toContain('#00FF87');
+      expect(mainFile!.content).toContain('#FF4757');
+      expect(mainFile!.content).toContain('Brand Colors');
+      // Size variations card
+      expect(mainFile!.content).toContain('Size Variations');
+    }
+  });
+
+  it('should use nexus-page layout class (not nexus-landing)', () => {
+    const config = { ...baseConfig, frontendFramework: 'react-vite' as const };
+    const files = generateLandingPage(config);
+    const app = files.find((f) => f.path === 'src/App.tsx');
+    expect(app!.content).toContain('nexus-page');
+    expect(app!.content).not.toContain('nexus-landing');
+  });
 });
 
 describe('generateAiConfig', () => {
@@ -213,7 +324,7 @@ describe('generateAiConfig', () => {
     const files = generateAiConfig(baseConfig);
     const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md');
     expect(instructions).toBeDefined();
-    expect(instructions!.content).toContain('test-app');
+    expect(instructions!.content).toContain('Test App');
   });
 
   it('should include framework and tech stack in instructions', () => {
@@ -224,7 +335,7 @@ describe('generateAiConfig', () => {
     expect(instructions!.content).toContain('npm');
   });
 
-  it('should generate all pointer files', () => {
+  it('should generate all AI tool config files', () => {
     const files = generateAiConfig(baseConfig);
     const paths = files.map((f) => f.path);
     expect(paths).toContain('.cursorrules');
@@ -234,30 +345,31 @@ describe('generateAiConfig', () => {
     expect(paths).toContain('.github/copilot-instructions.md');
   });
 
-  it('should have pointer files reference .nexus/ai/instructions.md', () => {
+  it('should embed full project-aware content in ALL tool files (not just pointers)', () => {
     const files = generateAiConfig(baseConfig);
-    const cursor = files.find((f) => f.path === '.cursorrules');
-    expect(cursor).toBeDefined();
-    expect(cursor!.content).toContain('.nexus/ai/instructions.md');
+    const toolFiles = ['.cursorrules', '.windsurfrules', '.clinerules', 'AGENTS.md', '.github/copilot-instructions.md'];
 
-    const windsurf = files.find((f) => f.path === '.windsurfrules');
-    expect(windsurf!.content).toContain('.nexus/ai/instructions.md');
-
-    const cline = files.find((f) => f.path === '.clinerules');
-    expect(cline!.content).toContain('.nexus/ai/instructions.md');
-
-    const agents = files.find((f) => f.path === 'AGENTS.md');
-    expect(agents!.content).toContain('.nexus/ai/instructions.md');
+    for (const toolPath of toolFiles) {
+      const file = files.find((f) => f.path === toolPath);
+      expect(file).toBeDefined();
+      // Every file should have the onboarding protocol
+      expect(file!.content).toContain('CRITICAL');
+      expect(file!.content).toContain('status: template');
+      expect(file!.content).toContain('status: populated');
+      // Every file should have project identity
+      expect(file!.content).toContain('Test App');
+      expect(file!.content).toContain('Next.js');
+      // Every file should have code rules
+      expect(file!.content).toContain('TypeScript strict mode');
+      // Every file should be substantial (not a thin pointer)
+      expect(file!.content.length).toBeGreaterThan(500);
+    }
   });
 
-  it('should embed full content in copilot instructions (not a pointer)', () => {
+  it('should still reference .nexus/ai/instructions.md for full details', () => {
     const files = generateAiConfig(baseConfig);
-    const copilot = files.find((f) => f.path === '.github/copilot-instructions.md');
-    expect(copilot).toBeDefined();
-    expect(copilot!.content).toContain('test-app');
-    expect(copilot!.content).toContain('Next.js');
-    // Copilot file should have full content, not just a pointer
-    expect(copilot!.content.length).toBeGreaterThan(200);
+    const cursor = files.find((f) => f.path === '.cursorrules');
+    expect(cursor!.content).toContain('.nexus/ai/instructions.md');
   });
 
   it('should include .nexus/ai directory in generated directories', () => {
@@ -278,5 +390,69 @@ describe('generateAiConfig', () => {
     const files = generateAiConfig(yarnConfig);
     const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md');
     expect(instructions!.content).toContain('yarn test');
+  });
+});
+
+describe('generateConfigs — framework config files', () => {
+  it('should generate vite.config.ts for react-vite framework', () => {
+    const config = { ...baseConfig, frontendFramework: 'react-vite' as const };
+    const files = generateConfigs(config);
+    const viteConfig = files.find((f) => f.path === 'vite.config.ts');
+    expect(viteConfig).toBeDefined();
+    expect(viteConfig!.content).toContain('@vitejs/plugin-react');
+    expect(viteConfig!.content).toContain('react()');
+  });
+
+  it('should generate svelte.config.js and vite.config.ts for sveltekit', () => {
+    const config = { ...baseConfig, frontendFramework: 'sveltekit' as const };
+    const files = generateConfigs(config);
+    const paths = files.map((f) => f.path);
+    expect(paths).toContain('svelte.config.js');
+    expect(paths).toContain('vite.config.ts');
+    const svelteConfig = files.find((f) => f.path === 'svelte.config.js');
+    expect(svelteConfig!.content).toContain('adapter-auto');
+  });
+
+  it('should generate astro.config.mjs for astro framework', () => {
+    const config = { ...baseConfig, frontendFramework: 'astro' as const };
+    const files = generateConfigs(config);
+    const astroConfig = files.find((f) => f.path === 'astro.config.mjs');
+    expect(astroConfig).toBeDefined();
+    expect(astroConfig!.content).toContain("from 'astro/config'");
+  });
+
+  it('should NOT generate extra framework config for nextjs (next.config is convention)', () => {
+    const files = generateConfigs(baseConfig);
+    const paths = files.map((f) => f.path);
+    expect(paths).not.toContain('vite.config.ts');
+    expect(paths).not.toContain('next.config.ts');
+  });
+
+  it('should use react-jsx for react-vite tsconfig', () => {
+    const config = { ...baseConfig, frontendFramework: 'react-vite' as const };
+    const files = generateConfigs(config);
+    const tsconfig = files.find((f) => f.path === 'tsconfig.json');
+    const parsed = JSON.parse(tsconfig!.content);
+    expect(parsed.compilerOptions.jsx).toBe('react-jsx');
+    expect(parsed.compilerOptions.moduleResolution).toBe('Bundler');
+  });
+
+  it('should use preserve jsx and next plugin for nextjs tsconfig', () => {
+    const files = generateConfigs(baseConfig);
+    const tsconfig = files.find((f) => f.path === 'tsconfig.json');
+    const parsed = JSON.parse(tsconfig!.content);
+    expect(parsed.compilerOptions.jsx).toBe('preserve');
+    expect(parsed.compilerOptions.plugins).toEqual([{ name: 'next' }]);
+  });
+
+  it('should use Bundler module resolution for modern frameworks', () => {
+    const frameworks = ['react-vite', 'sveltekit', 'nuxt', 'astro'] as const;
+    for (const fw of frameworks) {
+      const config = { ...baseConfig, frontendFramework: fw };
+      const files = generateConfigs(config);
+      const tsconfig = files.find((f) => f.path === 'tsconfig.json');
+      const parsed = JSON.parse(tsconfig!.content);
+      expect(parsed.compilerOptions.moduleResolution).toBe('Bundler');
+    }
   });
 });
