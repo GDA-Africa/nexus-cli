@@ -8,10 +8,16 @@
 
 ## ⚠️ Before You Do Anything
 
-1. **Read `.nexus/docs/index.md` FIRST.** It is the project brain — what's built, what's next, full module map.
-2. **Scan `.nexus/knowledge.md`** for relevant decisions, gotchas, and patterns.
-3. **Read `.nexus/docs/07_implementation.md`** for the technical architecture.
+**Read `.nexus/docs/index.md` FIRST.** It is the project brain — the single source of truth for:
+- What has been built (audit and provide suggestions but don't recreate it)
+- What hasn't been built yet
+- What to work on next
+- The full file inventory and module map
 
+Then:
+
+2. **Scan `.nexus/knowledge.md`** headings for relevant decisions, gotchas, and patterns.
+3. **Read `.nexus/docs/07_implementation.md`** for the technical architecture when architectural tasks are in play.
 ---
 
 ## Project Identity
@@ -19,13 +25,14 @@
 | Field | Value |
 |-------|-------|
 | **Name** | NEXUS CLI (`@nexus-framework/cli`) |
-| **Version** | 0.1.3 |
+| **Version** | 0.1.4 |
 | **Purpose** | AI-native project scaffolding tool — generates production-ready project structures with documentation AI agents can parse |
 | **Org** | GDA Africa |
 | **License** | Apache 2.0 |
 | **Repo** | https://github.com/GDA-Africa/nexus-cli |
 | **npm** | https://www.npmjs.com/package/@nexus-framework/cli |
 
+ 
 ---
 
 ## Tech Stack — Do Not Change Without Discussion
@@ -73,7 +80,7 @@
 | File | Purpose |
 |------|---------|
 | `.nexus/docs/index.md` | **PROJECT BRAIN** — read this first |
-| `.nexus/knowledge.md` | **KNOWLEDGE BASE** — scan before tasks, append after |
+| `.nexus/knowledge.md` | **KNOWLEDGE BASE** — scan before implementing tasks, append after identifying intriguing material for your knowledge base.|
 | `.nexus/docs/01_vision.md` | Product vision, user stories, success metrics |
 | `.nexus/docs/07_implementation.md` | Technical architecture, build phases |
 | `src/cli.ts` | CLI entry point (Commander.js, 4 commands) |
@@ -88,20 +95,36 @@
 
 ---
 
+## What's Built (45 tests passing) *Outdated*
+
+- Full CLI (`nexus init`, `--version`, `--help`)
+- 6 prompt modules (project type, data strategy, patterns, frameworks, features)
+- 8 generator modules (structure, docs, config, tests, CI/CD, landing page, ai-config, orchestrator)
+- 4 type modules (config, prompts, templates, index)
+- 6 utility modules (logger, validator, package-manager, git, file-system, index)
+- Branded landing pages for Next.js, React+Vite, SvelteKit, Nuxt, Astro
+- AI agent config generation (`.nexus/ai/` + root pointer files for Cursor, Windsurf, Cline, Copilot)
+- Centralized `.nexus/` folder (docs, AI config, manifest — one folder to opt in/out)
+- GitHub Actions CI, CODEOWNERS, PR/issue templates, commitlint
+
+---
+
 ## NEXUS Documentation System
+
+All documentation lives under `.nexus/docs/`:
 
 | # | File | Purpose |
 |---|------|---------|
 | — | `.nexus/docs/index.md` | Project brain — status, module map, what's next |
 | — | `.nexus/knowledge.md` | Progressive knowledge base — append-only log |
 | 1 | `.nexus/docs/01_vision.md` | Product requirements, user stories, success metrics |
-| 7 | `.nexus/docs/07_implementation.md` | Technical architecture, build phases |
+| 7 | `.nexus/docs/07_implementation.md` | Technical architecture, build phases, file-by-file plan |
 
 ---
 
 ## Knowledge Base Protocol
 
-**Before every task:** Scan `.nexus/knowledge.md` for entries relevant to your work.
+**Before every task:** Scan `.nexus/knowledge.md` titles for entries relevant to your work.
 
 **After completing work:** Append a new entry if you discovered something worth remembering:
 ```
@@ -114,15 +137,19 @@ Categories: `architecture`, `bug-fix`, `pattern`, `package`, `performance`, `con
 
 ## Workflow
 
+When implementing a feature:
+
 1. **Read the brain** — `.nexus/docs/index.md`
 2. **Scan knowledge** — `.nexus/knowledge.md`
-3. **Read the spec** — find relevant doc in `.nexus/docs/`
-4. **Write the code** following architecture rules
-5. **Write tests** in `tests/unit/`
-6. **Validate** — `npx tsc --noEmit && yarn test && yarn lint`
-7. **Commit** — conventional commits (`feat:`, `fix:`, etc.)
-8. **Update the brain** — `.nexus/docs/index.md` when you complete tasks
-9. **Record knowledge** — append to `.nexus/knowledge.md` if you learned something
+3. **Check the implementation plan** — `.nexus/docs/07_implementation.md`
+4. **Read the spec** — find relevant doc in `.nexus/docs/`
+5. **Write the code** following the architecture rules above
+6. **Write tests** — add tests in `tests/unit/`
+7. **Validate** — `npx tsc --noEmit && yarn test && yarn lint`
+8. **Commit (After user permission)** — use conventional commits (`feat:`, `fix:`, etc.)
+9. **Update the brain** — `.nexus/docs/index.md` when you complete tasks
+10. **Record knowledge** — append to `.nexus/knowledge.md` if you learned something you'd like to retain
+
 
 ---
 
