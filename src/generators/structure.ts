@@ -12,15 +12,42 @@ import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
  */
 export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
   const dirs: GeneratedDirectory[] = [
-    { path: 'src' },
-    { path: 'public' },
     { path: '.nexus' },
     { path: '.nexus/docs' },
     { path: '.nexus/ai' },
   ];
 
-  // Test directories
-  if (config.testFramework !== 'none') {
+  // Spring Boot projects have a different structure
+  if (config.backendFramework === 'spring-boot') {
+    const packagePath = `com/example/${config.projectName.replace(/-/g, '')}`;
+    dirs.push(
+      { path: 'src' },
+      { path: 'src/main' },
+      { path: 'src/main/java' },
+      { path: `src/main/java/${packagePath}` },
+      { path: `src/main/java/${packagePath}/controller` },
+      { path: 'src/main/resources' },
+      { path: 'src/test' },
+      { path: 'src/test/java' },
+      { path: `src/test/java/${packagePath}` },
+    );
+  } else {
+    // Node.js-based projects
+    dirs.push({ path: 'src' }, { path: 'public' });
+  }
+
+  // UI Library specific structure
+  if (config.projectType === 'ui-library') {
+    dirs.push(
+      { path: 'src/components' },
+      { path: 'src/lib' },
+      { path: '.storybook' },
+      { path: 'stories' },
+    );
+  }
+
+  // Test directories (skip for Spring Boot as it has its own structure)
+  if (config.testFramework !== 'none' && config.backendFramework !== 'spring-boot') {
     dirs.push(
       { path: 'tests' },
       { path: 'tests/unit' },
@@ -33,47 +60,49 @@ export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
   // CI/CD
   dirs.push({ path: '.github' }, { path: '.github/workflows' });
 
-  // Framework-specific
-  switch (config.frontendFramework) {
-    case 'nextjs':
-      dirs.push({ path: 'src/app' }, { path: 'src/components' }, { path: 'src/lib' });
-      break;
-    case 'react-vite':
-      dirs.push(
-        { path: 'src/components' },
-        { path: 'src/pages' },
-        { path: 'src/hooks' },
-        { path: 'src/lib' },
-      );
-      break;
-    case 'sveltekit':
-      dirs.push(
-        { path: 'src/routes' },
-        { path: 'src/lib' },
-        { path: 'src/lib/components' },
-        { path: 'src/styles' },
-      );
-      break;
-    case 'nuxt':
-      dirs.push(
-        { path: 'src/lib' },
-        { path: 'src/components' },
-        { path: 'pages' },
-        { path: 'assets' },
-        { path: 'assets/css' },
-      );
-      break;
-    case 'astro':
-      dirs.push(
-        { path: 'src/pages' },
-        { path: 'src/layouts' },
-        { path: 'src/components' },
-        { path: 'src/styles' },
-      );
-      break;
-    default:
-      dirs.push({ path: 'src/lib' }, { path: 'src/components' });
-      break;
+  // Framework-specific (skip if Spring Boot or UI library)
+  if (config.backendFramework !== 'spring-boot' && config.projectType !== 'ui-library') {
+    switch (config.frontendFramework) {
+      case 'nextjs':
+        dirs.push({ path: 'src/app' }, { path: 'src/components' }, { path: 'src/lib' });
+        break;
+      case 'react-vite':
+        dirs.push(
+          { path: 'src/components' },
+          { path: 'src/pages' },
+          { path: 'src/hooks' },
+          { path: 'src/lib' },
+        );
+        break;
+      case 'sveltekit':
+        dirs.push(
+          { path: 'src/routes' },
+          { path: 'src/lib' },
+          { path: 'src/lib/components' },
+          { path: 'src/styles' },
+        );
+        break;
+      case 'nuxt':
+        dirs.push(
+          { path: 'src/lib' },
+          { path: 'src/components' },
+          { path: 'pages' },
+          { path: 'assets' },
+          { path: 'assets/css' },
+        );
+        break;
+      case 'astro':
+        dirs.push(
+          { path: 'src/pages' },
+          { path: 'src/layouts' },
+          { path: 'src/components' },
+          { path: 'src/styles' },
+        );
+        break;
+      default:
+        dirs.push({ path: 'src/lib' }, { path: 'src/components' });
+        break;
+    }
   }
 
   return dirs;
@@ -81,8 +110,17 @@ export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
 
 /**
  * Generate the project's package.json content.
+ * For Spring Boot projects, returns empty content (they use pom.xml/build.gradle).
  */
 export function generatePackageJson(config: NexusConfig): GeneratedFile {
+  // Spring Boot projects don't use package.json - return empty
+  if (config.backendFramework === 'spring-boot') {
+    return {
+      path: 'package.json',
+      content: '',
+    };
+  }
+
   const scripts = getFrameworkScripts(config);
   const { dependencies, devDependencies } = getFrameworkDependencies(config);
 
@@ -95,6 +133,21 @@ export function generatePackageJson(config: NexusConfig): GeneratedFile {
     dependencies,
     devDependencies,
   };
+
+  // UI Library specific fields
+  if (config.projectType === 'ui-library') {
+    pkg.main = './dist/index.js';
+    pkg.module = './dist/index.mjs';
+    pkg.types = './dist/index.d.ts';
+    pkg.exports = {
+      '.': {
+        import: './dist/index.mjs',
+        require: './dist/index.js',
+        types: './dist/index.d.ts',
+      },
+    };
+    pkg.files = ['dist'];
+  }
 
   // Add test scripts & dependencies
   if (config.testFramework === 'vitest') {
@@ -125,6 +178,17 @@ function getFrameworkScripts(config: NexusConfig): Record<string, string> {
     format: 'prettier --write .',
     'type-check': 'tsc --noEmit',
   };
+
+  // UI Library scripts
+  if (config.projectType === 'ui-library') {
+    return {
+      dev: 'vite',
+      build: 'vite build && tsc --emitDeclarationOnly',
+      storybook: 'storybook dev -p 6006',
+      'build-storybook': 'storybook build',
+      ...base,
+    };
+  }
 
   switch (config.frontendFramework) {
     case 'nextjs':
@@ -194,6 +258,28 @@ function getFrameworkDependencies(config: NexusConfig): {
     eslint: '^8.57.0',
     prettier: '^3.4.0',
   };
+
+  // UI Library dependencies
+  if (config.projectType === 'ui-library') {
+    return {
+      dependencies: {},
+      devDependencies: {
+        ...baseDev,
+        react: '^19.0.0',
+        'react-dom': '^19.0.0',
+        '@types/react': '^19.0.0',
+        '@types/react-dom': '^19.0.0',
+        vite: '^6.0.0',
+        '@vitejs/plugin-react': '^4.3.0',
+        storybook: '^8.0.0',
+        '@storybook/react': '^8.0.0',
+        '@storybook/react-vite': '^8.0.0',
+        '@storybook/addon-essentials': '^8.0.0',
+        '@storybook/addon-interactions': '^8.0.0',
+        '@storybook/test': '^8.0.0',
+      },
+    };
+  }
 
   switch (config.frontendFramework) {
     case 'nextjs':

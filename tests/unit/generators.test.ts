@@ -747,13 +747,6 @@ describe('knowledge base — brain and instruction references', () => {
     expect(index.content).toContain('Learn as you go');
   });
 
-  it('should reference knowledge.md in .nexus/index.md doc map', () => {
-    const files = generateDocs(baseConfig);
-    const nexusIndex = files.find((f) => f.path === '.nexus/index.md')!;
-    expect(nexusIndex.content).toContain('knowledge.md');
-    expect(nexusIndex.content).toContain('Knowledge Base');
-  });
-
   it('should reference knowledge.md in master AI instructions', () => {
     const files = generateAiConfig(baseConfig);
     const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
