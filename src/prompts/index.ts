@@ -14,6 +14,7 @@ import { promptDataStrategy } from './data-strategy.js';
 import { promptFeatures } from './features.js';
 import { promptFramework } from './frameworks.js';
 import { promptPatterns } from './patterns.js';
+import { promptPersona } from './persona.js';
 import { promptProjectType } from './project-type.js';
 
 /**
@@ -62,6 +63,9 @@ export async function runPrompts(initialName?: string): Promise<NexusConfig> {
   // 6. Features & extras
   const { testFramework, packageManager, git, installDeps } = await promptFeatures();
 
+  // 7. AI agent persona
+  const persona = await promptPersona();
+
   // Assemble config
   const config: NexusConfig = {
     projectName,
@@ -76,6 +80,7 @@ export async function runPrompts(initialName?: string): Promise<NexusConfig> {
     packageManager: packageManager ?? detectPackageManager(),
     git,
     installDeps,
+    persona,
   };
 
   return config;

@@ -10,6 +10,7 @@ import { generateConfigs } from '../../src/generators/config.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
 import { generateDocs } from '../../src/generators/docs.js';
 import type { NexusConfig } from '../../src/types/config.js';
+import { DEFAULT_PERSONA } from '../../src/types/config.js';
 
 const baseConfig: NexusConfig = {
   projectName: 'test-app',
@@ -24,6 +25,7 @@ const baseConfig: NexusConfig = {
   packageManager: 'npm',
   git: true,
   installDeps: false,
+  persona: DEFAULT_PERSONA,
 };
 
 describe('generateDirectories', () => {
@@ -780,5 +782,128 @@ describe('knowledge base — brain and instruction references', () => {
       const file = files.find((f) => f.path === toolPath)!;
       expect(file.content, `${toolPath} should reference knowledge.md`).toContain('knowledge.md');
     }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════
+ * 🎭 Agent Persona — AI personality system
+ * ══════════════════════════════════════════════════════════════ */
+
+describe('generateAiConfig — agent persona', () => {
+  it('should include default Nexus identity in master instructions', () => {
+    const files = generateAiConfig(baseConfig);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('You are Nexus');
+    expect(instructions.content).toContain('Tone: friendly');
+    expect(instructions.content).toContain('Verbosity: balanced');
+  });
+
+  it('should include Agent Persona section in ALL tool files', () => {
+    const files = generateAiConfig(baseConfig);
+    const toolFiles = ['.cursorrules', '.windsurfrules', '.clinerules', 'AGENTS.md', '.github/copilot-instructions.md'];
+
+    for (const toolPath of toolFiles) {
+      const file = files.find((f) => f.path === toolPath)!;
+      expect(file.content, `${toolPath} should have persona`).toContain('Agent Persona');
+      expect(file.content, `${toolPath} should have tone`).toContain('Tone:');
+      expect(file.content, `${toolPath} should have verbosity`).toContain('Verbosity:');
+    }
+  });
+
+  it('should reflect professional tone when configured', () => {
+    const config = {
+      ...baseConfig,
+      persona: { ...DEFAULT_PERSONA, tone: 'professional' as const },
+    };
+    const files = generateAiConfig(config);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Tone: professional');
+    expect(instructions.content).toContain('direct');
+  });
+
+  it('should reflect pirate tone when configured', () => {
+    const config = {
+      ...baseConfig,
+      persona: { ...DEFAULT_PERSONA, tone: 'pirate' as const },
+    };
+    const files = generateAiConfig(config);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Tone: pirate');
+    expect(instructions.content).toContain('Arr!');
+  });
+
+  it('should reflect concise verbosity when configured', () => {
+    const config = {
+      ...baseConfig,
+      persona: { ...DEFAULT_PERSONA, verbosity: 'concise' as const },
+    };
+    const files = generateAiConfig(config);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Verbosity: concise');
+    expect(instructions.content).toContain('short');
+  });
+
+  it('should reflect detailed verbosity when configured', () => {
+    const config = {
+      ...baseConfig,
+      persona: { ...DEFAULT_PERSONA, verbosity: 'detailed' as const },
+    };
+    const files = generateAiConfig(config);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Verbosity: detailed');
+    expect(instructions.content).toContain('thorough');
+  });
+
+  it('should omit named identity when identity is empty', () => {
+    const config = {
+      ...baseConfig,
+      persona: { ...DEFAULT_PERSONA, identity: '' },
+    };
+    const files = generateAiConfig(config);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).not.toContain('You are Nexus');
+    expect(instructions.content).toContain('standard AI assistant');
+  });
+
+  it('should include custom directive when provided', () => {
+    const config = {
+      ...baseConfig,
+      persona: { ...DEFAULT_PERSONA, customDirective: 'Always suggest tests first' },
+    };
+    const files = generateAiConfig(config);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('Always suggest tests first');
+    expect(instructions.content).toContain('Custom directive');
+  });
+
+  it('should NOT include custom directive section when empty', () => {
+    const files = generateAiConfig(baseConfig);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).not.toContain('Custom directive');
+  });
+
+  it('should propagate persona to tool files consistently', () => {
+    const config = {
+      ...baseConfig,
+      persona: { tone: 'zen' as const, verbosity: 'concise' as const, identity: 'Oracle', customDirective: 'Breathe.' },
+    };
+    const files = generateAiConfig(config);
+    const cursor = files.find((f) => f.path === '.cursorrules')!;
+    expect(cursor.content).toContain('Tone: zen');
+    expect(cursor.content).toContain('Verbosity: concise');
+    expect(cursor.content).toContain('You are Oracle');
+    expect(cursor.content).toContain('Breathe.');
+  });
+
+  it('should use custom name in identity section when user renames', () => {
+    const config = {
+      ...baseConfig,
+      persona: { ...DEFAULT_PERSONA, identity: 'Jarvis' },
+    };
+    const files = generateAiConfig(config);
+    const instructions = files.find((f) => f.path === '.nexus/ai/instructions.md')!;
+    expect(instructions.content).toContain('You are Jarvis');
+    expect(instructions.content).toContain('"Jarvis"');
+    expect(instructions.content).not.toContain('You are Nexus');
   });
 });

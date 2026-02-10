@@ -18,6 +18,7 @@ import type { ProjectInfo } from '../../src/utils/project-detector.js';
 import { generateDocs } from '../../src/generators/docs.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
 import type { NexusConfig } from '../../src/types/config.js';
+import { DEFAULT_PERSONA } from '../../src/types/config.js';
 
 /* ──────────────────────────────────────────────────────────────
  * Helpers
@@ -36,6 +37,7 @@ const baseConfig: NexusConfig = {
   packageManager: 'npm',
   git: true,
   installDeps: false,
+  persona: DEFAULT_PERSONA,
 };
 
 let tmpDir: string;

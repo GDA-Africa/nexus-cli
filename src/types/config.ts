@@ -28,6 +28,38 @@ export type TestFramework = 'vitest' | 'jest' | 'none';
 /** Supported package managers */
 export type PackageManager = 'npm' | 'yarn' | 'pnpm';
 
+/** Agent communication tone */
+export type AgentTone = 'professional' | 'friendly' | 'witty' | 'zen' | 'pirate';
+
+/** Agent communication style */
+export type AgentVerbosity = 'concise' | 'balanced' | 'detailed';
+
+/**
+ * NEXUS Persona — configures how AI agents communicate with the user.
+ *
+ * When an AI agent reads the NEXUS instructions, it adopts this persona
+ * so the user knows the agent is "synced with the NEXUS brain."
+ * The agent refers to itself by the chosen identity name and speaks in the chosen tone.
+ */
+export interface NexusPersona {
+  /** How the agent speaks — sets the overall vibe */
+  tone: AgentTone;
+  /** How much detail the agent provides in responses */
+  verbosity: AgentVerbosity;
+  /** The name the agent uses to refer to itself. Default: "Nexus". Empty string = no custom name. */
+  identity: string;
+  /** Optional custom directive — freeform personality instruction */
+  customDirective: string;
+}
+
+/** Default persona — friendly, balanced, identifies as Nexus */
+export const DEFAULT_PERSONA: NexusPersona = {
+  tone: 'friendly',
+  verbosity: 'balanced',
+  identity: 'Nexus',
+  customDirective: '',
+};
+
 /** Full project configuration resolved from user prompts */
 export interface NexusConfig {
   /** Slug used for folder name & package.json name (e.g. "todo-list-app") */
@@ -44,6 +76,8 @@ export interface NexusConfig {
   packageManager: PackageManager;
   git: boolean;
   installDeps: boolean;
+  /** AI agent personality — how agents communicate when synced with the NEXUS brain */
+  persona: NexusPersona;
 }
 
 /** Partial config for incremental prompt building */
