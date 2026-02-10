@@ -20,7 +20,12 @@ export async function promptProjectType(): Promise<ProjectType> {
       {
         value: 'api',
         name: '⚡ API / Backend Service',
-        description: 'REST or GraphQL API (Express, Fastify, NestJS)',
+        description: 'REST or GraphQL API (Express, Fastify, NestJS, Spring Boot)',
+      },
+      {
+        value: 'ui-library',
+        name: '🎨 UI Component Library',
+        description: 'Reusable component library with Storybook & documentation',
       },
       {
         value: 'monorepo',
