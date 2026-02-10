@@ -62,9 +62,11 @@ export async function writeGeneratorResult(
     await ensureDirectory(path.join(projectRoot, dir.path));
   }
 
-  // Then write files
+  // Then write files (skip empty content files)
   for (const file of files) {
-    await writeFile(path.join(projectRoot, file.path), file.content);
+    if (file.content.trim()) {
+      await writeFile(path.join(projectRoot, file.path), file.content);
+    }
   }
 }
 

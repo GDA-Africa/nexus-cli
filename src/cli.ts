@@ -23,15 +23,17 @@ program
   .command('init [project-name]')
   .description('Initialize a new NEXUS project with interactive setup')
   .option('--adopt', 'Shorthand: same as `nexus adopt` (add NEXUS to an existing project)')
-  .action(async (projectName: string | undefined, options: { adopt?: boolean }) => {
-    await initCommand(projectName, { adopt: options.adopt ?? false });
+  .option('--local', 'Configure NEXUS as local-only (not tracked by git)')
+  .action(async (projectName: string | undefined, options: { adopt?: boolean; local?: boolean }) => {
+    await initCommand(projectName, { adopt: options.adopt ?? false, local: options.local ?? false });
   });
 
 program
   .command('adopt [path]')
   .description('Add NEXUS docs & AI config to an existing project (no scaffolding)')
-  .action(async (targetPath: string | undefined) => {
-    await adoptCommand(targetPath);
+  .option('--force', 'Force adoption even if no project is detected')
+  .action(async (targetPath: string | undefined, options: { force?: boolean }) => {
+    await adoptCommand(targetPath, options);
   });
 
 program

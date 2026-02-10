@@ -25,6 +25,7 @@ import { adoptCommand } from './adopt.js';
 /** Options passed from cli.ts */
 export interface InitOptions {
   adopt?: boolean;
+  local?: boolean;
 }
 
 /**
@@ -72,7 +73,7 @@ export async function initCommand(
 
   try {
     // Run interactive prompts
-    const config = await runPrompts(projectName);
+    const config = await runPrompts(projectName, options.local);
 
     logger.newline();
     logger.nexus(`Creating "${config.displayName}" with ${config.frontendFramework}...`);
