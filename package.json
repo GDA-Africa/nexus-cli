@@ -57,11 +57,13 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^7.3.2",
+    "boxen": "^8.0.1",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "execa": "^9.5.2",
     "figlet": "^1.8.0",
     "fs-extra": "^11.2.0",
+    "gradient-string": "^3.0.0",
     "inquirer": "^12.3.2",
     "mustache": "^4.2.0",
     "ora": "^8.1.1",

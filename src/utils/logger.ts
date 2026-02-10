@@ -1,10 +1,15 @@
 /**
  * NEXUS CLI - Logger Utility
  *
- * Pretty, color-coded terminal output using Chalk.
+ * Pretty, color-coded terminal output using Chalk, gradient-string, and boxen.
  */
 
+import boxen from 'boxen';
 import chalk from 'chalk';
+import gradient from 'gradient-string';
+
+/** NEXUS brand gradient (cyan → blue → purple) */
+const nexusGradient = gradient(['#00f2ff', '#0090ff', '#7b61ff']);
 
 /** Brand colors */
 const COLORS = {
@@ -52,10 +57,11 @@ export function divider(): void {
   console.log(COLORS.dim('━'.repeat(50)));
 }
 
-/** Print the NEXUS banner */
+/** Print the NEXUS banner with gradient */
 export function banner(version: string): void {
   newline();
-  console.log(COLORS.primary.bold('  🔮 NEXUS CLI') + COLORS.dim(` v${version}`));
+  const title = nexusGradient('  🔮 NEXUS CLI');
+  console.log(title + COLORS.dim(` v${version}`));
   console.log(COLORS.dim('  AI-Native Project Scaffolding'));
   divider();
   newline();
@@ -65,45 +71,59 @@ export function banner(version: string): void {
 export function complete(projectName: string, displayName?: string): void {
   const prettyName = displayName ?? projectName;
   newline();
-  divider();
-  newline();
-  console.log(COLORS.success.bold('  ✅ Project created successfully!'));
-  newline();
-  console.log(COLORS.bold(`  ${prettyName}`));
-  newline();
-  console.log(COLORS.bold('  Next steps:'));
-  console.log(COLORS.primary(`    cd ${projectName}`));
-  console.log(COLORS.primary('    npm run dev'));
-  newline();
-  console.log(COLORS.dim('  Open .nexus/docs/ to start filling in your project documentation.'));
-  console.log(COLORS.dim('  AI tools will use these files to understand your project.'));
-  newline();
-  divider();
+  
+  const message = [
+    COLORS.success.bold('✅ Project created successfully!'),
+    '',
+    COLORS.bold(prettyName),
+    '',
+    COLORS.bold('Next steps:'),
+    COLORS.primary(`  cd ${projectName}`),
+    COLORS.primary('  npm run dev'),
+    '',
+    COLORS.dim('Open .nexus/docs/ to start filling in your project documentation.'),
+    COLORS.dim('AI tools will use these files to understand your project.'),
+  ].join('\n');
+
+  console.log(boxen(message, {
+    padding: 1,
+    margin: 0,
+    borderStyle: 'round',
+    borderColor: 'cyan',
+  }));
+  
   newline();
 }
 
 /** Print adopt-mode completion with next steps */
 export function adoptComplete(displayName: string): void {
   newline();
-  divider();
-  newline();
-  console.log(COLORS.success.bold('  ✅ NEXUS adopted successfully!'));
-  newline();
-  console.log(COLORS.bold(`  "${displayName}" now has NEXUS documentation & AI config.`));
-  newline();
-  console.log(COLORS.bold('  What happens next:'));
-  console.log(COLORS.primary('    1. Open your AI coding tool (Copilot, Cursor, Windsurf, etc.)'));
-  console.log(COLORS.primary('    2. Ask it to do anything (e.g., "add a feature", "fix a bug")'));
-  console.log(COLORS.primary('    3. It will detect the template docs and auto-populate them first'));
-  console.log(COLORS.primary('    4. It will ask you questions for things it can\'t infer from code'));
-  newline();
-  console.log(COLORS.dim('  Files added:'));
-  console.log(COLORS.dim('    .nexus/docs/   — 8 structured documentation files (status: template)'));
-  console.log(COLORS.dim('    .nexus/ai/     — AI agent instructions (single source of truth)'));
-  console.log(COLORS.dim('    .cursorrules, .windsurfrules, .clinerules, AGENTS.md — AI tool pointers'));
-  console.log(COLORS.dim('    .github/copilot-instructions.md — GitHub Copilot config'));
-  newline();
-  divider();
+  
+  const message = [
+    COLORS.success.bold('✅ NEXUS adopted successfully!'),
+    '',
+    COLORS.bold(`"${displayName}" now has NEXUS documentation & AI config.`),
+    '',
+    COLORS.bold('What happens next:'),
+    COLORS.primary('  1. Open your AI coding tool (Copilot, Cursor, Windsurf, etc.)'),
+    COLORS.primary('  2. Ask it to do anything (e.g., "add a feature", "fix a bug")'),
+    COLORS.primary('  3. It will detect the template docs and auto-populate them first'),
+    COLORS.primary('  4. It will ask you questions for things it can\'t infer from code'),
+    '',
+    COLORS.dim('Files added:'),
+    COLORS.dim('  .nexus/docs/   — 8 structured documentation files (status: template)'),
+    COLORS.dim('  .nexus/ai/     — AI agent instructions (single source of truth)'),
+    COLORS.dim('  .cursorrules, .windsurfrules, .clinerules, AGENTS.md — AI tool pointers'),
+    COLORS.dim('  .github/copilot-instructions.md — GitHub Copilot config'),
+  ].join('\n');
+
+  console.log(boxen(message, {
+    padding: 1,
+    margin: 0,
+    borderStyle: 'round',
+    borderColor: 'cyan',
+  }));
+  
   newline();
 }
 
