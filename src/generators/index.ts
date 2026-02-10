@@ -10,6 +10,7 @@ import path from 'node:path';
 import { execa } from 'execa';
 import ora from 'ora';
 
+import type { AdoptionContext } from '../prompts/adoption.js';
 import type { NexusConfig } from '../types/config.js';
 import { DEFAULT_PERSONA } from '../types/config.js';
 import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
@@ -21,6 +22,7 @@ import { generateCiCd } from './ci-cd.js';
 import { generateConfigs } from './config.js';
 import { generateDocs } from './docs.js';
 import { generateLandingPage } from './landing-page.js';
+import { generateSpringBootFiles } from './spring-boot.js';
 import {
   generateDirectories,
   generatePackageJson,
@@ -45,7 +47,7 @@ export async function generateProject(config: NexusConfig): Promise<void> {
       generatePackageJson(config),
       generateGitignore(),
       generateReadme(config),
-      ...generateDocs(config),
+      ...generateDocs(config, config.localOnly ?? false),
       ...generateConfigs(config),
       ...generateTests(config),
       ...generateCiCd(config),
@@ -53,8 +55,20 @@ export async function generateProject(config: NexusConfig): Promise<void> {
       ...generateAiConfig(config),
     ];
 
+    // Add Spring Boot files if backend is Spring Boot
+    if (config.backendFramework === 'spring-boot') {
+      files.push(...generateSpringBootFiles(config));
+    }
+
     // Write everything to disk
     await writeGeneratorResult(projectRoot, files, directories);
+    
+    // If local-only mode, add .nexus/ to .gitignore
+    if (config.localOnly) {
+      await appendToGitignore(projectRoot);
+      spinner.text = 'NEXUS configured as local-only (not tracked by git)';
+    }
+    
     spinner.succeed('Project structure generated.');
 
     // Install dependencies
@@ -107,12 +121,13 @@ export async function generateProject(config: NexusConfig): Promise<void> {
 export async function adoptProject(
   targetDir: string,
   projectInfo: ProjectInfo,
+  adoptionContext: AdoptionContext,
 ): Promise<void> {
   const spinner = ora('Generating NEXUS documentation & AI config...').start();
 
   try {
-    // Build a minimal NexusConfig from detected project info
-    const config = buildAdoptConfig(targetDir, projectInfo);
+    // Build a minimal NexusConfig from detected project info + user interview
+    const config = buildAdoptConfig(targetDir, projectInfo, adoptionContext);
 
     // Directories to create
     const directories: GeneratedDirectory[] = [
@@ -123,10 +138,17 @@ export async function adoptProject(
     ];
 
     // Files to generate — docs + AI config only
+    // Pass adoption context to docs generator for pre-filling
     const files: GeneratedFile[] = [
-      ...generateDocs(config),
+      ...generateDocs(config, adoptionContext.localOnly, adoptionContext),
       ...generateAiConfig(config),
     ];
+
+    // If local-only mode, add .nexus/ to .gitignore
+    if (adoptionContext.localOnly) {
+      await appendToGitignore(targetDir);
+      spinner.text = 'NEXUS configured as local-only (not tracked by git)';
+    }
 
     // Write to disk
     await writeGeneratorResult(targetDir, files, directories);
@@ -349,7 +371,7 @@ export async function repairProject(
 }
 
 /**
- * Build a NexusConfig from detected ProjectInfo.
+ * Build a NexusConfig from detected ProjectInfo + user interview.
  *
  * Maps detected values to the closest NexusConfig equivalents,
  * using sensible defaults for anything not detected.
@@ -357,6 +379,7 @@ export async function repairProject(
 function buildAdoptConfig(
   targetDir: string,
   info: ProjectInfo,
+  _adoptionContext: AdoptionContext,
 ): NexusConfig {
   const slug = info.name ?? path.basename(targetDir);
   return {
@@ -395,4 +418,29 @@ function mapPackageManager(detected: string | null): NexusConfig['packageManager
   if (detected === 'yarn') return 'yarn';
   if (detected === 'pnpm') return 'pnpm';
   return 'npm';
+}
+
+/**
+ * Append `.nexus/` to .gitignore (for local-only mode).
+ *
+ * If .gitignore doesn't exist, create it. If it exists, append only if not already present.
+ */
+async function appendToGitignore(targetDir: string): Promise<void> {
+  const gitignorePath = path.join(targetDir, '.gitignore');
+  const entry = '\n# NEXUS (local-only mode)\n.nexus/\n';
+
+  if (await fileExists(gitignorePath)) {
+    const content = await readFile(gitignorePath);
+    if (!content) {
+      await writeFile(gitignorePath, entry.trim() + '\n');
+      return;
+    }
+    if (content.includes('.nexus/')) {
+      // Already gitignored
+      return;
+    }
+    await writeFile(gitignorePath, content + entry);
+  } else {
+    await writeFile(gitignorePath, entry.trim() + '\n');
+  }
 }

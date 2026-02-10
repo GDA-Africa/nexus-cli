@@ -19,6 +19,7 @@
 import path from 'node:path';
 
 import { adoptProject } from '../generators/index.js';
+import { promptAdoption } from '../prompts/adoption.js';
 import { logger } from '../utils/logger.js';
 import { detectProject } from '../utils/project-detector.js';
 import { version } from '../version.js';
@@ -27,11 +28,11 @@ import { version } from '../version.js';
  * Handler for `nexus adopt [path]`.
  *
  * @param targetPath - Optional path to the project to adopt (defaults to cwd)
- * @param options    - Reserved for future flags (e.g. --force)
+ * @param options    - Command options (--force to skip project detection)
  */
 export async function adoptCommand(
   targetPath?: string,
-  _options: Record<string, unknown> = {},
+  options: { force?: boolean } = {},
 ): Promise<void> {
   logger.banner(version);
 
@@ -39,15 +40,51 @@ export async function adoptCommand(
     ? path.resolve(process.cwd(), targetPath)
     : process.cwd();
 
-  // Detect the existing project
-  const projectInfo = await detectProject(targetDir);
+  // Detect the existing project (skip if --force)
+  const projectInfo = options.force
+    ? {
+        detected: true,
+        signals: {
+          hasPackageJson: false,
+          hasGit: false,
+          hasSrc: false,
+          hasTsConfig: false,
+          hasNodeModules: false,
+          hasGoMod: false,
+          hasCargoToml: false,
+          hasPyProjectToml: false,
+          hasFirebaseJson: false,
+          hasPomXml: false,
+          hasBuildGradle: false,
+          isInsideMonorepo: false,
+          monorepoRoot: null,
+        },
+        name: null,
+        description: null,
+        framework: null,
+        testFramework: null,
+        packageManager: null,
+        hasNexus: false,
+        dependencies: [],
+      }
+    : await detectProject(targetDir);
 
-  if (!projectInfo.detected) {
+  if (!projectInfo.detected && !options.force) {
     logger.error('No existing project detected in this directory.');
     logger.newline();
-    logger.info('The adopt command is for existing projects that already have a package.json.');
-    logger.info('To create a brand-new project, run:');
+    logger.info('NEXUS adopt works with:');
+    logger.info('  • Node.js projects (package.json)');
+    logger.info('  • Spring Boot projects (pom.xml, build.gradle)');
+    logger.info('  • Cloud Functions (firebase.json)');
+    logger.info('  • Go projects (go.mod)');
+    logger.info('  • Rust projects (Cargo.toml)');
+    logger.info('  • Python projects (pyproject.toml)');
+    logger.info('  • Monorepos (workspace structure)');
     logger.newline();
+    logger.info('To force adoption of any directory:');
+    logger.nexus('  nexus adopt --force');
+    logger.newline();
+    logger.info('To create a brand-new project:');
     logger.nexus('  nexus init <project-name>');
     logger.newline();
     process.exit(1);
@@ -73,8 +110,11 @@ export async function adoptCommand(
   logger.info(`Detected package manager: ${pm}`);
   logger.newline();
 
+  // Run pre-adoption interview
+  const adoptionContext = await promptAdoption(projectInfo);
+
   try {
-    await adoptProject(targetDir, projectInfo);
+    await adoptProject(targetDir, projectInfo, adoptionContext);
     logger.adoptComplete(displayName);
   } catch (err) {
     logger.error('Failed to adopt project.');

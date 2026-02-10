@@ -57,27 +57,50 @@ last_updated: "${now}"
 
 /**
  * Generate all NEXUS documentation files for a new project.
+ * 
+ * @param config - Project configuration
+ * @param localOnly - Whether to mark as local-only in manifest
+ * @param adoptionContext - Optional context from pre-adoption interview (used to pre-fill docs)
  */
-export function generateDocs(config: NexusConfig): GeneratedFile[] {
+export function generateDocs(
+  config: NexusConfig,
+  localOnly = false,
+  adoptionContext?: {
+    projectDescription?: string;
+    architectureType?: string;
+    techStack?: string;
+    painPoints?: string;
+  },
+): GeneratedFile[] {
   const files: GeneratedFile[] = [];
 
-  files.push(generateVision(config));
-  files.push(generateArchitecture(config));
+  files.push(generateVision(config, adoptionContext));
+  files.push(generateArchitecture(config, adoptionContext));
   files.push(generateDataContracts(config));
   files.push(generateApiContracts(config));
   files.push(generateBusinessLogic(config));
   files.push(generateTestStrategy(config));
   files.push(generateImplementation(config));
   files.push(generateDeployment(config));
-  files.push(generateProjectIndex(config));
+  files.push(generateProjectIndex(config, adoptionContext));
   files.push(generateKnowledge(config));
-  files.push(generateNexusIndex(config));
-  files.push(generateNexusManifest(config));
+  files.push(generateNexusManifest(config, localOnly));
 
   return files;
 }
 
-function generateVision(config: NexusConfig): GeneratedFile {
+function generateVision(
+  config: NexusConfig,
+  adoptionContext?: { projectDescription?: string; painPoints?: string },
+): GeneratedFile {
+  const visionContent = adoptionContext?.projectDescription
+    ? adoptionContext.projectDescription
+    : '<!-- What are you building and why? What problem does it solve? -->';
+
+  const painPointsContent = adoptionContext?.painPoints
+    ? `\n### Known Pain Points\n${adoptionContext.painPoints}\n`
+    : '';
+
   return {
     path: '.nexus/docs/01_vision.md',
     content: `${frontmatter('01_vision', 'Product Vision & Requirements')}# Product Vision & Requirements
@@ -87,8 +110,8 @@ function generateVision(config: NexusConfig): GeneratedFile {
 ---
 
 ## 🎯 Product Vision
-<!-- What are you building and why? What problem does it solve? -->
-
+${visionContent}
+${painPointsContent}
 ## 👥 Target Users
 <!-- 2-3 personas: role, goals, pain points, needs -->
 
@@ -105,15 +128,25 @@ function generateVision(config: NexusConfig): GeneratedFile {
   };
 }
 
-function generateArchitecture(config: NexusConfig): GeneratedFile {
+function generateArchitecture(
+  config: NexusConfig,
+  adoptionContext?: { architectureType?: string; techStack?: string },
+): GeneratedFile {
+  const archTypeContent = adoptionContext?.architectureType
+    ? `\n**Architecture Type:** ${adoptionContext.architectureType}\n`
+    : '';
+
+  const techStackContent = adoptionContext?.techStack
+    ? `\n### Additional Technologies\n${adoptionContext.techStack}\n`
+    : '';
+
   return {
     path: '.nexus/docs/02_architecture.md',
     content: `${frontmatter('02_architecture', 'System Architecture')}# System Architecture
 
 **Project:** ${config.displayName}
 **Framework:** ${config.frontendFramework}
-**Data Strategy:** ${config.dataStrategy}
-
+**Data Strategy:** ${config.dataStrategy}${archTypeContent}
 ---
 
 ## 🏗️ Architecture Overview
@@ -126,7 +159,7 @@ function generateArchitecture(config: NexusConfig): GeneratedFile {
 | Frontend  | ${config.frontendFramework} | Selected during project setup |
 | Data      | ${config.dataStrategy} | ${config.dataStrategy} strategy |
 | Testing   | ${config.testFramework} | Selected during project setup |
-
+${techStackContent}
 ## 📁 Directory Structure
 <!-- Folder conventions: what goes where and why -->
 
@@ -417,9 +450,21 @@ lint → typecheck → test → build
  * The agent must READ this before every task and UPDATE it after.
  * ────────────────────────────────────────────────────────────── */
 
-function generateProjectIndex(config: NexusConfig): GeneratedFile {
+function generateProjectIndex(
+  config: NexusConfig,
+  adoptionContext?: { projectDescription?: string; painPoints?: string },
+): GeneratedFile {
   const frameworkDisplay = getFrameworkDisplay(config.frontendFramework);
   const now = new Date().toISOString().split('T')[0];
+
+  // Pre-fill the current objective if we have adoption context
+  const activeTask = adoptionContext?.projectDescription
+    ? 'Review and expand pre-filled vision from adoption interview'
+    : "Populate NEXUS docs from user's project vision";
+
+  const statusNote = adoptionContext?.projectDescription
+    ? '🟡 Partially filled from adoption interview'
+    : '🔴 Template';
 
   return {
     path: '.nexus/docs/index.md',
@@ -443,7 +488,7 @@ function generateProjectIndex(config: NexusConfig): GeneratedFile {
      Update it at the start of every task. -->
 
 **Current Phase:** Phase 1 — Foundation
-**Active Task:** Populate NEXUS docs from user's project vision
+**Active Task:** ${activeTask}
 **Blocked:** None
 **Next Up:** See "What's Next" section below
 
@@ -455,8 +500,8 @@ function generateProjectIndex(config: NexusConfig): GeneratedFile {
 
 | Area | Status | Notes |
 |------|--------|-------|
-| 📋 Vision & Requirements | 🔴 Template | Needs user input → \`.nexus/docs/01_vision.md\` |
-| 🏗️ Architecture | 🔴 Template | Auto-fill from codebase → \`.nexus/docs/02_architecture.md\` |
+| 📋 Vision & Requirements | ${statusNote} | ${adoptionContext?.projectDescription ? 'See .nexus/docs/01_vision.md' : 'Needs user input → `.nexus/docs/01_vision.md`'} |
+| 🏗️ Architecture | ${statusNote} | ${adoptionContext?.projectDescription ? 'See .nexus/docs/02_architecture.md' : 'Auto-fill from codebase → `.nexus/docs/02_architecture.md`'} |
 | 📊 Data Contracts | 🔴 Template | Define from code → \`.nexus/docs/03_data_contracts.md\` |
 | 🔌 API Contracts | 🔴 Template | Define from code → \`.nexus/docs/04_api_contracts.md\` |
 | 📐 Business Logic | 🔴 Template | Needs user input → \`.nexus/docs/05_business_logic.md\` |
@@ -621,55 +666,8 @@ Optional: Brief supporting detail (1-2 sentences max).
   };
 }
 
-function generateNexusIndex(config: NexusConfig): GeneratedFile {
-  return {
-    path: '.nexus/index.md',
-    content: `# NEXUS Project Index
-
-**Project:** ${config.displayName}
-**Generated:** ${new Date().toISOString().split('T')[0]}
-**CLI Version:** ${version}
-
----
-
-## 🧠 Start Here
-
-**AI agents: Read \`.nexus/docs/index.md\` FIRST** — that is your project brain.
-It tracks status, features, progress, and what to work on next.
-
----
-
-## 📚 Document Map
-
-| Doc | Path | Purpose |
-|-----|------|---------|
-| **🧠 Project Brain** | **\`.nexus/docs/index.md\`** | **Status, backlog, progress, what's next** |
-| Vision | \`.nexus/docs/01_vision.md\` | Product requirements & user stories |
-| Architecture | \`.nexus/docs/02_architecture.md\` | System design & tech stack |
-| Data Contracts | \`.nexus/docs/03_data_contracts.md\` | Database schemas & validation |
-| API Contracts | \`.nexus/docs/04_api_contracts.md\` | Endpoints & interfaces |
-| Business Logic | \`.nexus/docs/05_business_logic.md\` | Rules, algorithms & flows |
-| Test Strategy | \`.nexus/docs/06_test_strategy.md\` | Testing philosophy & coverage |
-| Implementation | \`.nexus/docs/07_implementation.md\` | Build order & file-by-file plan |
-| Deployment | \`.nexus/docs/08_deployment.md\` | Infrastructure & CI/CD |
-| **📚 Knowledge Base** | **\`.nexus/docs/knowledge.md\`** | **Learned insights, patterns & gotchas** |
-
----
-
-## 🤖 AI Agent Instructions
-
-If you are an AI reading this project:
-
-1. **START with \`.nexus/docs/index.md\`** — your project brain, read it before every task
-2. **Read \`.nexus/docs/01_vision.md\`** to understand what this project does
-3. **Check \`.nexus/docs/07_implementation.md\`** for the file-by-file build plan
-4. **After every task, update \`.nexus/docs/index.md\`** — progress log, status, what's next
-5. **Never ask "what should we do next?"** — the index tells you
-`,
-  };
-}
-
-function generateNexusManifest(config: NexusConfig): GeneratedFile {
+ 
+function generateNexusManifest(config: NexusConfig, localOnly = false): GeneratedFile {
   const manifest: NexusManifest = {
     version: '1.0.0',
     generatedAt: new Date().toISOString(),
@@ -678,6 +676,7 @@ function generateNexusManifest(config: NexusConfig): GeneratedFile {
       version,
       name: '@nexus-framework/cli',
     },
+    localOnly,
   };
 
   return {
