@@ -95,3 +95,33 @@ Starting v0.2.0, NEXUS is positioned as an "AI-native development framework" not
 
 ## [2026-02-09] architecture — Persona identity: string name not boolean
 `NexusPersona.identity` was originally `boolean` ("Should the AI call itself Nexus? Y/N"). Changed to `string` so the AI introduces itself as "Nexus" and lets the user rename it to anything. Default is `'Nexus'`; an empty string means no custom identity. The name persists across `upgrade` and `repair` because `getPersonaSection()` embeds persistence language in the generated instructions. Touch points when changing a type on NexusPersona: type definition, DEFAULT_PERSONA, persona prompt, getPersonaSection(), all test baseConfigs.
+
+## [2026-02-10] architecture — Pre-adoption interview for existing projects
+Added `promptAdoption()` to gather context before running `nexus adopt` on existing projects. Collects project description, architecture type, tech stack, and pain points. This context is then passed to doc generators (`generateVision()`, `generateArchitecture()`, `generateProjectIndex()`) to pre-fill templates with actual project info instead of generic placeholders. Makes adopted projects feel AI-native from day one.
+
+## [2026-02-10] architecture — Project detector signals for Spring Boot
+Extended `ProjectSignals` with `hasPomXml` and `hasBuildGradle` to detect Maven/Gradle projects. Added Spring Boot detection logic: looks for `pom.xml` with `spring-boot-starter` or `build.gradle` with `org.springframework.boot`. This enables automatic framework detection when adopting existing Java projects.
+
+## [2026-02-10] feature — Local-only mode with --local flag
+Added `localOnly?: boolean` to `NexusConfig` and `--local` flag to `nexus init`. When enabled, the CLI skips creating git/CI files and appends `.nexus/` to `.gitignore`. Use case: experimenting with NEXUS structure without committing it to version control. The `writeGeneratorResult()` utility now skips writing files with empty content, which Spring Boot generator uses to avoid creating `package.json` for Maven projects.
+
+## [2026-02-10] architecture — Visual CLI upgrades with gradient-string and boxen
+Replaced plain text CLI output with gradient-string (cyan→blue→purple gradient for banner) and boxen (rounded border success messages). The `banner()` function now uses `nexusGradient()`, and `complete()`/`adoptComplete()` wrap output in boxen with padding. Makes the CLI feel more polished and modern while staying minimal.
+
+## [2026-02-10] architecture — Spring Boot project generator
+Created `src/generators/spring-boot.ts` with full Maven project generator: `pom.xml` (Spring Boot 3.2.0, Java 21), `application.properties`, `@SpringBootApplication` main class, sample REST controller (`/api/hello`, `/api/health`), and JUnit 5 test. The generator integrates with `generateDirectories()` to create proper Java package structure (`src/main/java/com/{packageName}/...`).
+
+## [2026-02-10] architecture — Backend framework selection for API projects
+Added `promptBackendFramework()` to prompt users building API projects for their backend framework choice (Express, Fastify, NestJS, Spring Boot). Also added `BackendFramework` type to `NexusConfig`. The prompts orchestrator now calls this for `projectType === 'api'`. This makes NEXUS framework-agnostic — works for Node.js and Java backends.
+
+## [2026-02-10] architecture — UI library project type with Storybook
+Added `'ui-library'` to `ProjectType` union for component library projects. When selected, `generateDirectories()` creates a Storybook-ready structure (components, stories, tests), and `getFrameworkDependencies()` adds Storybook 8.0 deps. UI library projects skip data strategy and pattern prompts since they're not full apps. Framework options include React, Vue, Svelte, Lit.
+
+## [2026-02-10] convention — Feature branch workflow for organized PRs
+When preparing multiple related changes for release, create separate feature branches from `develop` for each logical area (e.g., `feature/adoption-interview`, `feature/local-only-mode`, `feature/spring-boot-support`). Each branch gets focused commits with conventional commit messages. This makes PRs easier to review and allows independent merging if one feature needs more work.
+
+## [2026-02-10] gotcha — Spring Boot needs empty package.json return
+Spring Boot projects use Maven, not npm. The `generatePackageJson()` function now checks if `backendFramework === 'spring-boot'` and returns empty content. The `writeGeneratorResult()` utility was enhanced to skip writing files with empty content, preventing creation of unnecessary `package.json` in Java projects.
+
+## [2026-02-10] pattern — Commit organization by feature area
+When working with multiple simultaneous changes across many files, organize commits by feature area rather than by file type. For example, "feat: add Spring Boot generator" (spring-boot.ts), then "feat: add backend framework selection" (prompts), then "feat: add directory structure for Spring Boot" (structure.ts). This makes git history tell a story instead of being a jumble of unrelated changes.
