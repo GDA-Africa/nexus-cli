@@ -5,7 +5,7 @@
  */
 
 /** Supported project types */
-export type ProjectType = 'web' | 'api' | 'monorepo' | 'mobile' | 'desktop';
+export type ProjectType = 'web' | 'api' | 'monorepo' | 'mobile' | 'desktop' | 'ui-library';
 
 /** Data strategy options */
 export type DataStrategy = 'local-only' | 'local-first' | 'cloud-first' | 'hybrid';
@@ -17,7 +17,7 @@ export type AppPattern = 'pwa' | 'offline-first' | 'theming' | 'white-label' | '
 export type FrontendFramework = 'nextjs' | 'react-vite' | 'sveltekit' | 'nuxt' | 'remix' | 'astro';
 
 /** Supported backend frameworks */
-export type BackendFramework = 'express' | 'fastify' | 'nestjs' | 'none';
+export type BackendFramework = 'express' | 'fastify' | 'nestjs' | 'spring-boot' | 'none';
 
 /** Backend strategy options */
 export type BackendStrategy = 'integrated' | 'separate' | 'serverless' | 'baas';
@@ -78,6 +78,8 @@ export interface NexusConfig {
   installDeps: boolean;
   /** AI agent personality — how agents communicate when synced with the NEXUS brain */
   persona: NexusPersona;
+  /** Whether .nexus/ should be gitignored (local-only mode) */
+  localOnly?: boolean;
 }
 
 /** Partial config for incremental prompt building */
@@ -92,4 +94,6 @@ export interface NexusManifest {
     version: string;
     name: string;
   };
+  /** Whether .nexus/ is gitignored (local-only mode) */
+  localOnly?: boolean;
 }

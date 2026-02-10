@@ -12,7 +12,7 @@ import { validateProjectName, toSlug, toDisplayName } from '../utils/validator.j
 
 import { promptDataStrategy } from './data-strategy.js';
 import { promptFeatures } from './features.js';
-import { promptFramework } from './frameworks.js';
+import { promptFramework, promptBackendFramework } from './frameworks.js';
 import { promptPatterns } from './patterns.js';
 import { promptPersona } from './persona.js';
 import { promptProjectType } from './project-type.js';
@@ -24,8 +24,9 @@ import { promptProjectType } from './project-type.js';
  * slug ("todo-list-app") automatically for the folder & package.json name.
  *
  * @param initialName - Optional project name passed via CLI argument
+ * @param localOnly - Optional flag to set local-only mode (skip prompt)
  */
-export async function runPrompts(initialName?: string): Promise<NexusConfig> {
+export async function runPrompts(initialName?: string, localOnly?: boolean): Promise<NexusConfig> {
   // 1. Project name (free-text)
   let rawName: string;
   if (!initialName) {
@@ -51,14 +52,21 @@ export async function runPrompts(initialName?: string): Promise<NexusConfig> {
   // 2. Project type
   const projectType = await promptProjectType();
 
-  // 3. Data strategy
-  const dataStrategy = await promptDataStrategy();
+  // 3. Data strategy (skip for ui-library)
+  const dataStrategy = projectType === 'ui-library' ? 'local-only' : await promptDataStrategy();
 
-  // 4. Application patterns
-  const appPatterns = await promptPatterns();
+  // 4. Application patterns (skip for ui-library and api)
+  const appPatterns = (projectType === 'ui-library' || projectType === 'api') 
+    ? [] 
+    : await promptPatterns();
 
   // 5. Framework
   const frontendFramework = await promptFramework(projectType);
+
+  // 5b. Backend framework (only for API projects)
+  const backendFramework = projectType === 'api' 
+    ? await promptBackendFramework() 
+    : 'none';
 
   // 6. Features & extras
   const { testFramework, packageManager, git, installDeps } = await promptFeatures();
@@ -75,12 +83,13 @@ export async function runPrompts(initialName?: string): Promise<NexusConfig> {
     appPatterns,
     frontendFramework,
     backendStrategy: projectType === 'api' ? 'separate' : 'integrated',
-    backendFramework: projectType === 'api' ? 'express' : 'none',
+    backendFramework,
     testFramework,
     packageManager: packageManager ?? detectPackageManager(),
     git,
     installDeps,
     persona,
+    localOnly,
   };
 
   return config;
