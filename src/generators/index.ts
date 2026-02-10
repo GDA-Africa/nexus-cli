@@ -11,6 +11,7 @@ import { execa } from 'execa';
 import ora from 'ora';
 
 import type { NexusConfig } from '../types/config.js';
+import { DEFAULT_PERSONA } from '../types/config.js';
 import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
 import { logger, writeGeneratorResult, readFile, fileExists, writeFile, ensureDirectory, getInstallCommand, gitInit, toDisplayName } from '../utils/index.js';
 import type { ProjectInfo } from '../utils/project-detector.js';
@@ -371,6 +372,7 @@ function buildAdoptConfig(
     packageManager: mapPackageManager(info.packageManager),
     git: true,
     installDeps: false,
+    persona: DEFAULT_PERSONA,
   };
 }
 

@@ -1,6 +1,6 @@
 # 🤝 Contributing to NEXUS CLI
 
-Thank you for your interest in contributing to **NEXUS CLI** — the AI-native project scaffolding tool by [GDA Africa](https://github.com/GDA-Africa).
+Thank you for your interest in contributing to **NEXUS CLI** — the AI-native development framework by [GDA Africa](https://github.com/GDA-Africa).
 
 This document provides guidelines and standards for contributing to the project.
 
@@ -47,7 +47,7 @@ Verify everything works before making changes:
 
 ```bash
 yarn lint       # Zero errors expected
-yarn test       # 45/45 tests passing
+yarn test       # 190/190 tests passing
 npx tsc --noEmit  # Zero type errors
 ```
 

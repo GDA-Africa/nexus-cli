@@ -18,6 +18,7 @@ import { upgradeProject, repairProject, isPopulated, isCorrupted } from '../../s
 import { generateDocs } from '../../src/generators/docs.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
 import type { NexusConfig } from '../../src/types/config.js';
+import { DEFAULT_PERSONA } from '../../src/types/config.js';
 
 const baseConfig: NexusConfig = {
   projectName: 'test-app',
@@ -32,6 +33,7 @@ const baseConfig: NexusConfig = {
   packageManager: 'npm',
   git: true,
   installDeps: false,
+  persona: DEFAULT_PERSONA,
 };
 
 /* ══════════════════════════════════════════════════════════════
