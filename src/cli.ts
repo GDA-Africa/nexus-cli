@@ -14,6 +14,7 @@ import {
   skillInstallCommand,
   skillListCommand,
   skillNewCommand,
+  skillRegistryCommand,
   skillRemoveCommand,
   skillStatusCommand,
 } from './commands/skill.js';
@@ -78,6 +79,14 @@ skillCmd
   .description('List all installed skills (core / custom / community)')
   .action(async () => {
     await skillListCommand();
+  });
+
+skillCmd
+  .command('registry')
+  .description('Browse all skills available in the @nexus-framework/skills registry')
+  .option('--framework <name>', 'Filter to a single framework (e.g. nextjs, react-vite, shared)')
+  .action(async (options: { framework?: string }) => {
+    await skillRegistryCommand(options);
   });
 
 skillCmd

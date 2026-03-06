@@ -440,6 +440,11 @@
     "@emnapi/runtime" "^1.4.3"
     "@tybys/wasm-util" "^0.10.0"
 
+"@nexus-framework/skills@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@nexus-framework/skills/-/skills-0.1.0.tgz#10aa8cef701439f344adf06a50dd09ff9b8a800b"
+  integrity sha512-5FpbzVFKKemf8+bW3yPOy8yAW9BaHXjQBj1M1mJ2N64M3P/9xldxBx5S1mbhnUaB/fCg1UWaEDca6X7aB9724Q==
+
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
   resolved "https://registry.npmjs.org/@nodelib/fs.scandir/-/fs.scandir-2.1.5.tgz"

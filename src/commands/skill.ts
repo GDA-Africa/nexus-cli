@@ -193,6 +193,80 @@ export async function skillListCommand(): Promise<void> {
 }
 
 /* ──────────────────────────────────────────────────────────────
+ * nexus skill registry [--framework <fw>]
+ * ────────────────────────────────────────────────────────────── */
+
+/**
+ * List all skills available in the @nexus-framework/skills registry,
+ * optionally filtered to a single framework.
+ *
+ * Reads directly from the installed npm package — no network required.
+ */
+export async function skillRegistryCommand(options: { framework?: string } = {}): Promise<void> {
+  const { listFrameworks, listSkills } = await import('@nexus-framework/skills');
+
+  const allFrameworks: string[] = listFrameworks();
+
+  // Alias map: CLI-friendly names → package folder names
+  const ALIASES: Record<string, string> = {
+    nextjs: 'next.js',
+  };
+
+  // --framework filter: normalise alias, then validate
+  let filterFramework: string | undefined;
+  if (options.framework) {
+    const input = options.framework.toLowerCase();
+    filterFramework = ALIASES[input] ?? input;
+    if (!allFrameworks.includes(filterFramework)) {
+      const friendlyList = allFrameworks
+        .map((f) => (f === 'next.js' ? 'nextjs (next.js)' : f))
+        .join(', ');
+      logger.error(`Unknown framework: "${options.framework}"`);
+      logger.info(`Available frameworks: ${friendlyList}`);
+      process.exit(1);
+    }
+  }
+
+  logger.nexus('Skill Registry  (@nexus-framework/skills)\n');
+
+  // Frameworks to show — either the filtered one or all (shared last)
+  const frameworksToShow = filterFramework
+    ? [filterFramework]
+    : [...allFrameworks.filter((f) => f !== 'shared'), 'shared'];
+
+  let totalSkills = 0;
+
+  for (const fw of frameworksToShow) {
+    const skills: string[] = listSkills(fw);
+    totalSkills += skills.length;
+
+    const label = fw === 'shared'
+      ? '🔗 shared  (installed for every framework)'
+      : `📦 ${fw}`;
+
+    logger.info(`${label}  (${skills.length} skill${skills.length !== 1 ? 's' : ''})`);
+
+    if (skills.length === 0) {
+      logger.info('    (none)');
+    } else {
+      for (const slug of skills) {
+        console.log(`    • ${slug}`);
+      }
+    }
+
+    logger.newline();
+  }
+
+  if (!filterFramework) {
+    logger.info(`Total: ${totalSkills} skills across ${frameworksToShow.length} framework(s)`);
+    logger.newline();
+  }
+
+  logger.info('These skills are installed into .nexus/skills/core/ when you run `nexus init` or `nexus upgrade`.');
+  logger.info('Use `nexus skill list` to see what is installed in your current project.');
+}
+
+/* ──────────────────────────────────────────────────────────────
  * nexus skill install <pkg>
  * ────────────────────────────────────────────────────────────── */
 

@@ -137,10 +137,11 @@ describe('generateSkills — sveltekit framework', () => {
     expect(paths).toContain('.nexus/skills/core/component-creation.md');
   });
 
-  it('generates routing skill for sveltekit', () => {
+  it('includes shared skills for sveltekit', () => {
     const files = generateSkills(config);
     const paths = files.map((f) => f.path);
-    expect(paths).toContain('.nexus/skills/core/routing.md');
+    expect(paths).toContain('.nexus/skills/core/git-workflow.md');
+    expect(paths).toContain('.nexus/skills/core/knowledge-logging.md');
   });
 });
 
@@ -151,7 +152,12 @@ describe('generateSkills — nuxt framework', () => {
     const files = generateSkills(config);
     const paths = files.map((f) => f.path);
     expect(paths).toContain('.nexus/skills/core/component-creation.md');
-    expect(paths).toContain('.nexus/skills/core/routing.md');
+  });
+
+  it('includes shared skills for nuxt', () => {
+    const files = generateSkills(config);
+    const paths = files.map((f) => f.path);
+    expect(paths).toContain('.nexus/skills/core/git-workflow.md');
   });
 });
 
@@ -162,7 +168,12 @@ describe('generateSkills — astro framework', () => {
     const files = generateSkills(config);
     const paths = files.map((f) => f.path);
     expect(paths).toContain('.nexus/skills/core/component-creation.md');
-    expect(paths).toContain('.nexus/skills/core/routing.md');
+  });
+
+  it('includes shared skills for astro', () => {
+    const files = generateSkills(config);
+    const paths = files.map((f) => f.path);
+    expect(paths).toContain('.nexus/skills/core/git-workflow.md');
   });
 });
 
@@ -172,8 +183,13 @@ describe('generateSkills — remix framework', () => {
   it('generates skills for remix', () => {
     const files = generateSkills(config);
     const paths = files.map((f) => f.path);
-    expect(paths).toContain('.nexus/skills/core/routing.md');
     expect(paths).toContain('.nexus/skills/core/component-creation.md');
+  });
+
+  it('includes shared skills for remix', () => {
+    const files = generateSkills(config);
+    const paths = files.map((f) => f.path);
+    expect(paths).toContain('.nexus/skills/core/git-workflow.md');
   });
 });
 
@@ -303,9 +319,10 @@ describe('getCoreSkillSlugs', () => {
 
   it('returns skill slugs for remix', () => {
     const slugs = getCoreSkillSlugs('remix');
-    expect(slugs).toContain('routing');
     expect(slugs).toContain('component-creation');
     expect(slugs).toContain('git-workflow');
+    // routing.md not yet in @nexus-framework/skills for remix — shared skills fill the gap
+    expect(slugs).toContain('knowledge-logging');
   });
 
   it('includes shared skills for every framework', () => {

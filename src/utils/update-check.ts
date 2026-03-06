@@ -29,7 +29,7 @@ export interface UpdateInfo {
 // The check walks from the target version downward to find the best match.
 
 const RELEASE_HEADLINES: Record<string, string> = {
-  '0.3.0': '🧠 Skills System — AI task instructions per framework, `nexus skill` command',
+  '0.3.0': '🧠 Skills System, nexus skill registry, nexus pack/unpack, nexus update + auto-notifications',
   '0.2.1': '🐛 Bug fixes — backend scaffolding improvements & Spring Boot support',
   '0.2.0': '🎭 Agent Persona — configure your AI\'s tone, verbosity, and identity',
   '0.1.4': '📖 Full AI instructions embedded in every tool file (Cursor, Windsurf, Copilot)',

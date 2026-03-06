@@ -164,6 +164,12 @@ The original plan required publishing `@nexus-framework/skills` to npm first, th
 ## [2026-03-06] pattern — enableSkills === false explicit check, not !enableSkills
 The skills generator must use `if (config.enableSkills === false) return []` not `if (!config.enableSkills)`. The `enableSkills` field is optional — `undefined` means the user did not disable it (default on). Using `!enableSkills` would incorrectly skip skill generation for users who did not explicitly answer the prompt. The explicit `=== false` check preserves the default-on behaviour.
 
+## [2026-03-06] architecture — skills.ts wired to live @nexus-framework/skills package
+`src/generators/skills.ts` now imports `getSkillContent` and `listSkills` from `@nexus-framework/skills`. The inline skill content (~900 lines) was deleted. The package has no TypeScript declarations so a local shim was created at `src/types/nexus-skills.d.ts`. Framework name mapping: CLI uses `nextjs`, package folder is `next.js` — handled by `FRAMEWORK_TO_SKILLS_DIR` map.
+
+## [2026-03-06] gotcha — @nexus-framework/skills only has component-creation for sveltekit/nuxt/astro/remix at v0.1.0
+Only `next.js` and `react-vite` have full skill coverage in the first publish. `sveltekit`, `nuxt`, `astro`, and `remix` only ship `component-creation.md`. Shared skills (15 files) fill the gap. Tests must assert on slugs that actually exist in the package — not the old inlined stubs. When new skills are added to the registry package, no code changes needed in nexus-cli.
+
 ## [2026-03-06] architecture — nexus pack uses archiver + unzipper (new dependencies)
 `nexus pack` uses the `archiver` npm package to create ZIP archives and `unzipper` to extract them. Both were added as production dependencies with their `@types/*` counterparts as dev deps. Node's built-in `zlib` only handles gzip streams — it cannot create multi-file ZIP archives, so a library is required. `archiver` was chosen over `yazl`/`adm-zip` because it has a streaming directory-walk API that matches the `fs-extra` patterns already used in the project.
 
@@ -172,3 +178,7 @@ The startup update check (`checkForUpdate`) is fired as a background Promise bef
 
 ## [2026-03-06] convention — Release headlines are maintained in update-check.ts
 `src/utils/update-check.ts` contains a `RELEASE_HEADLINES` map (version string → one-line feature description). When releasing a new version, add its entry to this map. The `getHeadline()` function falls back to the nearest older registered version if an exact match is not found — so intermediate patch versions between registered entries will still show a sensible message.
+## [2026-03-06] architecture — nexus skill registry reads directly from installed npm package
+`skillRegistryCommand` calls `listFrameworks()` and `listSkills(fw)` from `@nexus-framework/skills` using a dynamic import. No network required — reads from the locally installed package. A `ALIASES` map handles the CLI-friendly name `nextjs` mapping to the package folder name `next.js`. The `shared` framework is always shown last as it installs into every project. Output is grouped by framework with a total count footer.
+## [2026-03-06] convention — Update RELEASE_HEADLINES in update-check.ts when shipping a new version
+When bumping to a new version (e.g. 0.3.0), add its entry to the `RELEASE_HEADLINES` record in `src/utils/update-check.ts`. The key is the exact version string; the value is a short feature summary shown in the update banner. Without this entry the banner falls back to the nearest older version's message.
