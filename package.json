@@ -1,6 +1,6 @@
 {
   "name": "@nexus-framework/cli",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "The AI-Native Development Framework — turns every project into an AI-powered workspace with structured docs, progressive memory, and configurable agent personas",
   "type": "module",
   "main": "dist/index.js",
@@ -51,12 +51,14 @@
   "bugs": {
     "url": "https://github.com/GDA-Africa/nexus-cli/issues"
   },
-  "homepage": "https://github.com/GDA-Africa/nexus-cli#readme",
+  "homepage": "https://nexus.glenhalton.com",
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.3.2",
+    "@nexus-framework/skills": "^0.1.0",
+    "archiver": "^7.0.1",
     "boxen": "^8.0.1",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
@@ -67,15 +69,18 @@
     "inquirer": "^12.3.2",
     "mustache": "^4.2.0",
     "ora": "^8.1.1",
+    "unzipper": "^0.12.3",
     "update-notifier": "^7.3.1",
     "validate-npm-package-name": "^6.0.0"
   },
   "devDependencies": {
+    "@types/archiver": "^7.0.0",
     "@types/figlet": "^1.7.0",
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^9.0.7",
     "@types/mustache": "^4.2.5",
     "@types/node": "^22.13.1",
+    "@types/unzipper": "^0.10.11",
     "@types/update-notifier": "^6.0.8",
     "@types/validate-npm-package-name": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^8.22.0",

@@ -8,7 +8,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-190_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-225_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![npm](https://img.shields.io/npm/v/@nexus-framework/cli?style=for-the-badge&logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/@nexus-framework/cli)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge)](https://github.com/GDA-Africa/nexus-cli/pulls)
@@ -79,6 +79,20 @@ Every project gets a documentation system AI agents can parse, a knowledge base 
 - **`nexus adopt`** — add NEXUS to any existing codebase
 - **`nexus upgrade`** — regenerate templates, preserve user work
 - **`nexus repair`** — fix missing or corrupted NEXUS files
+- **`nexus pack`** — zip `.nexus/` into a portable backup
+- **`nexus unpack`** — restore from a backup zip with verification
+- **`nexus update`** — self-update the CLI to the latest version
+
+</td>
+<td width="50%">
+
+### 🧠 Skills System
+- **`nexus skill list`** — see all skills installed in your project
+- **`nexus skill registry`** — browse all available skills in the registry
+- **`nexus skill new`** — scaffold a custom skill interactively
+- **`nexus skill status`** — health-check all installed skills
+- Pre-read instruction files so AI agents know *how* to do tasks
+- Sourced from `@nexus-framework/skills` — updated independently
 
 </td>
 <td width="50%">
@@ -112,7 +126,7 @@ nexus init my-app
 You'll be guided through an interactive setup:
 
 ```
-🔮 NEXUS CLI v0.2.0 — AI-Native Development Framework
+🔮 NEXUS CLI v0.3.0 — AI-Native Development Framework
 
 ? What are you building?                › Web Application
 ? How will your app handle data?        › Cloud First
@@ -161,6 +175,7 @@ Every generated project includes:
 | `src/` | Framework-specific source code and branded landing page |
 | `.nexus/docs/` | **The NEXUS Doc System** — 8 AI-readable files + project brain + knowledge base |
 | `.nexus/ai/` | Master AI instructions — the single source of truth for agent behavior |
+| `.nexus/skills/` | **Skills System** — `core/` (framework skills), `custom/` (yours), `community/` (registry) |
 | Tool configs | `.cursorrules`, `.windsurfrules`, `.clinerules`, `AGENTS.md`, `.github/copilot-instructions.md` — each embeds full instructions |
 | `tests/` | Vitest/Jest config, example tests, and test helpers |
 | `package.json` | Real dependencies, real scripts — `npm run dev` works immediately |
@@ -181,6 +196,44 @@ Every generated project includes:
 | 6 | `06_test_strategy.md` | Coverage targets, test types, philosophy |
 | 7 | `07_implementation.md` | Build order, file-by-file plan |
 | 8 | `08_deployment.md` | Infrastructure, CI/CD, environment config |
+
+---
+
+## 🧠 Skills System
+
+Skills are pre-read instruction files that tell AI agents *how* to execute tasks in your specific project — not just what to do, but the exact patterns, conventions, and anti-patterns your codebase follows.
+
+Every project gets a `.nexus/skills/` directory with three zones:
+
+```
+.nexus/skills/
+  README.md          ← auto-generated index agents read first
+  core/              ← framework-matched skills from @nexus-framework/skills
+  custom/            ← your own skills (created with nexus skill new, never touched by NEXUS)
+  community/         ← skills installed from the registry
+```
+
+### Managing Skills
+
+```bash
+nexus skill list                         # what's installed in this project
+nexus skill registry                     # browse everything in the registry
+nexus skill registry --framework nextjs  # filter to one framework
+nexus skill new                          # scaffold a custom skill interactively
+nexus skill status                       # health-check: deprecated, invalid frontmatter
+nexus skill install <pkg>                # install a community skill pack
+nexus skill remove <name>                # remove a community skill
+```
+
+### Custom Skills
+
+```bash
+nexus skill new my-service-pattern
+```
+
+Guides you through setting a category, trigger phrases, and scaffolds a full markdown template. The AI agent reads this file before any task matching the triggers.
+
+**Precedence:** `custom/` > `core/` > `community/` — your skills always win.
 
 ---
 
@@ -232,18 +285,21 @@ After adopting, your AI coding tool will auto-detect the NEXUS docs, scan your c
 ### ✅ Shipped
 - [x] Core CLI with `nexus init`, `nexus adopt`, `nexus upgrade`, `nexus repair`
 - [x] Interactive prompt system (7 modules including persona)
-- [x] Generator engine (8 modules: structure, docs, config, tests, CI/CD, landing page, AI config, orchestrator)
+- [x] Generator engine (8 modules: structure, docs, config, tests, CI/CD, landing page, AI config, skills)
 - [x] AI-native documentation system (8 structured files + project brain + knowledge base + onboarding protocol)
 - [x] Agent Persona system (tone, verbosity, identity, custom directives)
 - [x] Multi-tool AI support (Cursor, Copilot, Windsurf, Cline, Claude Code)
 - [x] 6 frontend frameworks supported
 - [x] Smart file strategy (upgrade preserves user work, repair fixes corruption)
 - [x] Progressive knowledge base (append-only, category-tagged, AI-scannable)
-- [x] 190 unit tests passing
+- [x] **Skills System** — `nexus skill` (6 subcommands), `.nexus/skills/`, sourced from `@nexus-framework/skills`
+- [x] **`nexus pack` / `nexus unpack`** — portable `.nexus/` migration with zip + verification
+- [x] **`nexus update`** — self-updating CLI + startup update notifications
+- [x] 225 unit tests passing
 - [x] Published to npm as `@nexus-framework/cli`
 - [x] CI/CD with auto-publish to npm on version bump
 
-### 🔜 Next Up (v0.3.0)
+### 🔜 Next Up (v0.3.x)
 - [ ] E2E tests — generate a project, run its build, verify all files
 - [ ] Framework-specific template content (not just landing pages)
 - [ ] `nexus add <feature>` — add capabilities to existing NEXUS projects
@@ -272,7 +328,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ```bash
 git clone https://github.com/GDA-Africa/nexus-cli.git
 cd nexus-cli && yarn install
-yarn lint && yarn test    # 190 tests, zero lint errors
+yarn lint && yarn test    # 225 tests, zero lint errors
 ```
 
 ---

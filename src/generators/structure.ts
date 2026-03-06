@@ -31,8 +31,11 @@ export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
       { path: 'src/test/java' },
       { path: `src/test/java/${packagePath}` },
     );
+  } else if (config.projectType === 'api') {
+    // API-only projects (Node.js-based)
+    dirs.push({ path: 'src' }, { path: 'src/routes' }, { path: 'src/controllers' }, { path: 'src/services' }, { path: 'src/models' }, { path: 'src/middleware' }, { path: 'src/utils' });
   } else {
-    // Node.js-based projects
+    // Regular web projects
     dirs.push({ path: 'src' }, { path: 'public' });
   }
 
@@ -60,8 +63,8 @@ export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
   // CI/CD
   dirs.push({ path: '.github' }, { path: '.github/workflows' });
 
-  // Framework-specific (skip if Spring Boot or UI library)
-  if (config.backendFramework !== 'spring-boot' && config.projectType !== 'ui-library') {
+  // Framework-specific (skip if Spring Boot, UI library, or API-only)
+  if (config.backendFramework !== 'spring-boot' && config.projectType !== 'ui-library' && config.projectType !== 'api') {
     switch (config.frontendFramework) {
       case 'nextjs':
         dirs.push({ path: 'src/app' }, { path: 'src/components' }, { path: 'src/lib' });
@@ -162,6 +165,32 @@ export function generatePackageJson(config: NexusConfig): GeneratedFile {
     (pkg.devDependencies as Record<string, string>)['@types/jest'] = '^29.0.0';
   }
 
+  // API-only projects need specific dependencies
+  if (config.projectType === 'api') {
+    // Add backend framework dependencies
+    if (config.backendFramework === 'express') {
+      (pkg.dependencies as Record<string, string>)['express'] = '^4.18.0';
+      (pkg.dependencies as Record<string, string>)['cors'] = '^2.8.5';
+      (pkg.dependencies as Record<string, string>)['helmet'] = '^7.0.0';
+      (pkg.devDependencies as Record<string, string>)['@types/express'] = '^4.17.0';
+      (pkg.devDependencies as Record<string, string>)['@types/cors'] = '^2.8.0';
+      (pkg.devDependencies as Record<string, string>)['@types/helmet'] = '^4.0.0';
+    } else if (config.backendFramework === 'fastify') {
+      (pkg.dependencies as Record<string, string>)['fastify'] = '^4.0.0';
+      (pkg.dependencies as Record<string, string>)['@fastify/cors'] = '^8.0.0';
+      (pkg.dependencies as Record<string, string>)['@fastify/helmet'] = '^11.0.0';
+    } else if (config.backendFramework === 'nestjs') {
+      (pkg.dependencies as Record<string, string>)['@nestjs/core'] = '^10.0.0';
+      (pkg.dependencies as Record<string, string>)['@nestjs/common'] = '^10.0.0';
+      (pkg.dependencies as Record<string, string>)['@nestjs/platform-express'] = '^10.0.0';
+      (pkg.devDependencies as Record<string, string>)['@nestjs/cli'] = '^10.0.0';
+      (pkg.devDependencies as Record<string, string>)['@nestjs/schematics'] = '^10.0.0';
+    }
+    
+    // Add TypeScript execution dependency
+    (pkg.devDependencies as Record<string, string>)['tsx'] = '^4.0.0';
+  }
+
   return {
     path: 'package.json',
     content: JSON.stringify(pkg, null, 2) + '\n',
@@ -178,6 +207,16 @@ function getFrameworkScripts(config: NexusConfig): Record<string, string> {
     format: 'prettier --write .',
     'type-check': 'tsc --noEmit',
   };
+
+  // API-only scripts
+  if (config.projectType === 'api') {
+    return {
+      dev: 'tsx src/index.ts',
+      build: 'tsc',
+      start: 'node dist/index.js',
+      ...base,
+    };
+  }
 
   // UI Library scripts
   if (config.projectType === 'ui-library') {

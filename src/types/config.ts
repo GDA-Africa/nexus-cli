@@ -14,7 +14,7 @@ export type DataStrategy = 'local-only' | 'local-first' | 'cloud-first' | 'hybri
 export type AppPattern = 'pwa' | 'offline-first' | 'theming' | 'white-label' | 'i18n' | 'real-time';
 
 /** Supported frontend frameworks */
-export type FrontendFramework = 'nextjs' | 'react-vite' | 'sveltekit' | 'nuxt' | 'remix' | 'astro';
+export type FrontendFramework = 'nextjs' | 'react-vite' | 'sveltekit' | 'nuxt' | 'remix' | 'astro' | 'none';
 
 /** Supported backend frameworks */
 export type BackendFramework = 'express' | 'fastify' | 'nestjs' | 'spring-boot' | 'none';
@@ -80,6 +80,8 @@ export interface NexusConfig {
   persona: NexusPersona;
   /** Whether .nexus/ should be gitignored (local-only mode) */
   localOnly?: boolean;
+  /** Whether to generate .nexus/skills/ with framework-matched core skills */
+  enableSkills?: boolean;
 }
 
 /** Partial config for incremental prompt building */

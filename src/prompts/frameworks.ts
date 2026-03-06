@@ -12,7 +12,7 @@ import type { FrontendFramework, ProjectType, BackendFramework } from '../types/
 export async function promptFramework(projectType: ProjectType): Promise<FrontendFramework> {
   if (projectType === 'api') {
     // API projects don't need a frontend framework — we return a sentinel
-    return 'nextjs'; // will be ignored; backend prompt handles this
+    return 'none'; // will be ignored; backend prompt handles this
   }
 
   if (projectType === 'ui-library') {
