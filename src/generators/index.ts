@@ -22,6 +22,7 @@ import { generateCiCd } from './ci-cd.js';
 import { generateConfigs } from './config.js';
 import { generateDocs } from './docs.js';
 import { generateLandingPage } from './landing-page.js';
+import { generateSkills } from './skills.js';
 import { generateSpringBootFiles } from './spring-boot.js';
 import {
   generateDirectories,
@@ -53,6 +54,7 @@ export async function generateProject(config: NexusConfig): Promise<void> {
       ...generateCiCd(config),
       ...generateLandingPage(config),
       ...generateAiConfig(config),
+      ...generateSkills(config),
     ];
 
     // Add Spring Boot files if backend is Spring Boot
@@ -134,14 +136,19 @@ export async function adoptProject(
       { path: '.nexus' },
       { path: '.nexus/docs' },
       { path: '.nexus/ai' },
+      { path: '.nexus/skills' },
+      { path: '.nexus/skills/core' },
+      { path: '.nexus/skills/custom' },
+      { path: '.nexus/skills/community' },
       { path: '.github' },
     ];
 
-    // Files to generate — docs + AI config only
+    // Files to generate — docs + AI config + skills
     // Pass adoption context to docs generator for pre-filling
     const files: GeneratedFile[] = [
       ...generateDocs(config, adoptionContext.localOnly, adoptionContext),
       ...generateAiConfig(config),
+      ...generateSkills(config),
     ];
 
     // If local-only mode, add .nexus/ to .gitignore
@@ -262,6 +269,10 @@ export async function reconcileNexusFiles(
     { path: '.nexus' },
     { path: '.nexus/docs' },
     { path: '.nexus/ai' },
+    { path: '.nexus/skills' },
+    { path: '.nexus/skills/core' },
+    { path: '.nexus/skills/custom' },
+    { path: '.nexus/skills/community' },
     { path: '.github' },
   ];
 
@@ -273,6 +284,7 @@ export async function reconcileNexusFiles(
   const freshFiles: GeneratedFile[] = [
     ...generateDocs(config),
     ...generateAiConfig(config),
+    ...generateSkills(config),
   ];
 
   const result: ReconcileResult = {
@@ -286,6 +298,18 @@ export async function reconcileNexusFiles(
     const fullPath = path.join(targetDir, file.path);
     const exists = await fileExists(fullPath);
 
+    // ── Skills: custom/ is SACRED — never read, never written, never deleted ──
+    if (file.path.startsWith('.nexus/skills/custom/')) {
+      // Only create if it doesn't exist yet (first init)
+      if (!exists) {
+        await writeFile(fullPath, file.content);
+        result.created.push(file.path);
+      } else {
+        result.preserved.push(file.path);
+      }
+      continue;
+    }
+
     // ── Missing file → always create ──
     if (!exists) {
       await writeFile(fullPath, file.content);
@@ -298,7 +322,7 @@ export async function reconcileNexusFiles(
     const content = existingContent ?? '';
     const corrupted = isCorrupted(file.path, content);
 
-    // ── Corrupted → always repair (both modes) ──
+    // ── Corrupted → always repair (both modes) — except custom/ skills ──
     if (corrupted) {
       await writeFile(fullPath, file.content);
       result.repaired.push(file.path);
@@ -323,6 +347,20 @@ export async function reconcileNexusFiles(
 
     if (ALWAYS_PRESERVE.has(file.path)) {
       result.preserved.push(file.path);
+      continue;
+    }
+
+    // Skills: core/ and README are always replaced on upgrade (regenerated from latest templates)
+    // community/ skills are preserved — reinstallable via `nexus skill install`
+    if (file.path.startsWith('.nexus/skills/community/')) {
+      result.preserved.push(file.path);
+      continue;
+    }
+
+    if (file.path.startsWith('.nexus/skills/')) {
+      // core/ skills and README.md — replace on upgrade, preserve on repair
+      await writeFile(fullPath, file.content);
+      result.replaced.push(file.path);
       continue;
     }
 

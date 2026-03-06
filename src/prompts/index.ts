@@ -16,6 +16,7 @@ import { promptFramework, promptBackendFramework } from './frameworks.js';
 import { promptPatterns } from './patterns.js';
 import { promptPersona } from './persona.js';
 import { promptProjectType } from './project-type.js';
+import { promptSkillConfig } from './skill-config.js';
 
 /**
  * Run the full interactive prompt flow and return a complete NexusConfig.
@@ -74,6 +75,10 @@ export async function runPrompts(initialName?: string, localOnly?: boolean): Pro
   // 7. AI agent persona
   const persona = await promptPersona();
 
+  // 8. Skills system
+  const frameworkLabel = getFrameworkLabel(frontendFramework);
+  const { enableSkills } = await promptSkillConfig(frameworkLabel);
+
   // Assemble config
   const config: NexusConfig = {
     projectName,
@@ -90,7 +95,21 @@ export async function runPrompts(initialName?: string, localOnly?: boolean): Pro
     installDeps,
     persona,
     localOnly,
+    enableSkills,
   };
 
   return config;
+}
+
+function getFrameworkLabel(framework: NexusConfig['frontendFramework']): string {
+  const labels: Record<string, string> = {
+    nextjs: 'Next.js',
+    'react-vite': 'React + Vite',
+    sveltekit: 'SvelteKit',
+    nuxt: 'Nuxt 3',
+    astro: 'Astro',
+    remix: 'Remix',
+    none: 'shared',
+  };
+  return labels[framework] ?? framework;
 }

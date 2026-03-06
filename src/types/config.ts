@@ -80,6 +80,8 @@ export interface NexusConfig {
   persona: NexusPersona;
   /** Whether .nexus/ should be gitignored (local-only mode) */
   localOnly?: boolean;
+  /** Whether to generate .nexus/skills/ with framework-matched core skills */
+  enableSkills?: boolean;
 }
 
 /** Partial config for incremental prompt building */

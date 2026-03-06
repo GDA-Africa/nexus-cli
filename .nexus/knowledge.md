@@ -125,3 +125,50 @@ Spring Boot projects use Maven, not npm. The `generatePackageJson()` function no
 
 ## [2026-02-10] pattern — Commit organization by feature area
 When working with multiple simultaneous changes across many files, organize commits by feature area rather than by file type. For example, "feat: add Spring Boot generator" (spring-boot.ts), then "feat: add backend framework selection" (prompts), then "feat: add directory structure for Spring Boot" (structure.ts). This makes git history tell a story instead of being a jumble of unrelated changes.
+
+---
+
+## [2026-03-06] architecture — Skills System: the third knowledge layer
+The Skills System (v0.3.0) adds a third layer to NEXUS's knowledge model. Layer 1: Project context docs (`01_vision.md` → `08_deployment.md`) answer *what are we building?*. Layer 2: State files (`index.md`, `knowledge.md`) answer *what has been decided?*. Layer 3: Skills (`.nexus/skills/`) answer *how do we execute tasks in this project?*. All three layers are needed — context and decisions without execution methodology still leads to agent drift.
+
+## [2026-03-06] architecture — Skills live in the project, not as a runtime dependency
+`@nexus-framework/skills` is the source registry, but skill files are *copied into* the project's `.nexus/skills/` directory at init time. The project does not depend on the package at runtime. This mirrors how NEXUS docs work — generated once, then owned by the project. This means skills work offline and can be customized in-place.
+
+## [2026-03-06] architecture — Three-directory skill layout with sacred custom/
+`.nexus/skills/` has three subdirectories with strict ownership rules: `core/` is owned by NEXUS (replaced on upgrade, sourced from `@nexus-framework/skills`). `custom/` is owned by the user (NEVER read, NEVER written, NEVER deleted by NEXUS — ever). `community/` is owned by the package registry (replaceable on `nexus skill install --force`). Breaking the `custom/` rule would destroy user work irreversibly.
+
+## [2026-03-06] architecture — Skills Protocol must be embedded in all AI instruction files
+The Skills Protocol (the 7-step agent pre-task checklist for `.nexus/skills/`) must be added to the master template in `ai-config.ts`. Because every AI tool file (`.cursorrules`, `.windsurfrules`, `.clinerules`, `AGENTS.md`, `copilot-instructions.md`) embeds the master instructions, adding it once to the template activates skills awareness across every AI tool simultaneously. This is the highest-leverage single change in the entire v0.3.0 implementation.
+
+## [2026-03-06] convention — Skill frontmatter is the contract, not decoration
+Every skill file requires YAML frontmatter with: `skill` (unique slug), `version` (semver), `framework` (`next.js` | `react-vite` | `sveltekit` | `nuxt` | `astro` | `remix` | `shared`), `category` (`ui` | `routing` | `data` | `testing` | `api` | `config` | `workflow`), `triggers` (array of natural language phrases), `author`, `status` (`active` | `draft` | `deprecated`). The `triggers` array is how agents identify which skill to read — without it, the matching protocol breaks. The `status` field controls enforcement: only `active` skills are mandatory; `draft` are optional guidance.
+
+## [2026-03-06] pattern — Skills generator follows the same GeneratedFile[] pattern
+`skills.generator.ts` must return `GeneratedFile[]` like every other generator — it must not write to disk directly. The orchestrator in `generators/index.ts` handles all disk writes via `writeGeneratorResult()`. This maintains the architecture invariant and keeps the generator fully unit-testable by inspecting returned arrays without touching the file system.
+
+## [2026-03-06] architecture — `nexus-skills` repo must be published before nexus-cli implementation
+`skills.generator.ts` sources skill file content from `@nexus-framework/skills`. The npm package must exist and be published before any code in nexus-cli can import from it. Implementation sequence: create `nexus-skills` repo → write SKILL_SPEC.md → write core skills for all 6 frameworks → publish `@nexus-framework/skills@0.1.0` → then and only then begin work in nexus-cli.
+
+## [2026-03-06] pattern — Skill precedence rule: custom > core > community
+When an agent is looking for a skill and finds matches in multiple directories, custom skills override core skills, and core skills override community skills. This ensures user customizations always take precedence over framework defaults, and official framework skills take precedence over third-party community skills. This rule must be stated explicitly in the Skills Protocol embedded in AI instruction files.
+
+## [2026-03-06] architecture — nexus skill generate is v0.4.0, not v0.3.0
+`nexus skill generate` (scan codebase, auto-draft custom skills) is the most complex feature in the Skills System and is intentionally deferred to v0.4.0. The v0.3.0 MVP delivers skill distribution (`skills.generator.ts`), the CLI management commands (`nexus skill new/list/install/remove`), and the AI protocol injection. `skill generate` requires AST-level pattern analysis and is out of scope until the base system is stable.
+
+## [2026-03-06] gotcha — Skills System was built directly in nexus-cli, not from nexus-skills package
+The original plan required publishing `@nexus-framework/skills` to npm first, then sourcing content from it. In practice, the skill content was authored directly inside `src/generators/skills.ts` (inlined as template strings), eliminating the blocking dependency. The `@nexus-framework/skills` registry can still be built later for community packs — `nexus skill install` is stubbed and ready. The `nexus-skills` npm blocker is therefore resolved and Skills System v0.3.0 is fully implemented and tested.
+
+## [2026-03-06] gotcha — upgrade.test.ts count tests must include generateSkills in the total
+`upgradeProject` and `repairProject` now also process skills files. Any test that asserts `totalResult === generateDocs.length + generateAiConfig.length` must be updated to also add `generateSkills.length`. Found this when all three count tests in `upgrade.test.ts` failed after wiring skills into the reconciler. Fix: import `generateSkills` and add its length to the expected total, and pre-populate skills files in the "never replaced" test.
+
+## [2026-03-06] pattern — enableSkills === false explicit check, not !enableSkills
+The skills generator must use `if (config.enableSkills === false) return []` not `if (!config.enableSkills)`. The `enableSkills` field is optional — `undefined` means the user did not disable it (default on). Using `!enableSkills` would incorrectly skip skill generation for users who did not explicitly answer the prompt. The explicit `=== false` check preserves the default-on behaviour.
+
+## [2026-03-06] architecture — nexus pack uses archiver + unzipper (new dependencies)
+`nexus pack` uses the `archiver` npm package to create ZIP archives and `unzipper` to extract them. Both were added as production dependencies with their `@types/*` counterparts as dev deps. Node's built-in `zlib` only handles gzip streams — it cannot create multi-file ZIP archives, so a library is required. `archiver` was chosen over `yazl`/`adm-zip` because it has a streaming directory-walk API that matches the `fs-extra` patterns already used in the project.
+
+## [2026-03-06] pattern — Update notification fires after command, not before
+The startup update check (`checkForUpdate`) is fired as a background Promise before `program.parseAsync()` is called, so the network request runs concurrently with the actual command. After the command completes, the Promise is awaited and the banner is printed only if an update exists. This avoids blocking startup and avoids inserting noise before command output. Commands that handle their own output (like `nexus update`) are not affected because the banner only prints on `hasUpdate === true`.
+
+## [2026-03-06] convention — Release headlines are maintained in update-check.ts
+`src/utils/update-check.ts` contains a `RELEASE_HEADLINES` map (version string → one-line feature description). When releasing a new version, add its entry to this map. The `getHeadline()` function falls back to the nearest older registered version if an exact match is not found — so intermediate patch versions between registered entries will still show a sensible message.

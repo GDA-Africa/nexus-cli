@@ -218,13 +218,32 @@ but ALWAYS read \\\`.nexus/docs/index.md\\\` before every task.
 | \`src/\` | Application source code |
 | \`tests/\` | Unit, integration, and E2E tests |
 | \`.nexus/docs/\` | NEXUS documentation system (8 files + brain + knowledge) |
+| \`.nexus/skills/\` | **NEXUS Skills** — pre-read AI task instructions (core / custom / community) |
 | \`.nexus/\` | Project metadata, AI config, and manifest |
 | \`public/\` | Static assets |
 | \`.github/\` | CI/CD workflows, PR templates |
 
 ---
 
-## NEXUS Documentation System
+## 🧠 Skills Protocol
+
+NEXUS Skills are pre-read instruction files that define **how to execute tasks** in this project.
+
+**Before performing any significant task:**
+1. Check \`.nexus/skills/\` for a relevant skill
+2. Look in \`.nexus/skills/core/\` for framework-specific skills
+3. Look in \`.nexus/skills/custom/\` for project-specific overrides
+4. Look in \`.nexus/skills/community/\` for installed integration skills
+5. Match the task you are about to perform against each skill's \`triggers\` list
+6. If a match is found, read the skill file **fully** before proceeding
+7. Follow the skill's steps and patterns precisely
+8. If you deviate from a skill for a valid reason, log it in \`.nexus/docs/knowledge.md\`
+
+**Precedence: \`custom/\` overrides \`core/\`, which overrides \`community/\`.**
+
+Available skills are listed in \`.nexus/skills/README.md\`.
+
+---
 
 This project includes structured documentation files designed for both humans and AI:
 
@@ -462,6 +481,26 @@ This is a hard requirement, not a suggestion.
 4. **Conventional Commits** — \`feat:\`, \`fix:\`, \`docs:\`, \`chore:\`, \`test:\`, \`refactor:\`
 5. **Test everything** — every feature needs tests
 6. **Validate after changes** — \`${getValidationCommand(config)}\`
+
+---
+
+## 🧠 Skills Protocol
+
+NEXUS Skills are pre-read instruction files that define **how to execute tasks** in this project.
+
+**Before performing any significant task:**
+1. Check \`.nexus/skills/\` for a relevant skill
+2. Look in \`.nexus/skills/core/\` for framework-specific skills
+3. Look in \`.nexus/skills/custom/\` for project-specific overrides
+4. Look in \`.nexus/skills/community/\` for installed integration skills
+5. Match the task you are about to perform against each skill's \`triggers\` list
+6. If a match is found, read the skill file **fully** before proceeding
+7. Follow the skill's steps and patterns precisely
+8. If you deviate from a skill for a valid reason, log it in \`.nexus/docs/knowledge.md\`
+
+**Precedence: \`custom/\` overrides \`core/\`, which overrides \`community/\`.**
+
+Available skills are listed in \`.nexus/skills/README.md\`.
 
 ---
 

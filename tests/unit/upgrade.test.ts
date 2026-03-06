@@ -17,6 +17,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { upgradeProject, repairProject, isPopulated, isCorrupted } from '../../src/generators/index.js';
 import { generateDocs } from '../../src/generators/docs.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
+import { generateSkills } from '../../src/generators/skills.js';
 import type { NexusConfig } from '../../src/types/config.js';
 import { DEFAULT_PERSONA } from '../../src/types/config.js';
 
@@ -358,10 +359,11 @@ status: template
   it('should produce correct counts in result summary', async () => {
     const result = await upgradeProject(tempDir, baseConfig);
 
-    // Total files should match what generateDocs + generateAiConfig produce
+    // Total files should match what generateDocs + generateAiConfig + generateSkills produce
     const allDocs = generateDocs(baseConfig);
     const allAi = generateAiConfig(baseConfig);
-    const totalGenerated = allDocs.length + allAi.length;
+    const allSkills = generateSkills(baseConfig);
+    const totalGenerated = allDocs.length + allAi.length + allSkills.length;
 
     const totalResult = result.created.length + result.replaced.length + result.preserved.length + result.repaired.length;
     expect(totalResult).toBe(totalGenerated);
@@ -515,7 +517,8 @@ status: populated
     // Pre-populate everything with valid content
     const allDocs = generateDocs(baseConfig);
     const allAi = generateAiConfig(baseConfig);
-    for (const file of [...allDocs, ...allAi]) {
+    const allSkills = generateSkills(baseConfig);
+    for (const file of [...allDocs, ...allAi, ...allSkills]) {
       const fullPath = path.join(tempDir, file.path);
       await fs.ensureDir(path.dirname(fullPath));
       await fs.writeFile(fullPath, file.content);
@@ -535,7 +538,8 @@ status: populated
 
     const allDocs = generateDocs(baseConfig);
     const allAi = generateAiConfig(baseConfig);
-    const totalGenerated = allDocs.length + allAi.length;
+    const allSkills = generateSkills(baseConfig);
+    const totalGenerated = allDocs.length + allAi.length + allSkills.length;
 
     const totalResult = result.created.length + result.replaced.length + result.preserved.length + result.repaired.length;
     expect(totalResult).toBe(totalGenerated);
