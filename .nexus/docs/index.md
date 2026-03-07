@@ -1,10 +1,10 @@
 # NEXUS CLI — Project Index
 
 **Project:** NEXUS CLI (`@nexus-framework/cli`)  
-**Status:** 🟢 LIVE ON NPM — v0.3.1 | dirExists bug fix + comprehensive test coverage  
+**Status:** 🟢 LIVE ON NPM — v0.3.2 | Live skill registry — fetches directly from npm tarball  
 **Last Updated:** March 7, 2026  
-**Version:** 0.3.1  
-**Coverage:** Unit: 295/295 passing | Integration: Pending | E2E: Pending
+**Version:** 0.3.2  
+**Coverage:** Unit: 306/306 passing | Integration: Pending | E2E: Pending
 
 ---
 
@@ -56,7 +56,7 @@
 
 | Module | Files | Description |
 |--------|-------|-------------|
-| **Entry Points** | `cli.ts`, `index.ts`, `version.ts` | Commander.js CLI, public API, version 0.3.1 |
+| **Entry Points** | `cli.ts`, `index.ts`, `version.ts` | Commander.js CLI, public API, version 0.3.2 |
 | **Commands** | `commands/init.ts`, `adopt.ts`, `upgrade.ts`, `repair.ts`, `skill.ts`, `pack.ts`, `update.ts` | 7 CLI commands (+ 6 skill subcommands) |
 | **Prompts** | `prompts/index.ts` + 7 modules | Project type, data strategy, patterns, frameworks, features, persona, skill-config |
 | **Generators** | `generators/index.ts` + 8 modules | Structure, docs, config, tests, CI/CD, landing page, AI config, skills |
@@ -143,7 +143,7 @@
 | `tests/unit/skill-commands.test.ts` ⬅ **NEW v0.3.1** | 26 | All 6 skill subcommands with real temp dirs + cwd mock, dirExists regression |
 | `tests/unit/update-check.test.ts` ⬅ **NEW v0.3.1** | 16 | checkForUpdate mock fetch, semver table, offline/timeout/404 fallback |
 | `tests/unit/pack.test.ts` ⬅ **NEW v0.3.1** | 11 | packCommand guard, zip naming, non-zero size, round-trip pack→unpack, findLatestBackup |
-| **Total** | **295** | **All passing ✅** |
+| **Total** | **306** | **All passing ✅** |
 
 ---
 
@@ -178,6 +178,7 @@
 | 0.2.1 | Feb 2026 | Bug fixes: backend-only scaffolding, local-only mode, skip empty files |
 | **0.3.0** | **Mar 6, 2026** | **Skills System — `nexus skill` (6 subcommands inc. registry), skills generator sourced from `@nexus-framework/skills` live npm package, `nexus pack`/`unpack`, `nexus update` + startup notifications, 225 unit tests** |
 | **0.3.1** | **Mar 7, 2026** | **Production bug fix: `dirExists` for skill directory checks. Comprehensive test coverage for all v0.3.x modules (295 tests). Homepage set to [nexus.glenhalton.com](https://nexus.glenhalton.com)** |
+| **0.3.2** | **Mar 7, 2026** | **Live skill registry — `nexus skill registry` now fetches the `@nexus-framework/skills` tarball directly from npm at runtime. New skills visible immediately without republishing nexus-cli. 306 unit tests.** |
 
 ---
 

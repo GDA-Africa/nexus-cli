@@ -197,26 +197,168 @@ export async function skillListCommand(): Promise<void> {
  * ────────────────────────────────────────────────────────────── */
 
 /**
+ * Fetch the latest @nexus-framework/skills tarball from npm and return a
+ * map of { framework → slug[] } by scanning tar entry paths.
+ *
+ * Uses only Node built-ins (fetch + zlib + Buffer). No file extraction —
+ * we only inspect the path names inside the .tgz to build the skill list.
+ *
+ * Returns null if the network is unavailable or the fetch fails.
+ */
+async function fetchLiveSkillRegistry(
+  timeoutMs = 8000,
+): Promise<{ skillMap: Map<string, string[]>; version: string } | null> {
+  const { createGunzip } = await import('node:zlib');
+  const { Readable } = await import('node:stream');
+
+  const REGISTRY_PKG = '@nexus-framework/skills';
+
+  try {
+    // ── Step 1: resolve latest tarball URL ────────────────────
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    const metaRes = await fetch(`https://registry.npmjs.org/${REGISTRY_PKG}/latest`, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    clearTimeout(timer);
+
+    if (!metaRes.ok) return null;
+
+    const meta = (await metaRes.json()) as { version?: string; dist?: { tarball?: string } };
+    const tarballUrl = meta.dist?.tarball;
+    const registryVersion = meta.version ?? '?';
+
+    if (!tarballUrl) return null;
+
+    // ── Step 2: download tarball ───────────────────────────────
+    const tgzController = new AbortController();
+    const tgzTimer = setTimeout(() => tgzController.abort(), timeoutMs);
+
+    const tgzRes = await fetch(tarballUrl, { signal: tgzController.signal });
+    clearTimeout(tgzTimer);
+
+    if (!tgzRes.ok || !tgzRes.body) return null;
+
+    // ── Step 3: decompress and scan tar entry names ────────────
+    // We only need the file paths (tar header block, offset 0, 100 bytes).
+    // We never read file contents — this is purely a path scan.
+    const chunks: Buffer[] = [];
+    const gunzip = createGunzip();
+
+    // Pump the fetch body through gunzip
+    const bodyBuffer = Buffer.from(await tgzRes.arrayBuffer());
+    const readable = Readable.from(bodyBuffer);
+    readable.pipe(gunzip);
+
+    await new Promise<void>((resolve, reject) => {
+      gunzip.on('data', (chunk: Buffer) => chunks.push(chunk));
+      gunzip.on('end', resolve);
+      gunzip.on('error', reject);
+    });
+
+    const tarData = Buffer.concat(chunks);
+
+    // ── Step 4: walk tar blocks (512-byte records) ─────────────
+    // TAR format: each file entry starts with a 512-byte header.
+    // Bytes 0–99: null-terminated file name.
+    // Bytes 124–135: file size in octal ASCII.
+    // We skip past header + file data (rounded up to 512-byte boundary).
+
+    const skillMap = new Map<string, string[]>();
+
+    let offset = 0;
+    while (offset + 512 <= tarData.length) {
+      const header = tarData.slice(offset, offset + 512);
+
+      // Empty block = end of archive
+      if (header.every((b) => b === 0)) break;
+
+      // Extract file name (first 100 bytes, null-terminated)
+      const nameEnd = header.indexOf(0, 0);
+      const name = header.slice(0, nameEnd === -1 ? 100 : Math.min(nameEnd, 100)).toString('utf8');
+
+      // Extract file size (bytes 124–135, octal)
+      const sizeStr = header.slice(124, 136).toString('utf8').replace(/\0/g, '').trim();
+      const fileSize = parseInt(sizeStr, 8) || 0;
+
+      // Parse skill paths: package/<framework>/<slug>.md
+      // e.g. "package/shared/git-workflow.md" or "package/next.js/routing.md"
+      const match = name.match(/^package\/([^/]+)\/([^/]+)\.md$/);
+      if (match) {
+        const [, framework, slug] = match;
+        if (framework && slug && slug !== 'README') {
+          if (!skillMap.has(framework)) skillMap.set(framework, []);
+          skillMap.get(framework)!.push(slug);
+        }
+      }
+
+      // Advance past header + file data (rounded up to 512-byte boundary)
+      offset += 512 + Math.ceil(fileSize / 512) * 512;
+    }
+
+    return skillMap.size > 0 ? { skillMap, version: registryVersion } : null;
+
+  } catch {
+    // Offline, timeout, or any network error — return null to trigger fallback
+    return null;
+  }
+}
+
+/**
  * List all skills available in the @nexus-framework/skills registry,
  * optionally filtered to a single framework.
  *
- * Reads directly from the installed npm package — no network required.
+ * Always fetches the LIVE version from npm — no need to republish nexus-cli
+ * when new skills are added to @nexus-framework/skills.
+ * Falls back to the locally installed package if the network is unavailable.
  */
 export async function skillRegistryCommand(options: { framework?: string } = {}): Promise<void> {
-  const { listFrameworks, listSkills } = await import('@nexus-framework/skills');
-
-  const allFrameworks: string[] = listFrameworks();
-
   // Alias map: CLI-friendly names → package folder names
   const ALIASES: Record<string, string> = {
     nextjs: 'next.js',
   };
 
-  // --framework filter: normalise alias, then validate
+  // ── Attempt live fetch from npm ──────────────────────────────
+  logger.info('Fetching latest skill registry from npm…');
+  const live = await fetchLiveSkillRegistry();
+
+  let allFrameworks: string[];
+  let getSkills: (fw: string) => string[];
+  let sourceLabel: string;
+
+  if (live) {
+    // Sort: non-shared alphabetically, then shared last
+    allFrameworks = [
+      ...[...live.skillMap.keys()].filter((f) => f !== 'shared').sort(),
+      ...(live.skillMap.has('shared') ? ['shared'] : []),
+    ];
+    getSkills = (fw: string) => [...(live.skillMap.get(fw) ?? [])].sort();
+    sourceLabel = `@nexus-framework/skills v${live.version} (live from npm)`;
+  } else {
+    // ── Fallback: locally installed package ─────────────────────
+    logger.warn('Could not reach npm — showing locally installed skills instead.');
+    const { listFrameworks, listSkills } = await import('@nexus-framework/skills');
+    allFrameworks = [
+      ...listFrameworks().filter((f: string) => f !== 'shared').sort(),
+      'shared',
+    ];
+    getSkills = (fw: string) => [...listSkills(fw)].sort();
+
+    // Read installed version from its own package.json
+    const { createRequire } = await import('node:module');
+    const req = createRequire(import.meta.url);
+    const installedVersion: string =
+      (req('@nexus-framework/skills/package.json') as { version?: string }).version ?? '?';
+    sourceLabel = `@nexus-framework/skills v${installedVersion} (local — offline fallback)`;
+  }
+
+  // ── --framework filter ───────────────────────────────────────
   let filterFramework: string | undefined;
   if (options.framework) {
-    const input = options.framework.toLowerCase();
-    filterFramework = ALIASES[input] ?? input;
+    const rawInput = options.framework.toLowerCase();
+    filterFramework = ALIASES[rawInput] ?? rawInput;
     if (!allFrameworks.includes(filterFramework)) {
       const friendlyList = allFrameworks
         .map((f) => (f === 'next.js' ? 'nextjs (next.js)' : f))
@@ -227,17 +369,17 @@ export async function skillRegistryCommand(options: { framework?: string } = {})
     }
   }
 
-  logger.nexus('Skill Registry  (@nexus-framework/skills)\n');
+  logger.nexus(`Skill Registry  (${sourceLabel})\n`);
 
-  // Frameworks to show — either the filtered one or all (shared last)
+  // ── Display ──────────────────────────────────────────────────
   const frameworksToShow = filterFramework
     ? [filterFramework]
-    : [...allFrameworks.filter((f) => f !== 'shared'), 'shared'];
+    : allFrameworks;
 
   let totalSkills = 0;
 
   for (const fw of frameworksToShow) {
-    const skills: string[] = listSkills(fw);
+    const skills = getSkills(fw);
     totalSkills += skills.length;
 
     const label = fw === 'shared'

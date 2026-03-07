@@ -191,3 +191,6 @@ When bumping to a new version (e.g. 0.3.0), add its entry to the `RELEASE_HEADLI
 
 ## [2026-03-07] pattern — version.ts and package.json must be bumped together
 `checkForUpdate()` reads the installed version from `src/version.ts`, not from `package.json`. If only `package.json` is bumped (e.g. by a user manually editing it), the update-check tests that mock the registry returning the "current" version will fail because the two sources disagree. Always bump both files atomically when releasing a patch.
+
+## [2026-03-07] pattern — nexus skill registry fetches live from npm tarball
+`skillRegistryCommand` no longer reads from the locally installed `@nexus-framework/skills` package. Instead it fetches the npm registry metadata for `@nexus-framework/skills/latest`, downloads the `.tgz` tarball in memory, decompresses it with `node:zlib`, and scans the tar header blocks (512-byte records) to extract file paths — never writing to disk. This means adding new skills to `@nexus-framework/skills` and publishing it is enough; users will see the updated list immediately without requiring a nexus-cli republish. Falls back to the locally installed package if the network is unavailable. Key detail: tar file paths inside npm tarballs are prefixed with `package/`, so paths look like `package/shared/git-workflow.md`.

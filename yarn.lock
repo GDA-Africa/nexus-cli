@@ -440,10 +440,10 @@
     "@emnapi/runtime" "^1.4.3"
     "@tybys/wasm-util" "^0.10.0"
 
-"@nexus-framework/skills@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@nexus-framework/skills/-/skills-0.1.0.tgz#10aa8cef701439f344adf06a50dd09ff9b8a800b"
-  integrity sha512-5FpbzVFKKemf8+bW3yPOy8yAW9BaHXjQBj1M1mJ2N64M3P/9xldxBx5S1mbhnUaB/fCg1UWaEDca6X7aB9724Q==
+"@nexus-framework/skills@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@nexus-framework/skills/-/skills-0.1.1.tgz#331618a30e3bac1de93398575911e488d2f2ad2c"
+  integrity sha512-BSGIWCEWW2j/ZaWmBg6erJ8pQNagcUglkzjoqxaLzombPakT3y2TODlvgl5n/7DRepnTP6a94Bi6uHtSG3iCHQ==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"

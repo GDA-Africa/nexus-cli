@@ -1,6 +1,6 @@
 {
   "name": "@nexus-framework/cli",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "The AI-Native Development Framework — turns every project into an AI-powered workspace with structured docs, progressive memory, and configurable agent personas",
   "type": "module",
   "main": "dist/index.js",
@@ -57,7 +57,7 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^7.3.2",
-    "@nexus-framework/skills": "^0.1.0",
+    "@nexus-framework/skills": "^0.1.1",
     "archiver": "^7.0.1",
     "boxen": "^8.0.1",
     "chalk": "^5.3.0",
