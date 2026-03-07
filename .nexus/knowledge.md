@@ -182,3 +182,12 @@ The startup update check (`checkForUpdate`) is fired as a background Promise bef
 `skillRegistryCommand` calls `listFrameworks()` and `listSkills(fw)` from `@nexus-framework/skills` using a dynamic import. No network required — reads from the locally installed package. A `ALIASES` map handles the CLI-friendly name `nextjs` mapping to the package folder name `next.js`. The `shared` framework is always shown last as it installs into every project. Output is grouped by framework with a total count footer.
 ## [2026-03-06] convention — Update RELEASE_HEADLINES in update-check.ts when shipping a new version
 When bumping to a new version (e.g. 0.3.0), add its entry to the `RELEASE_HEADLINES` record in `src/utils/update-check.ts`. The key is the exact version string; the value is a short feature summary shown in the update banner. Without this entry the banner falls back to the nearest older version's message.
+
+## [2026-03-07] bug-fix — fileExists() returns false for directories (dirExists bug)
+`fileExists()` uses `stat.isFile()` which returns `false` for directories. All `nexus skill` subcommands were using `fileExists()` to check `.nexus/skills/` directory paths, causing them to always report "No .nexus/skills/ directory found" even when the directory existed. Fix: added `dirExists()` using `stat.isDirectory()` and swapped all 6 directory checks in `skill.ts`. Lesson: never use `fileExists()` on a path that might be a directory.
+
+## [2026-03-07] gotcha — @inquirer/prompts hangs tests; must vi.mock() it
+`skillNewCommand` calls `select()` and `input()` from `@inquirer/prompts` before checking if the output file already exists. Any test that reaches past the directory-guard will block waiting for TTY input. Fix: add `vi.mock('@inquirer/prompts', () => ({ input: vi.fn().mockResolvedValue('test-skill'), select: vi.fn().mockResolvedValue('ui') }))` at the top of any test file that calls `skillNewCommand`. This also enables testing the happy-path flow (creates the skill file).
+
+## [2026-03-07] pattern — version.ts and package.json must be bumped together
+`checkForUpdate()` reads the installed version from `src/version.ts`, not from `package.json`. If only `package.json` is bumped (e.g. by a user manually editing it), the update-check tests that mock the registry returning the "current" version will fail because the two sources disagree. Always bump both files atomically when releasing a patch.

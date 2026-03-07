@@ -1,10 +1,10 @@
 # NEXUS CLI — Project Index
 
 **Project:** NEXUS CLI (`@nexus-framework/cli`)  
-**Status:** 🟢 LIVE ON NPM — v0.3.0 | Skills System + Pack/Unpack/Update — SHIPPED  
-**Last Updated:** March 6, 2026  
-**Version:** 0.3.0  
-**Coverage:** Unit: 225/225 passing | Integration: Pending | E2E: Pending
+**Status:** 🟢 LIVE ON NPM — v0.3.1 | dirExists bug fix + comprehensive test coverage  
+**Last Updated:** March 7, 2026  
+**Version:** 0.3.1  
+**Coverage:** Unit: 295/295 passing | Integration: Pending | E2E: Pending
 
 ---
 
@@ -56,7 +56,7 @@
 
 | Module | Files | Description |
 |--------|-------|-------------|
-| **Entry Points** | `cli.ts`, `index.ts`, `version.ts` | Commander.js CLI, public API, version 0.3.0 |
+| **Entry Points** | `cli.ts`, `index.ts`, `version.ts` | Commander.js CLI, public API, version 0.3.1 |
 | **Commands** | `commands/init.ts`, `adopt.ts`, `upgrade.ts`, `repair.ts`, `skill.ts`, `pack.ts`, `update.ts` | 7 CLI commands (+ 6 skill subcommands) |
 | **Prompts** | `prompts/index.ts` + 7 modules | Project type, data strategy, patterns, frameworks, features, persona, skill-config |
 | **Generators** | `generators/index.ts` + 8 modules | Structure, docs, config, tests, CI/CD, landing page, AI config, skills |
