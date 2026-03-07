@@ -8,10 +8,11 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-225_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-295_Passing-green?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![npm](https://img.shields.io/npm/v/@nexus-framework/cli?style=for-the-badge&logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/@nexus-framework/cli)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge)](https://github.com/GDA-Africa/nexus-cli/pulls)
+[![Website](https://img.shields.io/badge/Website-nexus.glenhalton.com-8A2BE2?style=for-the-badge&logo=googlechrome&logoColor=white)](https://nexus.glenhalton.com)
 
 ---
 
@@ -126,7 +127,7 @@ nexus init my-app
 You'll be guided through an interactive setup:
 
 ```
-🔮 NEXUS CLI v0.3.0 — AI-Native Development Framework
+🔮 NEXUS CLI v0.3.1 — AI-Native Development Framework
 
 ? What are you building?                › Web Application
 ? How will your app handle data?        › Cloud First
@@ -295,7 +296,7 @@ After adopting, your AI coding tool will auto-detect the NEXUS docs, scan your c
 - [x] **Skills System** — `nexus skill` (6 subcommands), `.nexus/skills/`, sourced from `@nexus-framework/skills`
 - [x] **`nexus pack` / `nexus unpack`** — portable `.nexus/` migration with zip + verification
 - [x] **`nexus update`** — self-updating CLI + startup update notifications
-- [x] 225 unit tests passing
+- [x] 295 unit tests passing
 - [x] Published to npm as `@nexus-framework/cli`
 - [x] CI/CD with auto-publish to npm on version bump
 
@@ -328,7 +329,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ```bash
 git clone https://github.com/GDA-Africa/nexus-cli.git
 cd nexus-cli && yarn install
-yarn lint && yarn test    # 225 tests, zero lint errors
+yarn lint && yarn test    # 295 tests, zero lint errors
 ```
 
 ---
@@ -339,7 +340,7 @@ yarn lint && yarn test    # 225 tests, zero lint errors
 
 **Built with ❤️ by [GDA Africa](https://github.com/GDA-Africa)** — Powering Africa's Digital Future
 
-*NEXUS CLI is the open-source foundation of the NEXUS framework — where AI agents don't just write code, they understand your project. For questions, ideas, or collaboration, reach out to the GDA engineering team.*
+*NEXUS CLI is the open-source foundation of the NEXUS framework — where AI agents don't just write code, they understand your project. For questions, ideas, or collaboration, visit [nexus.glenhalton.com](https://nexus.glenhalton.com) or reach out to the GDA engineering team.*
 
 ---
 
