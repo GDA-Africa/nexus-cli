@@ -21,7 +21,7 @@ import path from 'node:path';
 
 import { input, select } from '@inquirer/prompts';
 
-import { fileExists } from '../utils/file-system.js';
+import { fileExists, dirExists } from '../utils/file-system.js';
 import { logger } from '../utils/logger.js';
 import { version } from '../version.js';
 
@@ -39,7 +39,7 @@ export async function skillNewCommand(name?: string): Promise<void> {
   const targetDir = process.cwd();
   const skillsDir = path.join(targetDir, '.nexus', 'skills', 'custom');
 
-  if (!(await fileExists(skillsDir))) {
+  if (!(await dirExists(skillsDir))) {
     logger.error('No .nexus/skills/ directory found in this project.');
     logger.info('Run `nexus init` or `nexus adopt` first to set up the NEXUS framework.');
     process.exit(1);
@@ -145,7 +145,7 @@ export async function skillListCommand(): Promise<void> {
   const targetDir = process.cwd();
   const skillsBase = path.join(targetDir, '.nexus', 'skills');
 
-  if (!(await fileExists(skillsBase))) {
+  if (!(await dirExists(skillsBase))) {
     logger.warn('No .nexus/skills/ directory found. Run `nexus init` or `nexus adopt` first.');
     process.exit(0);
   }
@@ -161,7 +161,7 @@ export async function skillListCommand(): Promise<void> {
 
     logger.info(label);
 
-    if (!(await fileExists(dirPath))) {
+    if (!(await dirExists(dirPath))) {
       logger.info('  (none)\n');
       continue;
     }
@@ -286,7 +286,7 @@ export async function skillInstallCommand(pkg?: string): Promise<void> {
   const targetDir = process.cwd();
   const communityDir = path.join(targetDir, '.nexus', 'skills', 'community');
 
-  if (!(await fileExists(communityDir))) {
+  if (!(await dirExists(communityDir))) {
     logger.error('No .nexus/skills/ directory found. Run `nexus init` or `nexus adopt` first.');
     process.exit(1);
   }
@@ -364,7 +364,7 @@ export async function skillStatusCommand(): Promise<void> {
   const targetDir = process.cwd();
   const skillsBase = path.join(targetDir, '.nexus', 'skills');
 
-  if (!(await fileExists(skillsBase))) {
+  if (!(await dirExists(skillsBase))) {
     logger.warn('No .nexus/skills/ directory found. Run `nexus upgrade` to add skills.');
     process.exit(0);
   }
@@ -375,7 +375,7 @@ export async function skillStatusCommand(): Promise<void> {
 
   for (const dir of ['core', 'custom', 'community'] as const) {
     const dirPath = path.join(skillsBase, dir);
-    const exists = await fileExists(dirPath);
+    const exists = await dirExists(dirPath);
 
     if (!exists) {
       if (dir === 'core') {
