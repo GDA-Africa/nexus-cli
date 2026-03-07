@@ -4,4 +4,4 @@
  * Single source of truth for the CLI version.
  */
 
-export const version = '0.3.1';
+export const version = '0.3.2';

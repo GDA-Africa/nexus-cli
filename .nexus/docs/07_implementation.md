@@ -324,21 +324,44 @@ npm run pre-commit      # Lint, type-check, test
 ```
 
 ### Release Process
+
+Every release follows this ritual in order — no steps skipped:
+
 ```bash
-# 1. Update version
-npm version patch|minor|major
+# 1. Bump src/version.ts  (single source of truth for the CLI banner)
+#    export const version = 'X.Y.Z';
 
-# 2. Generate changelog
-npm run changelog
+# 2. Bump package.json version field to match
 
-# 3. Build
-npm run build
+# 3. Add headline to RELEASE_HEADLINES in src/utils/update-check.ts
+#    '0.X.Y': '🔖 One-line summary of the most notable change',
 
-# 4. Publish
-npm publish --access public
+# 4. Update README.md
+#    - Vitest badge count  (Vitest-NNN_Passing)
+#    - Quick Start prompt snippet version string
+#    - Skills System bullet if nexus skill registry changed
+#    - Roadmap ✅ Shipped list — add new items
+#    - Contributing clone command test count comment
 
-# 5. Create GitHub release
-gh release create v1.0.0
+# 5. Update .nexus/docs/index.md
+#    - Status line (version + headline)
+#    - Last Updated date
+#    - Version field
+#    - Coverage test count
+#    - Entry Points table row (version)
+#    - Tests table Total row count
+#    - Release History table — add new row
+
+# 6. Final validation
+npx tsc --noEmit   # zero type errors
+yarn test           # all tests passing
+yarn build          # clean dist/
+
+# 7. Commit + tag
+git add -A
+git commit -m "feat: release vX.Y.Z — <headline>"
+git tag vX.Y.Z
+git push && git push --tags
 ```
 
 ---

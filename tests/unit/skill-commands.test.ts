@@ -14,6 +14,8 @@
 
 import path from 'node:path';
 import os from 'node:os';
+import zlib from 'node:zlib';
+import { promisify } from 'node:util';
 
 import fs from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
@@ -27,10 +29,91 @@ vi.mock('@inquirer/prompts', () => ({
 import {
   skillListCommand,
   skillNewCommand,
+  skillRegistryCommand,
   skillRemoveCommand,
   skillStatusCommand,
   skillInstallCommand,
 } from '../../src/commands/skill.js';
+
+/* ──────────────────────────────────────────────────────────────
+ * TAR / TGZ test helpers
+ * ────────────────────────────────────────────────────────────── */
+
+const gzip = promisify(zlib.gzip);
+
+/**
+ * Build a minimal POSIX tar buffer containing a set of zero-length files.
+ * Each entry is a 512-byte header block followed by no data blocks
+ * (size = 0), followed by two 512-byte null blocks (end-of-archive).
+ *
+ * @param paths - List of tar paths, e.g. ["package/shared/git-workflow.md"]
+ */
+function buildTar(paths: string[]): Buffer {
+  const blocks: Buffer[] = [];
+
+  for (const filePath of paths) {
+    const header = Buffer.alloc(512, 0);
+
+    // Name (bytes 0–99): null-terminated
+    header.write(filePath.slice(0, 99), 0, 'utf8');
+
+    // Mode (bytes 100–107): '0000644\0'
+    header.write('0000644\0', 100, 'utf8');
+
+    // UID / GID (bytes 108–123): '0000000\0' each
+    header.write('0000000\0', 108, 'utf8');
+    header.write('0000000\0', 116, 'utf8');
+
+    // Size (bytes 124–135): '00000000000\0' (0 bytes)
+    header.write('00000000000\0', 124, 'utf8');
+
+    // Modification time (bytes 136–147): some valid octal
+    header.write('00000000000\0', 136, 'utf8');
+
+    // Type flag (byte 156): '0' = regular file
+    header.write('0', 156, 'utf8');
+
+    // Compute and write checksum (bytes 148–155)
+    // Treat checksum field as 8 spaces during calculation
+    header.fill(0x20, 148, 156);
+    let checksum = 0;
+    for (let i = 0; i < 512; i++) checksum += header[i]!;
+    header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148, 'utf8');
+
+    blocks.push(header);
+    // No data blocks — file size is 0
+  }
+
+  // Two null blocks = end-of-archive marker
+  blocks.push(Buffer.alloc(512, 0));
+  blocks.push(Buffer.alloc(512, 0));
+
+  return Buffer.concat(blocks);
+}
+
+/**
+ * Build a valid .tgz buffer from a list of file paths.
+ */
+async function buildTgz(paths: string[]): Promise<Buffer> {
+  return gzip(buildTar(paths));
+}
+
+/**
+ * Create a mock Response object compatible with the fetch API.
+ */
+function mockResponse(body: unknown, ok = true, status = 200): Response {
+  const isBuffer = Buffer.isBuffer(body);
+  return {
+    ok,
+    status,
+    json: async () => body,
+    arrayBuffer: async () => (isBuffer ? (body as Buffer).buffer.slice(
+      (body as Buffer).byteOffset,
+      (body as Buffer).byteOffset + (body as Buffer).byteLength,
+    ) : new ArrayBuffer(0)),
+    body: isBuffer ? {} : null,
+  } as unknown as Response;
+}
 
 /* ──────────────────────────────────────────────────────────────
  * Helpers
@@ -362,5 +445,215 @@ describe('skillInstallCommand()', () => {
   it('rejects unsupported (non-nexus-framework) packages', async () => {
     await makeSkillsTree();
     await expect(skillInstallCommand('some-random-package')).rejects.toThrow('process.exit called');
+  });
+});
+
+/* ──────────────────────────────────────────────────────────────
+ * nexus skill registry
+ * ────────────────────────────────────────────────────────────── */
+
+describe('skillRegistryCommand()', () => {
+  let fetchSpy: MockInstance;
+
+  /** Standard skill paths that represent a minimal registry tarball */
+  const MOCK_PATHS = [
+    'package/next.js/routing.md',
+    'package/next.js/api-routes.md',
+    'package/react-vite/component-creation.md',
+    'package/shared/git-workflow.md',
+    'package/shared/mapbox-integration.md',
+    'package/shared/skill-authoring.md',
+    // These should be ignored (not skill .md files)
+    'package/README.md',
+    'package/index.js',
+    'package/next.js/README.md',
+  ];
+
+  /** Registry metadata response returned by the first fetch() call */
+  const MOCK_META = {
+    version: '1.2.3',
+    dist: { tarball: 'https://registry.npmjs.org/@nexus-framework/skills/-/skills-1.2.3.tgz' },
+  };
+
+  beforeEach(() => {
+    // fetchSpy is set per-test so each can configure its own sequence
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it('fetches live registry and lists frameworks + skills from the tarball', async () => {
+    const tgz = await buildTgz(MOCK_PATHS);
+
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(MOCK_META))      // metadata fetch
+      .mockResolvedValueOnce(mockResponse(tgz));           // tarball fetch
+
+    const lines: string[] = [];
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+    await skillRegistryCommand();
+    logSpy.mockRestore();
+
+    const output = lines.join('\n');
+    // Skills from tarball should appear
+    expect(output).toContain('routing');
+    expect(output).toContain('api-routes');
+    expect(output).toContain('component-creation');
+    expect(output).toContain('git-workflow');
+    expect(output).toContain('mapbox-integration');
+    expect(output).toContain('skill-authoring');
+  });
+
+  it('shows the live npm version in the header', async () => {
+    const tgz = await buildTgz(MOCK_PATHS);
+
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(MOCK_META))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    const captured: string[] = [];
+    // logger uses console.log(prefix, message) — capture all arguments
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      captured.push(args.map(String).join(' '));
+    });
+
+    await skillRegistryCommand();
+    logSpy.mockRestore();
+
+    // Version string from mock meta should appear somewhere in output
+    expect(captured.join('\n')).toContain('1.2.3');
+  });
+
+  it('ignores README.md and non-.md files in the tarball', async () => {
+    const tgz = await buildTgz(MOCK_PATHS);
+
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(MOCK_META))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    const lines: string[] = [];
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+    await skillRegistryCommand();
+    logSpy.mockRestore();
+
+    const output = lines.join('\n');
+    expect(output).not.toContain('README');
+    expect(output).not.toContain('index.js');
+  });
+
+  it('falls back to locally installed package when metadata fetch fails (non-ok)', async () => {
+    fetchSpy.mockResolvedValueOnce(mockResponse({}, false, 500));
+
+    // Should complete without throwing — fallback uses the installed package
+    await expect(skillRegistryCommand()).resolves.not.toThrow();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it('falls back to locally installed package when fetch throws (offline)', async () => {
+    fetchSpy.mockRejectedValue(new Error('Network error'));
+
+    await expect(skillRegistryCommand()).resolves.not.toThrow();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it('falls back to locally installed package when tarball fetch fails', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(MOCK_META))           // metadata ok
+      .mockResolvedValueOnce(mockResponse(Buffer.alloc(0), false, 404)); // tarball 404
+
+    await expect(skillRegistryCommand()).resolves.not.toThrow();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it('filters by --framework when a valid framework is provided', async () => {
+    const tgz = await buildTgz(MOCK_PATHS);
+
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(MOCK_META))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    const lines: string[] = [];
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+    await skillRegistryCommand({ framework: 'shared' });
+    logSpy.mockRestore();
+
+    const output = lines.join('\n');
+    // shared skills should appear
+    expect(output).toContain('git-workflow');
+    expect(output).toContain('mapbox-integration');
+    expect(output).toContain('skill-authoring');
+    // next.js skills should NOT appear
+    expect(output).not.toContain('routing');
+    expect(output).not.toContain('api-routes');
+  });
+
+  it('resolves the "nextjs" alias to "next.js" framework folder', async () => {
+    const tgz = await buildTgz(MOCK_PATHS);
+
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(MOCK_META))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    const lines: string[] = [];
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+    await skillRegistryCommand({ framework: 'nextjs' }); // alias — not the real folder name
+    logSpy.mockRestore();
+
+    const output = lines.join('\n');
+    expect(output).toContain('routing');
+    expect(output).toContain('api-routes');
+    // shared skills should NOT appear (filtered to next.js only)
+    expect(output).not.toContain('git-workflow');
+  });
+
+  it('exits with error for an unknown --framework value', async () => {
+    const tgz = await buildTgz(MOCK_PATHS);
+
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(MOCK_META))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    await expect(skillRegistryCommand({ framework: 'angular' })).rejects.toThrow('process.exit called');
+  });
+
+  it('prints a total skill count when no framework filter is applied', async () => {
+    const tgz = await buildTgz(MOCK_PATHS);
+
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(MOCK_META))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    const captured: string[] = [];
+    // logger uses console.log(prefix, message) — capture all arguments
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      captured.push(args.map(String).join(' '));
+    });
+
+    await skillRegistryCommand();
+    logSpy.mockRestore();
+
+    // "Total: N skills across M framework(s)" should appear somewhere
+    expect(captured.join('\n')).toMatch(/Total:\s+\d+\s+skills/);
+  });
+
+  it('does not make a second fetch if the metadata response has no tarball URL', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      mockResponse({ version: '1.0.0', dist: {} }), // no tarball key
+    );
+
+    // Falls back gracefully — does not crash
+    await expect(skillRegistryCommand()).resolves.not.toThrow();
+    // Only one fetch call (the metadata one)
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });
