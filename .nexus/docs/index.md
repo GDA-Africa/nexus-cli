@@ -2,10 +2,10 @@
 
 **Project:** NEXUS CLI (`@nexus-framework/cli`)  
 **Published Version:** v0.3.2 (Mar 7, 2026)  
-**Working Branch:** `fix-backend-scaffolding` · target: `v0.4.0-alpha.1`  
-**Active Initiative:** 🚀 **v1.0 "Alive Brain"** — see [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md)  
+**Working Branch:** `main` · target: **v0.4.0** (M1+M2+M3 shipped together TODAY) · M4 deferred  
+**Active Initiative:** 🚀 **v1.0 "Alive Brain"** + **Auto-Invoke Layer** — see [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md)  
 **Brain Layout:** v1.0 (hand-bootstrapped 2026-05-02 — `.nexus/plans/`, `.nexus/state/`, Vital Signs block)  
-**Coverage:** Unit: 306/306 passing | Integration: Pending | E2E: Pending
+**Coverage:** Unit: 334/334 passing | Integration: sync test live | E2E: Next phase
 
 ---
 
@@ -32,14 +32,33 @@ _Last sync: 2026-05-02 15:30 UTC · branch `fix-backend-scaffolding` · 8 commit
 
 ## 🎯 Current Objective
 
-**Active phase:** 🚀 **v1.0 — Alive Brain · M1 Sensors & Sync**  
-**Active plan:** [`implement-v1-m1-sensors-sync`](../plans/implement-v1-m1-sensors-sync.md) (in_progress · step 1/13)  
-**Carry-over:** Phase 7 (E2E tests) still pending; can ship before or after M1 lands.  
+**🔴 STRATEGY SHIFT (2026-05-02):** Fast-track milestone delivery. Ship M1 + M2 + M3 together as **v0.4.0 stable** today (not alpha). Add **Auto-Invoke Layer** to close UX gap. Defer M4 to later iteration.
+
+**Why:** 
+- M1 (sensors) is complete and tested
+- M2 (plans) and M3 (doctor/brief) are scoped and ready
+- Users won't know when to run commands — auto-invoke solves this
+- Better to ship three cohesive features (sync → plan → audit) than one in isolation
+- M4 (consolidate/wake) can iterate post-release
+
+**Active phase:** 🚀 **v0.4.0 — Multi-Milestone Release**  
+**Active plans:** 
+  - [`implement-v1-m1-sensors-sync`](../plans/implement-v1-m1-sensors-sync.md) — ✅ DONE (staged to commit)
+  - [`implement-v1-m2-plans-mvp`](../plans/implement-v1-m2-plans-mvp.md) — 📋 Ready to start
+  - [`implement-v1-m3-doctor-brief`](../plans/implement-v1-m3-doctor-brief.md) — 📋 Ready to start
+  - [`implement-auto-invoke-layer`](../plans/implement-auto-invoke-layer.md) — 📋 NEW (brain self-awareness)
+
 **Design source:** [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md) — implementation-ready PRD for the six v1.0 commands and the Plans subsystem.
 
-### What v1.0 adds
+### What v0.4.0 adds (M1+M2+M3)
 
-Six new top-level CLI commands, four shippable milestones (M1 → M4), target release v1.0.0 within ~6 weeks of M1 start. The brain stops being a journal and becomes a runtime: `nexus sync` (sensors → Vital Signs block above), `nexus doctor` (drift detection), `nexus brief` (human-readable digest), `nexus consolidate` (`knowledge.md` hygiene), `nexus wake` (session handshake token), and the headline feature — `nexus plan ...` (persisted per-task plans living in `.nexus/plans/`, see [plans dashboard](../plans/index.md)).
+The **complete alive brain perception layer**:
+- **`nexus sync`** (M1) — sensors capture real repo state → Vital Signs block
+- **`nexus plan`** (M2) — persisted multi-step work tracking in `.nexus/plans/`
+- **`nexus doctor` + `nexus brief`** (M3) — drift detection + human-readable digest
+- **Auto-invoke layer** — brain detects its own needs and prompts user
+
+Result: a project brain that not only records state but detects drift, tracks work, and surfaces its own needs. Users don't have to remember when to update — the brain tells them.
 
 ### Brain layout (v1.0 shape — hand-bootstrapped)
 
@@ -238,42 +257,60 @@ Six new top-level CLI commands, four shippable milestones (M1 → M4), target re
 
 ## ⏭️ What's Next
 
-### 🔴 CRITICAL PATH: v1.0 Alive Brain (M1–M4)
+### 🎯 TODAY: Ship v0.4.0 (M1+M2+M3 + Auto-Invoke)
 
-**Full spec:** See root `.nexus/docs/v1_alive_brain.md` — implementation-ready design document.  
-**Start here:** Open plan `nexus plan new "Implement v1.0 M1 — Sensors & Sync"`
+**Full spec:** See root `.nexus/docs/v1_alive_brain.md` — implementation-ready design document.
 
-**M1 (v0.4.0-alpha.1) — Sensors & `nexus sync`** — **5 days** ← **START HERE**
-- Build `src/utils/brain.ts` — locate `.nexus/`, compute brain hash (foundation for all v1.0 features)
-- Build `src/utils/sensors/{git,files,tests,packages}.ts` — pure functions reading repo reality
-- Build `src/commands/sync.ts` — write Vital Signs block into `index.md`
-- Update generators: scaffold Vital Signs fences in new projects
-- Tests: unit per sensor, snapshot test for block, integration test against `nexus-sample/`
-- Spec: §5.1 + §10 of `v1_alive_brain.md`
-- **Blocker for M2–M4.** All later capabilities read sensor output.
+#### M1 ✅ **DONE** (staged, ready to commit)
+**Sensors & `nexus sync`**
+- `src/utils/brain.ts` — locate `.nexus/`, compute brain hash ✅
+- `src/utils/sensors/{git,files,tests,packages}.ts` — repo reality sensors ✅
+- `src/commands/sync.ts` — Vital Signs block writer ✅
+- Generators updated to scaffold fences ✅
+- 28 tests passing ✅
 
-**M2 (v0.4.0-alpha.2) — Plans MVP** — **7 days**
-- `.nexus/plans/` scaffold + `_active.json` index
-- `nexus plan {new,list,show,approve,start,tick,note,done,block,unblock,link,abandon}` (12 commands)
-- Plan file format + templates (feature, bug, refactor, spike, chore)
-- Plans index dashboard auto-builder
+#### M2 📋 **READY** (scoped, ready to start)
+**Plans MVP — the headline feature**
+- `.nexus/plans/` scaffold + lifecycle state machine
+- `nexus plan {new,list,show,start,tick,note,done}` (7 MVP subcommands)
+- Plan templates (feature, bug, refactor, spike, chore)
+- Plans index auto-builder
+- On `plan done`: auto-append to progress log + knowledge prompt
 - Spec: §5.6 of `v1_alive_brain.md`
+- **Est: 7 days**
 
-**M3 (v0.4.0-beta.1) — Doctor & Brief** — **5 days**
-- 10 doctor checks (D01–D10) + modular check architecture
-- `nexus brief` — human-readable digest (pretty + `--md` modes)
-- CI/CD snippets in generators
+#### M3 📋 **READY** (scoped, ready to start)
+**Doctor & Brief — project reflexes & voice**
+- `nexus doctor` — 10 drift checks (D01–D10), modular, configurable
+- `nexus brief` — human-readable status digest (pretty + `--md`)
+- Both consume sensor output from M1 + plan state from M2
 - Spec: §5.2 + §5.3 of `v1_alive_brain.md`
+- **Est: 5 days**
 
-**M4 (v1.0.0) — Consolidate, Wake, Polish** — **5 days**
+#### Auto-Invoke Layer 🆕 **APPROVED** (UX glue)
+**Brain self-awareness: detect its own needs, surface at right moment**
+- Brain detector: recognizes when sync/doctor/consolidate should run
+- Interactive + silent modes, respects config
+- `nexus brain status` — health dashboard
+- Prevents user confusion ("when do I run this?")
+- Spec: new plan [`implement-auto-invoke-layer.md`](../plans/implement-auto-invoke-layer.md)
+- **Est: 3 days, can overlap with M2/M3**
+
+**Combined Target:** v0.4.0 stable shipped this week (M1 commit + M2/M3/auto-invoke parallel dev)
+
+---
+
+### 🔮 LATER: v0.5.0+ and v1.0.0 (M4 + polish)
+
+**M4 (deferred to next iteration) — Consolidate, Wake, Polish**
 - `nexus consolidate` + auto-generated `knowledge-summary.md`
-- `nexus wake` — session handshake tokens
+- `nexus wake` — session handshake tokens (or replaced by auto-invoke tokens)
 - Update all generators for v1.0 scaffolding
-- Update AI instruction generators (CLAUDE.md/AGENTS.md reference `nexus wake`)
 - Migration guide + CHANGELOG
 - Spec: §5.4 + §5.5 + §13 of `v1_alive_brain.md`
+- **Est: 5 days post-v0.4.0**
 
-**Target Release:** v1.0.0 within 6 weeks of M1 start. Backwards-compatible with v0.3.x via `nexus upgrade`.
+**v1.0.0 release:** Celebrate when M4 ships. Six top-level commands, all integrated, AI-native development framework complete.
 
 ---
 

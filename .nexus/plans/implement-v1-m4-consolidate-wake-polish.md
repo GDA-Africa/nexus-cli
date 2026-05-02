@@ -2,7 +2,7 @@
 nexus_plan: true
 id: "implement-v1-m4-consolidate-wake-polish"
 title: "Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0"
-status: approved
+status: backlog
 created: "2026-05-02"
 updated: "2026-05-02"
 owner: "unassigned"
@@ -10,7 +10,12 @@ source: "design:v1_alive_brain.md#5.4,#5.5,#13"
 parent: null
 estimate: "5d"
 phase: "alive-brain-m4"
-tags: ["v1.0", "consolidate", "wake", "release"]
+tags: ["v0.5.0+", "consolidate", "wake", "deferred"]
+---
+
+## Status Update (2026-05-02)
+**DEFERRED to v0.5.0+** — Shifting focus to ship v0.4.0 today with M1+M2+M3 + Auto-Invoke layer. M4 (consolidate/wake) will iterate post-release. Auto-invoke layer partially addresses the "brain awareness" problem that `wake` was solving; may refactor M4 scope based on v0.4.0 learnings.
+
 ---
 
 ## Goal

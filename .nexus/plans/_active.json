@@ -1,6 +1,9 @@
 {
-  "active": ["implement-v1-m1-sensors-sync"],
-  "set_at": "2026-05-02T15:30:00Z",
-  "by": "claude (cowork bootstrap)",
-  "note": "M1 is the foundation — every later command imports from src/utils/brain.ts and src/utils/sensors/."
+  "active": ["implement-v1-m2-plans-mvp", "implement-v1-m3-doctor-brief", "implement-auto-invoke-layer"],
+  "set_at": "2026-05-02T16:00:00Z",
+  "by": "user (strategy shift: v0.4.0 multi-milestone release)",
+  "note": "M1 is DONE (staged to commit). Ship M1+M2+M3 as v0.4.0 today (not alpha). Add auto-invoke layer. M4 defers to v0.5.0+.",
+  "blockers": [],
+  "parallel": true,
+  "target_version": "0.4.0"
 }

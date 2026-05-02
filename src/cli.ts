@@ -9,6 +9,15 @@ import { Command } from 'commander';
 import { adoptCommand } from './commands/adopt.js';
 import { initCommand } from './commands/init.js';
 import { packCommand, unpackCommand } from './commands/pack.js';
+import {
+  planDoneCommand,
+  planListCommand,
+  planNewCommand,
+  planNoteCommand,
+  planShowCommand,
+  planStartCommand,
+  planTickCommand,
+} from './commands/plan.js';
 import { repairCommand } from './commands/repair.js';
 import {
   skillInstallCommand,
@@ -109,6 +118,75 @@ skillCmd
   .description('Check skill health — missing core skills, invalid frontmatter, deprecated status')
   .action(async () => {
     await skillStatusCommand();
+  });
+
+// ── nexus plan ───────────────────────────────────────────────
+
+const planCmd = program
+  .command('plan')
+  .description('Manage durable multi-step plans in .nexus/plans/');
+
+planCmd
+  .command('new <title>')
+  .description('Create a new plan file from the selected type template')
+  .option('--type <kind>', 'Template kind: feature|bug|refactor|spike|chore', 'feature')
+  .option('--owner <owner>', 'Plan owner (default: unassigned)')
+  .option('--phase <phase>', 'Phase label (default inferred from type)')
+  .option('--estimate <estimate>', 'Effort estimate, e.g. 2d')
+  .action(async (title: string, options: {
+    type?: 'feature' | 'bug' | 'refactor' | 'spike' | 'chore';
+    owner?: string;
+    phase?: string;
+    estimate?: string;
+  }) => {
+    await planNewCommand(title, options);
+  });
+
+planCmd
+  .command('list')
+  .description('List plans, optionally filtered by status')
+  .option('--status <status>', 'Filter: draft|approved|in_progress|blocked|done|abandoned')
+  .action(async (options: {
+    status?: 'draft' | 'approved' | 'in_progress' | 'blocked' | 'done' | 'abandoned';
+  }) => {
+    await planListCommand({ status: options.status });
+  });
+
+planCmd
+  .command('show <id>')
+  .description('Print a plan markdown file')
+  .action(async (id: string) => {
+    await planShowCommand(id);
+  });
+
+planCmd
+  .command('start <id>')
+  .description('Move plan to in_progress and mark it active')
+  .action(async (id: string) => {
+    await planStartCommand(id);
+  });
+
+planCmd
+  .command('tick <id> <step>')
+  .description('Mark a checklist step as done (or reopen with --undo)')
+  .option('--undo', 'Set the step back to unchecked')
+  .action(async (id: string, step: string, options: { undo?: boolean }) => {
+    await planTickCommand(id, Number(step), !options.undo);
+  });
+
+planCmd
+  .command('note <id> <message>')
+  .description('Append a timestamped note entry to a plan')
+  .action(async (id: string, message: string) => {
+    await planNoteCommand(id, message);
+  });
+
+planCmd
+  .command('done <id>')
+  .description('Mark a plan done, update active pointer, and append progress log')
+  .option('--summary <text>', 'Optional completion summary appended to Evidence')
+  .action(async (id: string, options: { summary?: string }) => {
+    await planDoneCommand(id, options.summary);
   });
 
 // ── nexus pack / unpack ───────────────────────────────────────

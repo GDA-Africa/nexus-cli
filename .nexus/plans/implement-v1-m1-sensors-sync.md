@@ -10,7 +10,7 @@ source: "design:v1_alive_brain.md#5.1"
 parent: null
 estimate: "5d"
 phase: "alive-brain-m1"
-tags: ["v1.0", "sensors", "cli-command", "first-milestone"]
+tags: ["v0.4.0", "sensors", "cli-command", "milestone-complete"]
 ---
 
 ## Goal

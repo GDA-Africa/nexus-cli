@@ -2,7 +2,7 @@
 nexus_plan: true
 id: "implement-v1-m3-doctor-brief"
 title: "Implement v1.0 M3 — `nexus doctor` & `nexus brief`"
-status: approved
+status: in_progress
 created: "2026-05-02"
 updated: "2026-05-02"
 owner: "unassigned"
@@ -10,7 +10,7 @@ source: "design:v1_alive_brain.md#5.2,#5.3"
 parent: null
 estimate: "5d"
 phase: "alive-brain-m3"
-tags: ["v1.0", "doctor", "brief", "drift-detection"]
+tags: ["v0.4.0", "doctor", "brief", "drift-detection"]
 ---
 
 ## Goal

@@ -2,7 +2,7 @@
 nexus_plan: true
 id: "implement-v1-m2-plans-mvp"
 title: "Implement v1.0 M2 — Plans MVP (the headline feature)"
-status: approved
+status: in_progress
 created: "2026-05-02"
 updated: "2026-05-02"
 owner: "unassigned"
@@ -10,7 +10,7 @@ source: "design:v1_alive_brain.md#5.6"
 parent: null
 estimate: "7d"
 phase: "alive-brain-m2"
-tags: ["v1.0", "plans", "headline-feature"]
+tags: ["v0.4.0", "plans", "headline-feature"]
 ---
 
 ## Goal
@@ -20,36 +20,36 @@ Ship the persisted-plans subsystem: `.nexus/plans/<id>.md` files, lifecycle stat
 The single biggest gap in v0.x is that multi-step work has nowhere to live between sessions — agents re-derive plans every time and contradict each other. Plans solve this. They are the v1.0 *headline feature*; the other commands give plans a useful environment. See [`v1_alive_brain.md` §5.6](../../../.nexus/docs/v1_alive_brain.md).
 
 ## Acceptance Criteria
-- [ ] `src/utils/plans/parser.ts` — read/write plan files (frontmatter + sections), tolerant of human edits
-- [ ] `src/utils/plans/lifecycle.ts` — state transitions: draft → approved → in_progress → (blocked | done | abandoned)
-- [ ] `src/utils/plans/active.ts` — `_active.json` read/write
-- [ ] `src/utils/plans/index-builder.ts` — auto-rebuilds `plans/index.md` after every command
-- [ ] `src/commands/plan.ts` — Commander subcommands: `new`, `list`, `show`, `start`, `tick`, `note`, `done` (MVP)
-- [ ] Plan templates in `src/generators/plan-templates/`: `feature`, `bug`, `refactor`, `spike`, `chore`
-- [ ] On `plan done`: auto-append entry to `index.md` Progress Log, prompt for `knowledge.md` insight
-- [ ] Unit tests for parser, lifecycle, active-pointer, index-builder
-- [ ] Integration test: lifecycle round-trip (`new → start → tick → done`) leaves `plans/`, `index.md`, and `knowledge.md` in expected state
-- [ ] Generator update: `nexus init` scaffolds empty `.nexus/plans/` with a starter plan
-- [ ] CHANGELOG entry for `v0.4.0-alpha.2`
+- [x] `src/utils/plans/parser.ts` — read/write plan files (frontmatter + sections), tolerant of human edits
+- [x] `src/utils/plans/lifecycle.ts` — state transitions: draft → approved → in_progress → (blocked | done | abandoned)
+- [x] `src/utils/plans/active.ts` — `_active.json` read/write
+- [x] `src/utils/plans/index-builder.ts` — auto-rebuilds `plans/index.md` after every command
+- [x] `src/commands/plan.ts` — Commander subcommands: `new`, `list`, `show`, `start`, `tick`, `note`, `done` (MVP)
+- [x] Plan templates in `src/generators/plan-templates/`: `feature`, `bug`, `refactor`, `spike`, `chore`
+- [x] On `plan done`: auto-append entry to `index.md` Progress Log, prompt for `knowledge.md` insight
+- [x] Unit tests for parser, lifecycle, active-pointer, index-builder
+- [x] Integration test: lifecycle round-trip (`new → start → tick → done`) leaves `plans/`, `index.md`, and `knowledge.md` in expected state
+- [x] Generator update: `nexus init` scaffolds empty `.nexus/plans/` with a starter plan
+- [x] CHANGELOG entry for `v0.4.0-alpha.2`
 
 ## Steps
-- [ ] 1. Define `Plan` and `PlanStatus` TypeScript types
-- [ ] 2. Implement `parser.ts` (gray-matter for frontmatter, regex for checkbox steps)
-- [ ] 3. Implement `lifecycle.ts` — pure functions, no I/O
-- [ ] 4. Implement `active.ts` (read/write `_active.json`)
-- [ ] 5. Implement `index-builder.ts` (renders `plans/index.md` table)
-- [ ] 6. Implement `src/commands/plan.ts` — subcommand router
-- [ ] 7. Implement `plan new` (with template selection)
-- [ ] 8. Implement `plan list` (filter flags)
-- [ ] 9. Implement `plan show`
-- [ ] 10. Implement `plan start` (sets active)
-- [ ] 11. Implement `plan tick` (toggles checkbox)
-- [ ] 12. Implement `plan note` (appends timestamped Notes entry)
-- [ ] 13. Implement `plan done` (transition + index.md + knowledge.md prompt)
-- [ ] 14. Author plan templates (feature/bug/refactor/spike/chore)
-- [ ] 15. Wire into `cli.ts`
-- [ ] 16. Generator update for `nexus init` / `adopt` / `upgrade`
-- [ ] 17. CHANGELOG + version bump
+- [x] 1. Define `Plan` and `PlanStatus` TypeScript types
+- [x] 2. Implement `parser.ts` (gray-matter for frontmatter, regex for checkbox steps)
+- [x] 3. Implement `lifecycle.ts` — pure functions, no I/O
+- [x] 4. Implement `active.ts` (read/write `_active.json`)
+- [x] 5. Implement `index-builder.ts` (renders `plans/index.md` table)
+- [x] 6. Implement `src/commands/plan.ts` — subcommand router
+- [x] 7. Implement `plan new` (with template selection)
+- [x] 8. Implement `plan list` (filter flags)
+- [x] 9. Implement `plan show`
+- [x] 10. Implement `plan start` (sets active)
+- [x] 11. Implement `plan tick` (toggles checkbox)
+- [x] 12. Implement `plan note` (appends timestamped Notes entry)
+- [x] 13. Implement `plan done` (transition + index.md + knowledge.md prompt)
+- [x] 14. Author plan templates (feature/bug/refactor/spike/chore)
+- [x] 15. Wire into `cli.ts`
+- [x] 16. Generator update for `nexus init` / `adopt` / `upgrade`
+- [x] 17. CHANGELOG + version bump
 
 ## Files Touched
 - `nexus-cli/src/utils/plans/{parser,lifecycle,active,index-builder,types}.ts` (new)
@@ -70,6 +70,10 @@ The single biggest gap in v0.x is that multi-step work has nowhere to live betwe
 
 ## Notes
 - 2026-05-02 (claude): plan approved during bootstrap surgery; ready to start once M1 sensors module is live (since plans uses `brain.ts` from M1).
+- 2026-05-02 (copilot): shipped first full M2 MVP slice in one pass — plans utility modules, `nexus plan` subcommands, generator scaffolding, template stubs, and command-level lifecycle test coverage.
 
 ## Evidence
-_(to be filled)_
+- Test run: `npx vitest run tests/unit/plan-utils.test.ts tests/unit/plan-command.test.ts` → 7 passed
+- Test run: `npm test` → 20 files, 341 tests passed (includes new plan suites)
+- Typecheck: `npm run type-check` passed
+- Lint: `npm run lint` passed

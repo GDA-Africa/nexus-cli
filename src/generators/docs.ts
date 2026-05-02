@@ -85,8 +85,100 @@ export function generateDocs(
   files.push(generateProjectIndex(config, adoptionContext));
   files.push(generateKnowledge(config));
   files.push(generateNexusManifest(config, localOnly));
+  files.push(...generatePlansScaffold(config));
 
   return files;
+}
+
+function generatePlansScaffold(config: NexusConfig): GeneratedFile[] {
+  const today = new Date().toISOString().split('T')[0] ?? '';
+  const starterId = `bootstrap-${config.projectName}-roadmap`;
+
+  return [
+    {
+      path: '.nexus/plans/_active.json',
+      content: JSON.stringify(
+        {
+          active: [],
+          set_at: new Date().toISOString(),
+          by: 'nexus scaffold',
+        },
+        null,
+        2,
+      ) + '\n',
+    },
+    {
+      path: '.nexus/plans/index.md',
+      content: `---
+nexus_doc: true
+id: "plans_index"
+title: "NEXUS Plans Dashboard"
+status: auto
+generated_at: "${today}"
+---
+
+# Plans Dashboard
+
+> This file is auto-rebuilt by \`nexus plan\` commands.
+
+## Active
+
+| ID | Title | Status | Owner | Updated | Phase |
+|----|-------|--------|-------|---------|-------|
+| — | (none) | — | — | — | — |
+
+## Approved
+
+| ID | Title | Status | Owner | Updated | Phase |
+|----|-------|--------|-------|---------|-------|
+| — | (none) | — | — | — | — |
+
+## Draft
+
+| ID | Title | Status | Owner | Updated | Phase |
+|----|-------|--------|-------|---------|-------|
+| [\`${starterId}\`](./${starterId}.md) | Bootstrap initial roadmap | 📝 draft | unassigned | ${today} | bootstrap |
+`,
+    },
+    {
+      path: `.nexus/plans/${starterId}.md`,
+      content: `---
+nexus_plan: true
+id: "${starterId}"
+title: "Bootstrap initial roadmap"
+status: "draft"
+created: "${today}"
+updated: "${today}"
+owner: "unassigned"
+source: "nexus:scaffold"
+parent: null
+estimate: "1d"
+phase: "bootstrap"
+tags: ["chore"]
+---
+
+## Goal
+Capture a first, durable roadmap for this project.
+
+## Why
+Plans persist multi-step work across sessions.
+
+## Acceptance Criteria
+- [ ] Define initial milestone list
+- [ ] Identify first implementation slice
+
+## Steps
+- [ ] Add a new plan with \`nexus plan new\`
+- [ ] Start it with \`nexus plan start <id>\`
+
+## Notes
+- scaffolded by NEXUS
+
+## Evidence
+- (to be filled)
+`,
+    },
+  ];
 }
 
 function generateVision(

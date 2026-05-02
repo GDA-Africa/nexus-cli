@@ -15,6 +15,7 @@ export function generateDirectories(config: NexusConfig): GeneratedDirectory[] {
     { path: '.nexus' },
     { path: '.nexus/docs' },
     { path: '.nexus/ai' },
+    { path: '.nexus/plans' },
   ];
 
   // Spring Boot projects have a different structure

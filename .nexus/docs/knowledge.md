@@ -95,3 +95,13 @@
 **2026-05-02** — `npm outdated --json` and `npm audit --json` frequently return useful JSON even when the command exits non-zero (for example when outdated or vulnerable packages exist). The sensor must parse stdout/stderr with `reject: false` instead of treating non-zero as a hard failure.
 
 **How to apply:** For package-health sensors, prioritize parsing JSON payloads over exit-code-only logic.
+
+### [architecture] Plans parser should mutate sections, not raw text
+**2026-05-02** — For M2, the robust approach was parsing plans into `frontmatter + preamble + named sections` and mutating specific sections (`Steps`, `Notes`, `Evidence`) before re-serializing. Direct raw-string replacements were too brittle when humans reflow headings or add narrative text.
+
+**How to apply:** Keep lifecycle and active-pointer logic pure/typed, and let the parser own markdown structure transforms.
+
+### [pattern] Rebuild plans index after every plan mutation
+**2026-05-02** — Recomputing `.nexus/plans/index.md` after each command (`new/start/tick/note/done`) keeps dashboard drift at zero and removes a whole class of stale-state bugs. The rebuild is fast because it only scans `.nexus/plans/*.md` and parses frontmatter.
+
+**How to apply:** Treat `plans/index.md` as a derived artifact, never as user-edited source-of-truth.
