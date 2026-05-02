@@ -22,6 +22,24 @@ import type { NexusManifest } from '../types/config.js';
 import { logger } from '../utils/logger.js';
 import { version } from '../version.js';
 
+const VITAL_SIGNS_START = '<!-- NEXUS:VITAL_SIGNS:START';
+const VITAL_SIGNS_END = '<!-- NEXUS:VITAL_SIGNS:END -->';
+const VITAL_SIGNS_PLACEHOLDER = [
+  '<!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` -->',
+  '## 🩺 Vital Signs (auto)',
+  '',
+  '_Last sync: not yet synced_',
+  '',
+  '| Sensor | Reading |',
+  '|--------|---------|',
+  '| Last commit | not available |',
+  '| Tests | not yet measured |',
+  '| Coverage | not collected · M1 sensor adds `vitest --coverage` parsing |',
+  '| Stale folders | not measured |',
+  '| Packages | not yet measured |',
+  '<!-- NEXUS:VITAL_SIGNS:END -->',
+].join('\n');
+
 /**
  * Handler for `nexus upgrade [path]`.
  *
@@ -64,6 +82,7 @@ export async function upgradeCommand(targetPath?: string): Promise<void> {
 
   try {
     const result = await upgradeProject(targetDir, config);
+    await ensureVitalSignsFences(targetDir);
 
     // Log results
     if (result.created.length > 0) {
@@ -109,4 +128,23 @@ export async function upgradeCommand(targetPath?: string): Promise<void> {
     }
     process.exit(1);
   }
+}
+
+async function ensureVitalSignsFences(targetDir: string): Promise<void> {
+  const indexPath = path.join(targetDir, '.nexus', 'docs', 'index.md');
+
+  if (!(await fs.pathExists(indexPath))) {
+    return;
+  }
+
+  const content = await fs.readFile(indexPath, 'utf-8');
+  const hasStart = content.includes(VITAL_SIGNS_START);
+  const hasEnd = content.includes(VITAL_SIGNS_END);
+
+  if (hasStart && hasEnd) {
+    return;
+  }
+
+  const updated = `${content.trimEnd()}\n\n---\n\n${VITAL_SIGNS_PLACEHOLDER}\n`;
+  await fs.writeFile(indexPath, updated, 'utf-8');
 }

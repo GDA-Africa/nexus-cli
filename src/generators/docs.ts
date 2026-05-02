@@ -482,6 +482,22 @@ function generateProjectIndex(
 
 ---
 
+<!-- NEXUS:VITAL_SIGNS:START — managed by \`nexus sync\` -->
+## 🩺 Vital Signs (auto)
+
+_Last sync: not yet synced_
+
+| Sensor | Reading |
+|--------|---------|
+| Last commit | not available |
+| Tests | not yet measured |
+| Coverage | not collected · M1 sensor adds \`vitest --coverage\` parsing |
+| Stale folders | not measured |
+| Packages | not yet measured |
+<!-- NEXUS:VITAL_SIGNS:END -->
+
+---
+
 ## 🎯 Current Objective
 
 <!-- AI: This section must ALWAYS reflect what you're working on RIGHT NOW.

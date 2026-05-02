@@ -85,3 +85,13 @@
 **2026-05-02** — nexus-cli has a logger utility (`src/utils/logger.ts`) that wraps console with structured messages: `logger.info()`, `logger.warn()`, `logger.error()`, `logger.debug()`. Commands use the logger, not bare `console.log()`. Logs are testable (mock logger), quiet-mode-able (`--quiet` flag), CI-friendly.
 
 **How to apply:** All v1.0 commands should use logger for user-facing messages. Tests mock logger or suppress output.
+
+### [gotcha] Folder mtime can hide true file staleness
+**2026-05-02** — While implementing `src/utils/sensors/files.ts`, using directory `mtime` as the primary freshness signal produced false "fresh" readings because creating a nested folder updates directory metadata even when actual source files are old. The reliable approach is: use latest **file** `mtime` when files exist, and only fall back to directory `mtime` when the folder tree is empty.
+
+**How to apply:** For stale-day sensors, prefer latest file timestamps over directory timestamps to avoid under-reporting staleness.
+
+### [gotcha] npm outdated/audit JSON can arrive with non-zero exit code
+**2026-05-02** — `npm outdated --json` and `npm audit --json` frequently return useful JSON even when the command exits non-zero (for example when outdated or vulnerable packages exist). The sensor must parse stdout/stderr with `reject: false` instead of treating non-zero as a hard failure.
+
+**How to apply:** For package-health sensors, prioritize parsing JSON payloads over exit-code-only logic.

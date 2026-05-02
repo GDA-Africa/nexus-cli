@@ -18,6 +18,7 @@ import {
   skillRemoveCommand,
   skillStatusCommand,
 } from './commands/skill.js';
+import { syncCommand } from './commands/sync.js';
 import { updateCommand, printUpdateBanner } from './commands/update.js';
 import { upgradeCommand } from './commands/upgrade.js';
 import { checkForUpdate } from './utils/update-check.js';
@@ -134,6 +135,27 @@ program
   .description('Check for a newer version of NEXUS CLI and install it automatically')
   .action(async () => {
     await updateCommand();
+  });
+
+program
+  .command('sync [path]')
+  .description('Capture repository Vital Signs and update the managed block in .nexus/docs/index.md')
+  .option('--write', 'Write updated Vital Signs block to index.md (default behavior)')
+  .option('--dry-run', 'Do not write files; capture and print output only')
+  .option('--json', 'Print captured Vital Signs as JSON')
+  .option('--scope <name>', 'Limit JSON output scope: all|git|files|tests|packages', 'all')
+  .action(async (targetPath: string | undefined, options: {
+    write?: boolean;
+    dryRun?: boolean;
+    json?: boolean;
+    scope?: 'all' | 'git' | 'files' | 'tests' | 'packages';
+  }) => {
+    await syncCommand(targetPath, {
+      write: options.write,
+      dryRun: options.dryRun,
+      json: options.json,
+      scope: options.scope,
+    });
   });
 
 // ── Startup update notification ───────────────────────────────
