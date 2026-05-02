@@ -1,18 +1,72 @@
 # NEXUS CLI — Project Index
 
 **Project:** NEXUS CLI (`@nexus-framework/cli`)  
-**Status:** 🟢 LIVE ON NPM — v0.3.2 | Live skill registry — fetches directly from npm tarball  
-**Last Updated:** March 7, 2026  
-**Version:** 0.3.2  
+**Published Version:** v0.3.2 (Mar 7, 2026)  
+**Working Branch:** `fix-backend-scaffolding` · target: `v0.4.0-alpha.1`  
+**Active Initiative:** 🚀 **v1.0 "Alive Brain"** — see [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md)  
+**Brain Layout:** v1.0 (hand-bootstrapped 2026-05-02 — `.nexus/plans/`, `.nexus/state/`, Vital Signs block)  
 **Coverage:** Unit: 306/306 passing | Integration: Pending | E2E: Pending
+
+---
+
+<!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` (currently hand-maintained, see plan implement-v1-m1-sensors-sync) -->
+## 🩺 Vital Signs (auto)
+
+_Last sync: 2026-05-02 15:30 UTC · branch `fix-backend-scaffolding` · 8 commits ahead of `main` · working tree dirty (3 files)_
+
+| Sensor | Reading |
+|--------|---------|
+| Last commit | `092d7e7` — feat: release v0.3.2 — live skill registry... · Glenhalton · **8 weeks ago** |
+| Tests | 306 passed · 0 failed · 0 skipped (claimed by index — not verified, M1 will run live) |
+| Coverage | not collected · M1 sensor adds `vitest --coverage` parsing |
+| Stale folders | ⚠ `src/commands` 56 days · `src/utils` 56 days · `src/generators` 56 days · `tests/e2e` never created |
+| Packages | not yet measured · M1 `packages.ts` adds `npm outdated` summary |
+| Plans | 1 active · 3 approved · 1 done · 0 blocked · 0 stale |
+| Manifest | ⚠ `manifest.json` reports v0.1.3 vs published v0.3.2 — proposed doctor check `D-stale-manifest` |
+| Missing docs | ⚠ 02_architecture, 03_data_contracts, 04_api_contracts, 05_business_logic, 06_test_strategy, 08_deployment (6 of 8) |
+
+> **Active plan:** [`implement-v1-m1-sensors-sync`](../plans/implement-v1-m1-sensors-sync.md) (step 1/13) — wake token: `NX-WAKE-BOOT-2026-05-02`
+<!-- NEXUS:VITAL_SIGNS:END -->
 
 ---
 
 ## 🎯 Current Objective
 
-**Phase 1–8:** ✅ COMPLETE — v0.3.0 shipped  
-**Phase 7: Polish & Distribution** — 🟡 IN PROGRESS (E2E tests remaining)  
-**Next Focus:** E2E test suite, `nexus add <feature>` command, framework-specific template content
+**Active phase:** 🚀 **v1.0 — Alive Brain · M1 Sensors & Sync**  
+**Active plan:** [`implement-v1-m1-sensors-sync`](../plans/implement-v1-m1-sensors-sync.md) (in_progress · step 1/13)  
+**Carry-over:** Phase 7 (E2E tests) still pending; can ship before or after M1 lands.  
+**Design source:** [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md) — implementation-ready PRD for the six v1.0 commands and the Plans subsystem.
+
+### What v1.0 adds
+
+Six new top-level CLI commands, four shippable milestones (M1 → M4), target release v1.0.0 within ~6 weeks of M1 start. The brain stops being a journal and becomes a runtime: `nexus sync` (sensors → Vital Signs block above), `nexus doctor` (drift detection), `nexus brief` (human-readable digest), `nexus consolidate` (`knowledge.md` hygiene), `nexus wake` (session handshake token), and the headline feature — `nexus plan ...` (persisted per-task plans living in `.nexus/plans/`, see [plans dashboard](../plans/index.md)).
+
+### Brain layout (v1.0 shape — hand-bootstrapped)
+
+```
+.nexus/
+├── docs/
+│   ├── index.md                ← THIS FILE (Vital Signs block injected above)
+│   ├── knowledge.md             append-only learning log
+│   ├── knowledge-summary.md    ← NEW — auto-generated consolidation (M4 will rebuild)
+│   ├── 01_vision.md
+│   └── 07_implementation.md
+├── plans/                      ← NEW (v1.0 headline)
+│   ├── index.md                 dashboard, hand-maintained until M2 ships
+│   ├── _active.json             pointer to active plan(s)
+│   ├── bootstrap-v1-brain-by-hand.md  ✅ done
+│   ├── implement-v1-m1-sensors-sync.md  🟢 in_progress (active)
+│   ├── implement-v1-m2-plans-mvp.md     📋 approved
+│   ├── implement-v1-m3-doctor-brief.md  📋 approved
+│   └── implement-v1-m4-consolidate-wake-polish.md  📋 approved
+├── state/                      ← NEW, gitignored
+│   ├── session.json             last handshake token
+│   ├── last-sync.json           last Vital Signs snapshot
+│   └── doctor.json              last drift report
+├── ai/instructions.md           AI agent protocol (handshake section added)
+├── skills/
+└── manifest.json                ⚠ stale (reports v0.1.3 vs npm v0.3.2)
+```
 
 ---
 
@@ -184,25 +238,60 @@
 
 ## ⏭️ What's Next
 
-### Immediate (v0.3.x)
-- [ ] E2E tests — generate a project, run its build, verify all files
-- [ ] `nexus skill status` — live check of core/community skills against `@nexus-framework/skills` package versions (when registry exists)
-- [ ] Framework-specific template content (not just landing pages)
-- [ ] `nexus add <feature>` command for incremental additions
-- [ ] Strategy pattern generators (PWA service workers, i18n setup, theming engine)
+### 🔴 CRITICAL PATH: v1.0 Alive Brain (M1–M4)
 
-### Near-term
-- [ ] `nexus skill generate` (v0.4.0) — scan codebase, auto-draft custom skills from patterns
-- [ ] `@nexus-framework/skills` npm package — central registry of community skill packs
-- [ ] `@nexus-framework/skills-integrations` — Supabase, Stripe, Prisma skill packs
+**Full spec:** See root `.nexus/docs/v1_alive_brain.md` — implementation-ready design document.  
+**Start here:** Open plan `nexus plan new "Implement v1.0 M1 — Sensors & Sync"`
+
+**M1 (v0.4.0-alpha.1) — Sensors & `nexus sync`** — **5 days** ← **START HERE**
+- Build `src/utils/brain.ts` — locate `.nexus/`, compute brain hash (foundation for all v1.0 features)
+- Build `src/utils/sensors/{git,files,tests,packages}.ts` — pure functions reading repo reality
+- Build `src/commands/sync.ts` — write Vital Signs block into `index.md`
+- Update generators: scaffold Vital Signs fences in new projects
+- Tests: unit per sensor, snapshot test for block, integration test against `nexus-sample/`
+- Spec: §5.1 + §10 of `v1_alive_brain.md`
+- **Blocker for M2–M4.** All later capabilities read sensor output.
+
+**M2 (v0.4.0-alpha.2) — Plans MVP** — **7 days**
+- `.nexus/plans/` scaffold + `_active.json` index
+- `nexus plan {new,list,show,approve,start,tick,note,done,block,unblock,link,abandon}` (12 commands)
+- Plan file format + templates (feature, bug, refactor, spike, chore)
+- Plans index dashboard auto-builder
+- Spec: §5.6 of `v1_alive_brain.md`
+
+**M3 (v0.4.0-beta.1) — Doctor & Brief** — **5 days**
+- 10 doctor checks (D01–D10) + modular check architecture
+- `nexus brief` — human-readable digest (pretty + `--md` modes)
+- CI/CD snippets in generators
+- Spec: §5.2 + §5.3 of `v1_alive_brain.md`
+
+**M4 (v1.0.0) — Consolidate, Wake, Polish** — **5 days**
+- `nexus consolidate` + auto-generated `knowledge-summary.md`
+- `nexus wake` — session handshake tokens
+- Update all generators for v1.0 scaffolding
+- Update AI instruction generators (CLAUDE.md/AGENTS.md reference `nexus wake`)
+- Migration guide + CHANGELOG
+- Spec: §5.4 + §5.5 + §13 of `v1_alive_brain.md`
+
+**Target Release:** v1.0.0 within 6 weeks of M1 start. Backwards-compatible with v0.3.x via `nexus upgrade`.
+
+---
+
+### Immediate (v0.3.x — parallel to v1.0 work)
+- [ ] E2E tests — generate a project, run its build, verify all files
+- [ ] `nexus skill status` — live check of core/community skills against `@nexus-framework/skills` package versions
+- [ ] Framework-specific template content (not just landing pages)
+
+### Near-term (v0.4.x carry-over, post-v1.0)
+- [ ] `nexus skill generate` — scan codebase, auto-draft custom skills from patterns
+- [ ] `nexus add <feature>` command for incremental additions
 - [ ] Plugin system for custom generators
-- [ ] Template marketplace / community templates
-- [ ] Web-based project configurator
 - [ ] Persona presets — share your persona config as a shareable JSON
+- [ ] Web-based project configurator
 
 ### Backlog
 - [ ] `nexus eject` — remove NEXUS, keep code
 - [ ] `nexus validate` — check project against NEXUS standards
 - [ ] `nexus migrate` — migrate from CRA, etc.
-- [ ] GitLab CI, Bitbucket Pipelines templates
+- [ ] Template marketplace / community templates
 - [ ] Pro tier features (paid AI-powered code generation)

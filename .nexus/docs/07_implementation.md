@@ -494,25 +494,181 @@ git push && git push --tags
 
 ---
 
-## 📝 Next Steps
+## 🎯 v1.0 Alive Brain Implementation (M1–M4)
 
-**Immediate:**
-1. Create GitHub repo
-2. Setup project structure
-3. Install dependencies
-4. Write first test
+> **Reference:** See root `../.../v1_alive_brain.md` for full design spec.
+> This section breaks down the nexus-cli implementation tasks for each milestone.
+> Agents should read `.nexus/docs/knowledge.md` for v1.0-specific patterns and gotchas before starting.
 
-**This Week:**
-1. Implement basic CLI
-2. Create one working template
-3. Test locally
-4. Iterate on UX
+### M1 — Sensors & `nexus sync` (v0.4.0-alpha.1) — ~5 days
 
-**Next Week:**
-1. Add more templates
-2. Build prompt system
-3. Generate documentation
-4. Add tests
+**Objective:** Give the brain eyes. Sensors read repo reality; `nexus sync` writes a Vital Signs block into `.nexus/docs/index.md`.
+
+**Implementation Order (sequential):**
+
+1. **`src/utils/brain.ts` (NEW — foundation)**
+   - Exports: `locateBrainRoot(cwd?: string): string` — find .nexus/ directory
+   - Exports: `computeBrainHash(brainRoot: string): string` — SHA256(index.md + knowledge.md + plans/_active.json) + date
+   - Tests: `tests/unit/brain.test.ts` — locate .nexus from cwd, from parent, returns null if not found; hash is deterministic
+   - This is the foundation for all v1.0 features
+
+2. **`src/utils/sensors/git.ts` (NEW)**
+   - Exports: `captureGit(repoRoot: string): Promise<VitalSigns['git']>` 
+   - Reads: branch name, commits ahead of main, last commit (sha, subject, author, date), dirty status
+   - Uses: `git rev-parse --abbrev-ref HEAD`, `git rev-list main.. --count`, `git log -1 --format=...`, `git status --porcelain`
+   - Timeout: 2s, graceful degradation (null on timeout)
+   - Tests: fixture repos in `tests/__fixtures__/{repo-basic,repo-monorepo,repo-detached}`, unit + integration tests
+
+3. **`src/utils/sensors/files.ts` (NEW)**
+   - Exports: `captureFiles(brainRoot: string): Promise<VitalSigns['files']>`
+   - Reads: phase folders (look for `01_`, `02_`, etc. in .nexus/docs/), last touch date, staleness in days
+   - Timeout: 2s
+   - Tests: mock filesystem with in-memory vol, snapshot test for output format
+
+4. **`src/utils/sensors/tests.ts` (NEW)**
+   - Exports: `captureTests(projectRoot: string): Promise<VitalSigns['tests']>`
+   - Tries: `npm test` (JSON output parse), `npx vitest run --reporter=json`, `npx jest --json`, with fallback
+   - Parses: passed, failed, skipped counts + last run timestamp
+   - Timeout: 2s per attempt, returns null if all fail
+   - Tests: mock npm scripts, parse real test output samples
+
+5. **`src/utils/sensors/packages.ts` (NEW)**
+   - Exports: `capturePackages(projectRoot: string): Promise<VitalSigns['packages']>`
+   - Runs: `npm outdated --json`, `npm audit --json` (or graceful null)
+   - Counts: outdated + vulnerable packages
+   - Timeout: 2s per command
+   - Tests: mock npm output, snapshot test
+
+6. **`src/utils/sensors/index.ts` (NEW — orchestrator)**
+   - Exports: `VitalSigns` interface (typed, matches spec §5.1)
+   - Exports: `captureVitalSigns(opts: SensorOpts): Promise<VitalSigns>`
+   - Calls: all 4 sensors in parallel with Promise.all, then builds aggregate object
+   - Tests: unit test for aggregation, snapshot test of raw JSON output
+   - Add to `src/utils/index.ts` barrel exports
+
+7. **`src/commands/sync.ts` (NEW)**
+   - Exports: `syncCommand(options: CliOptions): Promise<void>`
+   - CLI entry: parses --dry-run, --write (default), --json, --scope
+   - Logic: locates brain, calls `captureVitalSigns()`, renders markdown block, writes to index.md between fences
+   - Rendering: format as markdown table (see spec §5.1 for layout)
+   - Idempotence: on re-run with no changes, block is byte-for-byte identical
+   - Tests: snapshot test of rendered block, integration test (real .nexus/ fixture), dry-run test
+
+8. **Update `src/cli.ts`**
+   - Register: `program.command('sync').description(...).action(syncCommand)`
+   - Add flags: --dry-run, --write, --json, --scope, --cwd
+   - Tests: command routing test
+
+9. **Update generators: `src/generators/docs.ts`**
+   - When generating new projects, scaffold the Vital Signs fences in generated `index.md`:
+     ```markdown
+     <!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync`, do not edit -->
+     ## 🩺 Vital Signs (auto)
+     (empty on init; user runs `nexus sync` to populate)
+     <!-- NEXUS:VITAL_SIGNS:END -->
+     ```
+   - Tests: snapshot test of generated scaffold
+
+10. **Test Summary**
+    - Unit: brain (3), git (4), files (3), tests (4), packages (3), sensors (2), sync (3) = ~22 tests
+    - Integration: fixture repo sync + idempotence (2)
+    - Snapshot: rendered block (1), raw VitalSigns JSON (1)
+    - Total M1 tests: ~26 new tests (targets 306 → 332 total)
+
+**Files Touched:**
+- NEW: `src/utils/brain.ts`, `src/utils/sensors/{git,files,tests,packages,index}.ts`, `src/commands/sync.ts`
+- NEW: `tests/unit/brain.test.ts`, `tests/unit/sensors.test.ts`, `tests/unit/sync.test.ts`
+- NEW: `tests/__fixtures__/{repo-basic,repo-monorepo,repo-detached}` (minimal .git dirs)
+- MODIFIED: `src/cli.ts` (register sync command), `src/utils/index.ts` (barrel), `src/generators/docs.ts` (scaffold fences)
+- MODIFIED: `.gitignore` (add .nexus/state/)
+
+**Acceptance Criteria:**
+- [ ] `nexus sync --dry-run` outputs rendered Vital Signs block
+- [ ] `nexus sync --write` updates index.md between fences
+- [ ] Running sync twice yields identical block (idempotence)
+- [ ] All sensors have 2s timeout + graceful degradation
+- [ ] 26+ new tests all pass
+- [ ] CI green (tsc + eslint + vitest)
+
+---
+
+### M2 — Plans MVP (v0.4.0-alpha.2) — ~7 days *(unblock after M1)*
+
+See spec §5.6 for full plan format. Implementation builds on M1's brain.ts foundation.
+
+**Key Files:**
+- NEW: `src/utils/plans/{parser,lifecycle,active,index-builder}.ts`
+- NEW: `src/commands/plan.ts` (12 subcommands)
+- NEW: `src/generators/plan-templates/{feature,bug,refactor,spike,chore}.md.mustache`
+- NEW: `tests/unit/plans.test.ts` (30+ tests)
+- MODIFIED: `src/cli.ts` (register `nexus plan` command)
+
+**Acceptance Criteria:**
+- [ ] Plan file format matches spec (frontmatter + sections)
+- [ ] All 12 subcommands implemented
+- [ ] `.nexus/plans/index.md` auto-rebuilds
+- [ ] `.nexus/plans/_active.json` tracks active plan(s)
+- [ ] Checkpoint tests (draft → approved → in_progress → done workflow)
+- [ ] Template tests (feature, bug, etc. all scaffold correctly)
+
+---
+
+### M3 — Doctor & Brief (v0.4.0-beta.1) — ~5 days *(unblock after M1)*
+
+Spec §5.2 + §5.3. Doctor reads sensor data + docs, detects drift. Brief is human digest.
+
+**Key Files:**
+- NEW: `src/utils/doctor/checks/{d01..d10}.ts` (one check per file)
+- NEW: `src/utils/doctor/index.ts` (registry + orchestrator)
+- NEW: `src/commands/doctor.ts`
+- NEW: `src/commands/brief.ts`
+- NEW: `tests/unit/doctor.test.ts`, `tests/unit/brief.test.ts`
+
+**Acceptance Criteria:**
+- [ ] All 10 doctor checks (D01–D10) implemented
+- [ ] Checks are modular (add/remove per project via config)
+- [ ] `nexus doctor --severity=warn` filters correctly
+- [ ] `nexus brief` outputs <30 lines, reads in <20s
+- [ ] Brief shows shipped commits, active plans, drift, next steps
+
+---
+
+### M4 — Consolidate, Wake, Polish → v1.0.0 (~5 days) *(unblock after M1–M3)*
+
+Spec §5.4 + §5.5 + §13. Memory hygiene + handshake + polish for release.
+
+**Key Files:**
+- NEW: `src/utils/consolidate.ts` (knowledge clustering)
+- NEW: `src/commands/consolidate.ts`, `src/commands/wake.ts`
+- NEW: `tests/unit/consolidate.test.ts`, `tests/unit/wake.test.ts`
+- MODIFIED: `.nexus/ai/instructions.md` (add wake handshake section)
+- MODIFIED: Generators for v1.0 scaffolding (plans/, state/, welcome)
+
+**Acceptance Criteria:**
+- [ ] `nexus consolidate` generates `knowledge-summary.md`
+- [ ] Summary clusters by category, preserves append-only property
+- [ ] `nexus wake` issues deterministic token, prompts agent to echo
+- [ ] `nexus doctor D09` flags missed handshakes
+- [ ] All generators scaffold for v1.0 by default
+- [ ] `nexus upgrade` lifts v0.3.x projects to v1.0 without data loss
+- [ ] E2E test: new project → plan → sync → doctor clean
+- [ ] README + CHANGELOG + migration guide
+- [ ] v1.0.0 published to npm
+
+**Target Total Tests:** 380+ (26 M1 + 35 M2 + 25 M3 + 20 M4)
+
+---
+
+## 📝 Next Steps (v0.3.x Carry-over)
+
+**Immediate (parallel to M1):**
+1. E2E test suite — generate project, run build
+2. `nexus skill status` command
+
+**After v1.0.0 ships (v1.x backlog):**
+1. `nexus skill generate` — auto-draft skills from code
+2. `nexus add <feature>` command
+3. Web-based project configurator
 
 ---
 

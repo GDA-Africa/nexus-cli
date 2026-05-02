@@ -41,3 +41,7 @@ nexus-sample/
 
 # Misc
 nexus-logo.png
+
+# NEXUS v1.0 runtime state — per-clone, do not commit
+# (last sync snapshot, session handshake token, last doctor report)
+.nexus/state/
