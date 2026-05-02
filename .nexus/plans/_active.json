@@ -1,0 +1,6 @@
+{
+  "active": ["implement-v1-m1-sensors-sync"],
+  "set_at": "2026-05-02T15:30:00Z",
+  "by": "claude (cowork bootstrap)",
+  "note": "M1 is the foundation — every later command imports from src/utils/brain.ts and src/utils/sensors/."
+}
