@@ -2,7 +2,7 @@
 nexus_plan: true
 id: "implement-v1-m2-plans-mvp"
 title: "Implement v1.0 M2 — Plans MVP (the headline feature)"
-status: in_progress
+status: done
 created: "2026-05-02"
 updated: "2026-05-02"
 owner: "unassigned"

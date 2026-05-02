@@ -82,6 +82,7 @@ Without these the brain still cannot react to or speak about reality — it can 
 
 ## Notes
 - 2026-05-02 (claude): plan approved during bootstrap surgery. Depends on M1 (for `nexus sync --json`) and M2 (for plan parsing).
+- 2026-05-02 (copilot): verification pass shows M3 is **not done** yet. Current implementation includes `src/commands/doctor.ts` + checks `D04/D06/D07/D08` only; `src/commands/brief.ts`, checks `D01–D03/D05/D09/D10`, and M3 acceptance test suite are still pending.
 
 ## Evidence
 _(to be filled)_

@@ -7,6 +7,9 @@
 import { Command } from 'commander';
 
 import { adoptCommand } from './commands/adopt.js';
+import { brainCommand } from './commands/brain.js';
+import { briefCommand } from './commands/brief.js';
+import { doctorCommand } from './commands/doctor.js';
 import { initCommand } from './commands/init.js';
 import { packCommand, unpackCommand } from './commands/pack.js';
 import {
@@ -205,6 +208,15 @@ program
   .action(async (targetPath: string | undefined, options: { file?: string }) => {
     await unpackCommand(targetPath, options);
   });
+
+// ── nexus doctor ──────────────────────────────────────────────
+program.addCommand(doctorCommand());
+
+// ── nexus brief ───────────────────────────────────────────────
+program.addCommand(briefCommand());
+
+// ── nexus brain ───────────────────────────────────────────────
+program.addCommand(brainCommand());
 
 // ── nexus update ──────────────────────────────────────────────
 

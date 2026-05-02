@@ -2,7 +2,7 @@
 nexus_plan: true
 id: "implement-auto-invoke-layer"
 title: "Auto-Invoke Layer — Brain Detection & Self-Update"
-status: approved
+status: in_progress
 created: "2026-05-02"
 updated: "2026-05-02"
 owner: "unassigned"
@@ -145,6 +145,7 @@ $ nexus brain status
 - 2026-05-02 (user): "nexus should utilize some of these commands when it sees fit... because users won't know when they need to do this... the brain that identifies those discrepancies"
 - This is the UX layer that makes v1.0 "alive" — the brain proactively surfaces its own needs instead of being a passive tool.
 - Can be shipped in v0.4.0 or iterated post-release; core M1/M2/M3 work unblocked.
+- 2026-05-02 (copilot): moved to `in_progress` after verification pass; M3 is still partial, but auto-invoke kickoff started per strategy-shift request.
 
 ## Evidence
 _(to be filled as work happens)_
