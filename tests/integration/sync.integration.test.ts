@@ -6,16 +6,17 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { syncCommand } from '../../src/commands/sync.js';
 
-describe('sync integration (nexus-sample fixture)', () => {
+describe('sync integration (mock fixture)', () => {
   let tmpDir: string;
   let fixtureDir: string;
 
   beforeEach(async () => {
     tmpDir = path.join(os.tmpdir(), `nexus-sync-integration-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    fixtureDir = path.join(tmpDir, 'nexus-sample-copy');
+    fixtureDir = path.join(tmpDir, 'mock-project');
 
-    const source = path.join(process.cwd(), 'nexus-sample');
-    await fs.copy(source, fixtureDir);
+    await fs.ensureDir(fixtureDir);
+    await fs.ensureDir(path.join(fixtureDir, '.git'));
+    await fs.writeFile(path.join(fixtureDir, 'package.json'), JSON.stringify({name:"test-mock"}), 'utf-8');
 
     // Ensure minimal .nexus/docs/index.md exists with fences
     const indexPath = path.join(fixtureDir, '.nexus', 'docs', 'index.md');
