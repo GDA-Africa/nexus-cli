@@ -5,6 +5,7 @@ import { readActivePlans } from '../plans/active.js';
 import { parsePlanContent } from '../plans/parser.js';
 import type { PlanSummary } from '../plans/types.js';
 import type { VitalSigns } from '../sensors/index.js';
+
 import type { DoctorContext } from './types.js';
 
 export async function buildDoctorContext(cwd: string, nexusDir: string): Promise<DoctorContext> {

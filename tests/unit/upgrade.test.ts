@@ -8,15 +8,15 @@
  *   - repairProject() fix-only mode (restore missing, fix corrupted, preserve valid)
  */
 
-import path from 'node:path';
 import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import fs from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { upgradeProject, repairProject, isPopulated, isCorrupted } from '../../src/generators/index.js';
-import { generateDocs } from '../../src/generators/docs.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
+import { generateDocs } from '../../src/generators/docs.js';
+import { upgradeProject, repairProject, isPopulated, isCorrupted } from '../../src/generators/index.js';
 import { generateSkills } from '../../src/generators/skills.js';
 import type { NexusConfig } from '../../src/types/config.js';
 import { DEFAULT_PERSONA } from '../../src/types/config.js';

@@ -1,5 +1,5 @@
 {
-  "active": ["implement-v1-m2-plans-mvp", "implement-v1-m3-doctor-brief", "implement-auto-invoke-layer"],
+  "active": ["implement-v1-m2-plans-mvp", "implement-auto-invoke-layer"],
   "set_at": "2026-05-02T16:00:00Z",
   "by": "user (strategy shift: v0.4.0 multi-milestone release)",
   "note": "M1 is DONE (staged to commit). Ship M1+M2+M3 as v0.4.0 today (not alpha). Add auto-invoke layer. M4 defers to v0.5.0+.",

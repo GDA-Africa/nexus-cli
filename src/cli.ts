@@ -4,6 +4,10 @@
  * Sets up Commander.js with all commands, flags, and version info.
  */
 
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+import { select } from '@inquirer/prompts';
 import { Command } from 'commander';
 
 import { adoptCommand } from './commands/adopt.js';
@@ -33,6 +37,17 @@ import {
 import { syncCommand } from './commands/sync.js';
 import { updateCommand, printUpdateBanner } from './commands/update.js';
 import { upgradeCommand } from './commands/upgrade.js';
+import {
+  loadAutoInvokeConfig,
+  resolveAutoInvokeMode,
+  saveAutoInvokeConfig,
+  shouldPromptInteractively,
+  shouldSkipAutoInvoke,
+} from './utils/auto-invoke-config.js';
+import { detectBrainNeeds } from './utils/brain-detector.js';
+import { getNexusDir } from './utils/brain.js';
+import { buildDoctorContext } from './utils/doctor/context.js';
+import { runDoctor } from './utils/doctor/index.js';
 import { checkForUpdate } from './utils/update-check.js';
 import { version } from './version.js';
 
@@ -41,7 +56,9 @@ const program = new Command();
 program
   .name('nexus')
   .description('NEXUS CLI — AI-Native Project Scaffolding for the Modern Era')
-  .version(version, '-v, --version');
+  .version(version, '-v, --version')
+  .option('--brain-check', 'Run interactive brain-check flow before command execution')
+  .option('--no-brain-check', 'Disable auto-invoke checks for this command run');
 
 program
   .command('init [project-name]')
@@ -257,6 +274,14 @@ async function runWithUpdateCheck(): Promise<void> {
   // Fire update check in background — does not block CLI startup
   const updatePromise = checkForUpdate(4000);
 
+  program.hook('preAction', async (_thisCommand, actionCommand) => {
+    await runAutoInvokePre(actionCommand);
+  });
+
+  program.hook('postAction', async (_thisCommand, actionCommand) => {
+    await runAutoInvokePost(actionCommand);
+  });
+
   // Parse and run the actual command
   await program.parseAsync();
 
@@ -268,3 +293,138 @@ async function runWithUpdateCheck(): Promise<void> {
 }
 
 void runWithUpdateCheck();
+
+async function runAutoInvokePre(actionCommand: Command): Promise<void> {
+  const cwd = process.cwd();
+  const nexusDir = getNexusDir(cwd);
+  if (!nexusDir) return;
+
+  const commandPath = getCommandPath(actionCommand);
+  const projectRoot = path.dirname(nexusDir);
+  const config = await loadAutoInvokeConfig(projectRoot);
+  const mode = resolveAutoInvokeMode(config, {
+    brainCheck: process.argv.includes('--brain-check'),
+    noBrainCheck: process.argv.includes('--no-brain-check'),
+  });
+
+  if (mode === 'disabled' || shouldSkipAutoInvoke(commandPath, config)) {
+    return;
+  }
+
+  if (shouldPreSync(commandPath)) {
+    await syncCommand(projectRoot, { write: true });
+  }
+
+  const detection = await detectBrainNeeds(projectRoot, {
+    syncIntervalMinutes: config.sync_interval_minutes,
+  });
+
+  if (!detection.shouldDoctor && !detection.shouldSync) {
+    return;
+  }
+
+  if (!shouldPromptInteractively(mode, commandPath, config, detection)) {
+    return;
+  }
+
+  const choice = await select<string>({
+    message: '🧠 Brain Check: choose an action',
+    choices: [
+      { value: 'sync', name: 'Run nexus sync (refresh repo state)' },
+      { value: 'doctor', name: 'Run doctor checks (warn+)' },
+      { value: 'both', name: 'Run sync and doctor' },
+      { value: 'skip', name: 'Skip for now' },
+      { value: 'disable', name: 'Always skip brain checks (disable auto-invoke)' },
+    ],
+    default: 'both',
+  });
+
+  if (choice === 'disable') {
+    await saveAutoInvokeConfig(projectRoot, {
+      ...config,
+      enabled: false,
+      mode: 'disabled',
+    });
+    return;
+  }
+
+  if (choice === 'skip') {
+    return;
+  }
+
+  if (choice === 'sync' || choice === 'both') {
+    await syncCommand(projectRoot, { write: true });
+  }
+
+  if (choice === 'doctor' || choice === 'both') {
+    const ctx = await buildDoctorContext(projectRoot, nexusDir);
+    const report = await runDoctor(ctx, { minSeverity: 'warn' });
+    await persistDoctorState(nexusDir, report);
+  }
+}
+
+async function runAutoInvokePost(actionCommand: Command): Promise<void> {
+  const cwd = process.cwd();
+  const nexusDir = getNexusDir(cwd);
+  if (!nexusDir) return;
+
+  const commandPath = getCommandPath(actionCommand);
+  const projectRoot = path.dirname(nexusDir);
+  const config = await loadAutoInvokeConfig(projectRoot);
+  const mode = resolveAutoInvokeMode(config, {
+    brainCheck: process.argv.includes('--brain-check'),
+    noBrainCheck: process.argv.includes('--no-brain-check'),
+  });
+
+  if (mode === 'disabled' || shouldSkipAutoInvoke(commandPath, config)) {
+    return;
+  }
+
+  const detection = await detectBrainNeeds(projectRoot, {
+    syncIntervalMinutes: config.sync_interval_minutes,
+  });
+
+  const syncLabel = detection.lastSyncAt ? `last synced ${detection.lastSyncAt}` : 'never synced';
+  const doctorLabel = `${detection.doctorWarnOrHigher} doctor warn/error`;
+  const knowledgeLabel = `${detection.knowledgeEntries} knowledge entries`;
+  console.log(`→ Brain: ${syncLabel}, ${doctorLabel}, ${knowledgeLabel}`);
+}
+
+function getCommandPath(actionCommand: Command): string[] {
+  const parts: string[] = [];
+  let current: Command | null = actionCommand;
+
+  while (current) {
+    const currentName = current.name();
+    if (currentName && currentName !== 'nexus') {
+      parts.unshift(currentName);
+    }
+
+    current = current.parent ?? null;
+  }
+
+  return parts;
+}
+
+function shouldPreSync(commandPath: string[]): boolean {
+  const full = commandPath.join(' ');
+  return full === 'plan new'
+    || full === 'plan start'
+    || full === 'plan done'
+    || full === 'skill install';
+}
+
+async function persistDoctorState(
+  nexusDir: string,
+  report: Awaited<ReturnType<typeof runDoctor>>,
+): Promise<void> {
+  const stateDir = path.join(nexusDir, 'state');
+  const filePath = path.join(stateDir, 'doctor.json');
+
+  await fs.mkdir(stateDir, { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify({
+    ranAt: new Date().toISOString(),
+    summary: report.summary,
+    findings: report.findings,
+  }, null, 2), 'utf8');
+}

@@ -59,6 +59,9 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      - name: Nexus doctor
+        run: npx @nexus-framework/cli doctor --severity=error
+
       - name: Build
         run: npm run build
 ${testStep}`,

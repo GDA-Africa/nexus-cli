@@ -5,6 +5,7 @@ export function renderBrainStatus(result: BrainDetectionResult): string {
     '🧠 Brain Status Report',
     `Checked: ${result.checkedAt}`,
     `Sync: ${result.shouldSync ? '⚠ needs refresh' : '✅ fresh enough'}`,
+    `Commits since sync: ${result.hasNewCommitsSinceSync ? '⚠ yes' : '✅ none detected'}`,
     `Doctor: ${result.doctorWarnOrHigher > 0 ? `⚠ ${result.doctorWarnOrHigher} warn/error finding(s)` : '✅ no warn/error findings cached'}`,
     `Plans: ${result.stalePlanCount > 0 ? `⚠ ${result.stalePlanCount} stale in-progress plan(s)` : '✅ no stale in-progress plans'}`,
     `Knowledge: ${result.knowledgeEntries} entries, ${result.knowledgeLines} lines`,

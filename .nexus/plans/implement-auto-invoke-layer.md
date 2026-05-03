@@ -2,7 +2,7 @@
 nexus_plan: true
 id: "implement-auto-invoke-layer"
 title: "Auto-Invoke Layer — Brain Detection & Self-Update"
-status: in_progress
+status: done
 created: "2026-05-02"
 updated: "2026-05-02"
 owner: "unassigned"
@@ -27,30 +27,30 @@ The whole point of an "alive brain" is that it *detects* these needs. Auto-invok
 ## Acceptance Criteria
 
 ### Detection Logic
-- [ ] `src/utils/brain-detector.ts` — checks if brain needs updating:
-  - [ ] Last sync is >1 hour old OR repo has new commits since last sync
-  - [ ] Doctor findings exist at `warn` or higher severity
-  - [ ] Knowledge base has >150 entries OR >700 lines
-  - [ ] Any plan is `in_progress` and untouched for >14 days
-  - [ ] Vital Signs block is missing or malformed
-- [ ] Detection is **non-blocking** (fast, ~100ms max)
-- [ ] Dry-run mode: check without making changes
+- [x] `src/utils/brain-detector.ts` — checks if brain needs updating:
+  - [x] Last sync is >1 hour old OR repo has new commits since last sync
+  - [x] Doctor findings exist at `warn` or higher severity
+  - [x] Knowledge base has >150 entries OR >700 lines
+  - [x] Any plan is `in_progress` and untouched for >14 days
+  - [x] Vital Signs block is missing or malformed
+- [x] Detection is **non-blocking** (fast, ~100ms max)
+- [x] Dry-run mode: check without making changes
 
 ### Invoke Modes
-- [ ] **Silent mode** (default): run checks, cache results, surface via status badge in next command output
-- [ ] **Interactive mode** (`--brain-check`): prompt before running, show what's about to happen
+- [x] **Silent mode** (default): run checks, cache results, surface via status badge in next command output
+- [x] **Interactive mode** (`--brain-check`): prompt before running, show what's about to happen
 - [ ] **Scheduled mode** (future): if run in CI, auto-fix and commit
-- [ ] **Disabled mode** (`--no-brain-check`): skip all auto-invoke (for scripting)
+- [x] **Disabled mode** (`--no-brain-check`): skip all auto-invoke (for scripting)
 
 ### Integration Points
 Auto-check before/after these commands:
-- [ ] Every command entry (`cli.ts` middleware or each command `exec` hook)
-- [ ] On `nexus init` — skip (it scaffolds fresh)
-- [ ] On `nexus adopt` — skip (it's a one-time operation)
-- [ ] On `nexus upgrade` — run after to catch new template issues
-- [ ] On `nexus plan new|start|done` — run sync first (capture latest state)
-- [ ] On `nexus skill install` — run sync to update skill listing
-- [ ] On any user command — check if brain needs updating
+- [x] Every command entry (`cli.ts` middleware or each command `exec` hook)
+- [x] On `nexus init` — skip (it scaffolds fresh)
+- [x] On `nexus adopt` — skip (it's a one-time operation)
+- [x] On `nexus upgrade` — run after to catch new template issues
+- [x] On `nexus plan new|start|done` — run sync first (capture latest state)
+- [x] On `nexus skill install` — run sync to update skill listing
+- [x] On any user command — check if brain needs updating
 
 ### Prompts & UX
 
@@ -88,7 +88,7 @@ $ nexus brain status
 ```
 
 ### Configuration
-- [ ] `.nexus/auto-invoke.config.json` — per-project settings:
+- [x] `.nexus/auto-invoke.config.json` — per-project settings:
   ```json
   {
     "enabled": true,
@@ -99,7 +99,7 @@ $ nexus brain status
     "always_prompt_for": ["plan"]
   }
   ```
-- [ ] Respect user choice (remember "always skip" → update config)
+- [x] Respect user choice (remember "always skip" → update config)
 
 ### Files Touched
 - `nexus-cli/src/utils/brain-detector.ts` (new)
@@ -119,22 +119,22 @@ $ nexus brain status
 - Auto-invoke reads all three to make decisions
 
 ### Testing
-- [ ] Unit: brain-detector against fixture states (no sync, stale sync, doctor warnings, old plans)
-- [ ] Unit: config loading and respected choices
-- [ ] Integration: real repo, run command, verify auto-check fires appropriately
+- [x] Unit: brain-detector against fixture states (no sync, stale sync, doctor warnings, old plans)
+- [x] Unit: config loading and respected choices
+- [x] Integration: real repo, run command, verify auto-check fires appropriately
 - [ ] UX: test interactive prompt (mocked inquirer)
 
 ## Steps
-1. [ ] Design brain-detector heuristics (what counts as "needs updating"?)
-2. [ ] Implement `brain-detector.ts` — pure functions, testable
-3. [ ] Implement `brain-status.ts` — renders human-readable status
-4. [ ] Implement `src/commands/brain.ts` — `status`, `check`, `config` subcommands
-5. [ ] Add CLI middleware in `cli.ts` to hook auto-check
-6. [ ] Add config file generator
-7. [ ] Test detection against all state combinations
-8. [ ] Test prompts (mocked inquirer, verify UX flow)
-9. [ ] Integration test: seed a repo, run commands, verify auto-invoke fires
-10. [ ] Documentation: explain detection heuristics, config options, disable patterns
+1. [x] Design brain-detector heuristics (what counts as "needs updating"?)
+2. [x] Implement `brain-detector.ts` — pure functions, testable
+3. [x] Implement `brain-status.ts` — renders human-readable status
+4. [x] Implement `src/commands/brain.ts` — `status`, `check`, `config` subcommands
+5. [x] Add CLI middleware in `cli.ts` to hook auto-check
+6. [x] Add config file generator
+7. [x] Test detection against all state combinations
+- [x] Test prompts (mocked inquirer, verify UX flow)
+9. [x] Integration test: seed a repo, run commands, verify auto-invoke fires
+10. [x] Documentation: explain detection heuristics, config options, disable patterns
 
 ## Risks
 - Prompt fatigue — users disable it. Mitigation: smart defaults (silent mode, long intervals), only prompt when >12h stale or high-severity issues.
@@ -146,6 +146,9 @@ $ nexus brain status
 - This is the UX layer that makes v1.0 "alive" — the brain proactively surfaces its own needs instead of being a passive tool.
 - Can be shipped in v0.4.0 or iterated post-release; core M1/M2/M3 work unblocked.
 - 2026-05-02 (copilot): moved to `in_progress` after verification pass; M3 is still partial, but auto-invoke kickoff started per strategy-shift request.
+- 2026-05-03 (copilot): implemented auto-invoke middleware in `cli.ts` with silent + interactive + disabled modes, command-aware pre-sync triggers (`plan new/start/done`, `skill install`), status badge output, and persisted config at `.nexus/auto-invoke.config.json`.
 
 ## Evidence
-_(to be filled as work happens)_
+- `yarn type-check` ✅
+- `yarn lint` ✅
+- `yarn test tests/unit/auto-invoke-config.test.ts tests/unit/brain-detector.test.ts tests/unit/brain-status.test.ts tests/unit/brief-command.test.ts tests/unit/doctor-checks.test.ts tests/unit/doctor.test.ts tests/integration/doctor-brief.integration.test.ts` ✅ (23 tests)

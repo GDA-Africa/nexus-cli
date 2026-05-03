@@ -7,18 +7,17 @@
  *   - Frontmatter in documentation files (generators/docs.ts)
  */
 
-import path from 'node:path';
 import os from 'node:os';
+import path from 'node:path';
 
 import fs from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { isExistingProject, detectProject } from '../../src/utils/project-detector.js';
-import type { ProjectInfo } from '../../src/utils/project-detector.js';
-import { generateDocs } from '../../src/generators/docs.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
+import { generateDocs } from '../../src/generators/docs.js';
 import type { NexusConfig } from '../../src/types/config.js';
 import { DEFAULT_PERSONA } from '../../src/types/config.js';
+import { isExistingProject, detectProject } from '../../src/utils/project-detector.js';
 
 /* ──────────────────────────────────────────────────────────────
  * Helpers

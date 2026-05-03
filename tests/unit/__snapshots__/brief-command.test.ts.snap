@@ -1,0 +1,45 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`brief renderers > renders markdown digest with expected headings 1`] = `
+"## Nexus Brief (2026-05-02T18:00:00.000Z)
+
+**Since:** 7 days ago
+**Last sync:** 2026-05-02T17:40:00.000Z
+
+### Shipped
+- abc123 feat: add thing
+
+### Active Plans
+- \`plan-1\` — Plan 1 _(updated 2026-05-02)_
+
+### Drift
+- Errors: 0
+- Warnings: 1
+- Info: 0
+- [D08] Vital signs stale
+
+### Suggested Next
+- Run \`nexus doctor --severity=warn\`
+"
+`;
+
+exports[`brief renderers > renders pretty digest with key sections 1`] = `
+"🧠 Nexus Brief
+Generated: 2026-05-02T18:00:00.000Z
+Since: 7 days ago
+
+Shipped (1):
+  - abc123 feat: add thing
+
+Active plans (1):
+  - plan-1: Plan 1 [updated 2026-05-02]
+
+Drift: 0 error(s), 1 warning(s), 0 info
+  - [D08] Vital signs stale
+
+Suggested next (1):
+  - Run \`nexus doctor --severity=warn\`
+
+Plans done total: 0
+Last sync: 2026-05-02T17:40:00.000Z"
+`;

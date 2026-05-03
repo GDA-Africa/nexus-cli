@@ -9,8 +9,8 @@
  *   - dirExists() must return true for directories and false for files/missing paths
  */
 
-import path from 'node:path';
 import os from 'node:os';
+import path from 'node:path';
 
 import fs from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';

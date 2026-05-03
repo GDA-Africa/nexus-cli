@@ -13,8 +13,8 @@
  *   - round-trip: pack → unpack produces the original .nexus/ structure
  */
 
-import path from 'node:path';
 import os from 'node:os';
+import path from 'node:path';
 
 import fs from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';

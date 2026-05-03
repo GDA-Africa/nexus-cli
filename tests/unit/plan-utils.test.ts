@@ -4,15 +4,15 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { readActivePlans, removeActivePlan, setActivePlan } from '../../src/utils/plans/active.js';
+import { rebuildPlansIndex } from '../../src/utils/plans/index-builder.js';
+import { canTransition, transitionFrontmatter } from '../../src/utils/plans/lifecycle.js';
 import {
   parseChecklist,
   parsePlanContent,
   serializePlanContent,
   updateChecklistItem,
 } from '../../src/utils/plans/parser.js';
-import { canTransition, transitionFrontmatter } from '../../src/utils/plans/lifecycle.js';
-import { readActivePlans, removeActivePlan, setActivePlan } from '../../src/utils/plans/active.js';
-import { rebuildPlansIndex } from '../../src/utils/plans/index-builder.js';
 
 const TMP_DIRS: string[] = [];
 

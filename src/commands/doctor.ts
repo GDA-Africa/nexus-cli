@@ -1,10 +1,15 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
 import { Command } from 'commander';
 
 import { getNexusDir } from '../utils/brain.js';
 import { buildDoctorContext } from '../utils/doctor/context.js';
-import { runDoctor } from '../utils/doctor/index.js';
+import { DEFAULT_CHECKS, runDoctor } from '../utils/doctor/index.js';
 import type { DoctorReport, DoctorSeverity } from '../utils/doctor/types.js';
 import { logger } from '../utils/logger.js';
+
+import { syncCommand } from './sync.js';
 
 export function doctorCommand() {
   const doctor = new Command('doctor')
@@ -25,7 +30,10 @@ export function doctorCommand() {
       const ctx = await buildDoctorContext(cwd, nexusDir);
 
       // 2. Run checks
+      const doctorConfig = await readDoctorConfig(nexusDir);
+      const checks = DEFAULT_CHECKS.filter((check) => !doctorConfig.disabledChecks.includes(check.id));
       const report = await runDoctor(ctx, {
+        checks,
         minSeverity: options.severity as DoctorSeverity,
       });
 
@@ -36,23 +44,63 @@ export function doctorCommand() {
         renderReport(report);
       }
 
+      await persistDoctorReport(nexusDir, report);
+
       // 4. Handle fix
       if (options.fix) {
         const autoFixable = report.findings.filter(f => f.autoFixable);
         if (autoFixable.length > 0) {
           logger.info(`Found ${autoFixable.length} auto-fixable issues. Applying...`);
-          // Basic auto-fix for D08 - just suggest running sync
-          // Full auto-fix logic for sync, etc. goes here
+          if (autoFixable.some((finding) => finding.id === 'D08')) {
+            await syncCommand(cwd, { write: true });
+            logger.success('Auto-fix complete: Vital Signs refreshed via `nexus sync`.');
+          }
         }
       }
 
       // 5. Exit Code
-      if (report.summary.error > 0) {
-        process.exit(2);
-      }
+      process.exit(highestSeverityExitCode(report));
     });
 
   return doctor;
+}
+
+async function persistDoctorReport(nexusDir: string, report: DoctorReport): Promise<void> {
+  const stateDir = path.join(nexusDir, 'state');
+  const filePath = path.join(stateDir, 'doctor.json');
+
+  await fs.mkdir(stateDir, { recursive: true });
+  await fs.writeFile(
+    filePath,
+    JSON.stringify({
+      ranAt: new Date().toISOString(),
+      summary: report.summary,
+      findings: report.findings,
+    }, null, 2),
+    'utf8',
+  );
+}
+
+function highestSeverityExitCode(report: DoctorReport): number {
+  if (report.summary.error > 0) return 2;
+  if (report.summary.warn > 0) return 1;
+  return 0;
+}
+
+async function readDoctorConfig(nexusDir: string): Promise<{ disabledChecks: string[] }> {
+  const configPath = path.join(nexusDir, 'doctor.config.json');
+
+  try {
+    const raw = await fs.readFile(configPath, 'utf8');
+    const parsed = JSON.parse(raw) as { disabledChecks?: unknown };
+    const disabledChecks = Array.isArray(parsed.disabledChecks)
+      ? parsed.disabledChecks.filter((item): item is string => typeof item === 'string')
+      : [];
+
+    return { disabledChecks };
+  } catch {
+    return { disabledChecks: [] };
+  }
 }
 
 function renderReport(report: DoctorReport) {

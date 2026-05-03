@@ -47,7 +47,7 @@ Verify everything works before making changes:
 
 ```bash
 yarn lint       # Zero errors expected
-yarn test       # 295/295 tests passing
+yarn test       # 364/364 tests passing
 npx tsc --noEmit  # Zero type errors
 ```
 

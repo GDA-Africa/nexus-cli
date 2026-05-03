@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import path from 'node:path';
 import os from 'node:os';
+import path from 'node:path';
+
 import fs from 'fs-extra';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { getNexusDir, computeBrainHash } from '../../src/utils/brain.js';
 
 describe('brain.ts', () => {

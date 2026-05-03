@@ -12,10 +12,10 @@
  * without actually killing the test runner.
  */
 
-import path from 'node:path';
 import os from 'node:os';
-import zlib from 'node:zlib';
+import path from 'node:path';
 import { promisify } from 'node:util';
+import zlib from 'node:zlib';
 
 import fs from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';

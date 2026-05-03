@@ -1,17 +1,131 @@
-import { describe, it, expect } from 'vitest';
-import { D04_knowledge_bloat } from '../../src/utils/doctor/checks/D04.js';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { D01_frontmatter_status_drift } from '../../src/utils/doctor/checks/D01.js';
+import { D02_stale_phase } from '../../src/utils/doctor/checks/D02.js';
+import { D03_progress_log_gap } from '../../src/utils/doctor/checks/D03.js';
+import { D05_stale_knowledge_references } from '../../src/utils/doctor/checks/D05.js';
 import { D06_plan_stale } from '../../src/utils/doctor/checks/D06.js';
 import { D07_plan_orphan } from '../../src/utils/doctor/checks/D07.js';
 import { D08_vital_signs_missing } from '../../src/utils/doctor/checks/D08.js';
+import { D09_handshake_missed } from '../../src/utils/doctor/checks/D09.js';
+import { D10_skills_drift } from '../../src/utils/doctor/checks/D10.js';
 import type { DoctorContext } from '../../src/utils/doctor/types.js';
 
+const execaMock = vi.hoisted(() => vi.fn());
+
+vi.mock('execa', () => ({
+  execa: execaMock,
+}));
+
 describe('Doctor Checks', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = path.join(os.tmpdir(), `nexus-doctor-checks-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await fs.mkdir(path.join(tmpDir, '.nexus', 'docs'), { recursive: true });
+    await fs.mkdir(path.join(tmpDir, '.nexus', 'state'), { recursive: true });
+    await fs.mkdir(path.join(tmpDir, '.nexus', 'skills'), { recursive: true });
+    execaMock.mockReset();
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
   const dummyCtx: DoctorContext = {
     cwd: '/fake/cwd',
     vitalSigns: null,
     plans: [],
     activePlans: null,
   };
+
+  it('D01 detects template docs that look populated', async () => {
+    const docPath = path.join(tmpDir, '.nexus', 'docs', '02_architecture.md');
+    await fs.writeFile(docPath, [
+      '---',
+      'status: "template"',
+      '---',
+      '',
+      '# Architecture',
+      ...Array.from({ length: 25 }, (_, i) => `This is concrete implementation detail line ${i + 1}.`),
+    ].join('\n'));
+
+    const findings = await D01_frontmatter_status_drift.run({ ...dummyCtx, cwd: tmpDir });
+    expect(findings.length).toBeGreaterThanOrEqual(1);
+    expect(findings[0]?.id).toBe('D01');
+  });
+
+  it('D02 flags stale active phase when stale folders exist', async () => {
+    const findings = await D02_stale_phase.run({
+      ...dummyCtx,
+      plans: [
+        { fileName: 'active.md', id: 'active', title: 'Active', status: 'in_progress', owner: '', updated: '2026-05-02', phase: '' },
+      ],
+      vitalSigns: {
+        capturedAt: new Date().toISOString(),
+        git: { branch: null, aheadOfMain: null, lastCommit: null, isDirty: null },
+        files: { staleFolders: [{ folder: 'src/commands', staleDays: 30 }] },
+        tests: { passed: null, failed: null, skipped: null, durationMs: null, source: null },
+        packages: { outdatedCount: null, vulnerableCount: null },
+      },
+    });
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.id).toBe('D02');
+  });
+
+  it('D03 reports done plans absent from progress log', async () => {
+    const indexPath = path.join(tmpDir, '.nexus', 'docs', 'index.md');
+    await fs.writeFile(indexPath, '# Index\n\n## ✅ Progress Log\n\n- none yet\n');
+
+    const findings = await D03_progress_log_gap.run({
+      ...dummyCtx,
+      cwd: tmpDir,
+      plans: [
+        { fileName: 'done.md', id: 'done-plan', title: 'Done', status: 'done', owner: '', updated: '2026-05-02', phase: '' },
+      ],
+    });
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.id).toBe('D03');
+  });
+
+  it('D05 reports missing file references in knowledge base', async () => {
+    const knowledgePath = path.join(tmpDir, '.nexus', 'docs', 'knowledge.md');
+    await fs.writeFile(knowledgePath, 'Use `src/legacy/missing.ts` when handling edge case.');
+
+    const findings = await D05_stale_knowledge_references.run({ ...dummyCtx, cwd: tmpDir });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.id).toBe('D05');
+  });
+
+  it('D09 reports missing wake token in recent commit messages', async () => {
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'state', 'session.json'), JSON.stringify({ token: 'NX-WAKE-123' }));
+    execaMock.mockResolvedValue({ stdout: 'feat: add command\nfix: typo' });
+
+    const findings = await D09_handshake_missed.run({ ...dummyCtx, cwd: tmpDir });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.id).toBe('D09');
+  });
+
+  it('D10 detects drift between package dependency and generated skills readme version', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'package.json'),
+      JSON.stringify({ dependencies: { '@nexus-framework/skills': '^0.1.2' } }),
+    );
+    await fs.writeFile(
+      path.join(tmpDir, '.nexus', 'skills', 'README.md'),
+      'Sourced from `@nexus-framework/skills@0.1.0`.',
+    );
+
+    const findings = await D10_skills_drift.run({ ...dummyCtx, cwd: tmpDir });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.id).toBe('D10');
+  });
 
   describe('D06 - Stale Plan', () => {
     it('detects plans older than 14 days', async () => {
@@ -36,6 +150,37 @@ describe('Doctor Checks', () => {
     });
   });
 
+  describe('D07 - Plan orphan', () => {
+    it('flags done plans missing evidence', async () => {
+      const planPath = path.join(tmpDir, '.nexus', 'plans');
+      await fs.mkdir(planPath, { recursive: true });
+      await fs.writeFile(
+        path.join(planPath, 'done.md'),
+        [
+          '---',
+          'id: "done"',
+          'title: "Done"',
+          'status: "done"',
+          '---',
+          '',
+          '## Evidence',
+          '_(to be filled)_',
+        ].join('\n'),
+      );
+
+      const findings = await D07_plan_orphan.run({
+        ...dummyCtx,
+        cwd: tmpDir,
+        plans: [
+          { fileName: 'done.md', id: 'done', title: 'Done', status: 'done', owner: '', updated: '2026-05-02', phase: '' },
+        ],
+      });
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.id).toBe('D07');
+    });
+  });
+
   describe('D08 - Vital Signs Missing', () => {
     it('reports missing vital signs', async () => {
       const findings = await D08_vital_signs_missing.run(dummyCtx);
@@ -50,7 +195,7 @@ describe('Doctor Checks', () => {
       
       const findings = await D08_vital_signs_missing.run({
         ...dummyCtx,
-        vitalSigns: { capturedAt: old.toISOString() } as any,
+        vitalSigns: { capturedAt: old.toISOString() } as DoctorContext['vitalSigns'],
       });
       expect(findings).toHaveLength(1);
       expect(findings[0].description).toContain('older than 24 hours');
@@ -61,7 +206,7 @@ describe('Doctor Checks', () => {
       const recent = new Date();
       const findings = await D08_vital_signs_missing.run({
         ...dummyCtx,
-        vitalSigns: { capturedAt: recent.toISOString() } as any,
+        vitalSigns: { capturedAt: recent.toISOString() } as DoctorContext['vitalSigns'],
       });
       expect(findings).toHaveLength(0);
     });

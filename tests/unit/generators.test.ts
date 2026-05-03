@@ -4,11 +4,11 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { generateDirectories, generatePackageJson, generateGitignore, generateReadme } from '../../src/generators/structure.js';
-import { generateLandingPage } from '../../src/generators/landing-page.js';
-import { generateConfigs } from '../../src/generators/config.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
+import { generateConfigs } from '../../src/generators/config.js';
 import { generateDocs } from '../../src/generators/docs.js';
+import { generateLandingPage } from '../../src/generators/landing-page.js';
+import { generateDirectories, generatePackageJson, generateGitignore, generateReadme } from '../../src/generators/structure.js';
 import type { NexusConfig } from '../../src/types/config.js';
 import { DEFAULT_PERSONA } from '../../src/types/config.js';
 

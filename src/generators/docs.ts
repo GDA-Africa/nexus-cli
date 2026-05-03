@@ -85,9 +85,24 @@ export function generateDocs(
   files.push(generateProjectIndex(config, adoptionContext));
   files.push(generateKnowledge(config));
   files.push(generateNexusManifest(config, localOnly));
+  files.push(generateAutoInvokeConfig());
   files.push(...generatePlansScaffold(config));
 
   return files;
+}
+
+function generateAutoInvokeConfig(): GeneratedFile {
+  return {
+    path: '.nexus/auto-invoke.config.json',
+    content: `${JSON.stringify({
+      enabled: true,
+      mode: 'silent',
+      sync_interval_minutes: 60,
+      auto_fix_doctor: false,
+      disabled_for_commands: ['help'],
+      always_prompt_for: ['plan'],
+    }, null, 2)}\n`,
+  };
 }
 
 function generatePlansScaffold(config: NexusConfig): GeneratedFile[] {

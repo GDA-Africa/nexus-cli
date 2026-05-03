@@ -29,6 +29,7 @@ export interface UpdateInfo {
 // The check walks from the target version downward to find the best match.
 
 const RELEASE_HEADLINES: Record<string, string> = {
+  '0.4.0': '🤖 Plans, Auto-invoke layer — Brain detection & self-update',
   '0.3.2': '🔴 Live skill registry — nexus skill registry now fetches directly from npm, always up-to-date',
   '0.3.0': '🧠 Skills System, nexus skill registry, nexus pack/unpack, nexus update + auto-notifications',
   '0.2.1': '🐛 Bug fixes — backend scaffolding improvements & Spring Boot support',

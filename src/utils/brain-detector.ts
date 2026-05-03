@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { execa } from 'execa';
+
 import { fileExists } from './file-system.js';
 import { collectPlanSummaries } from './plans/index-builder.js';
 
@@ -15,6 +17,7 @@ export interface BrainDetectionResult {
   shouldDoctor: boolean;
   reasons: BrainDetectionReason[];
   lastSyncAt: string | null;
+  hasNewCommitsSinceSync: boolean;
   doctorWarnOrHigher: number;
   knowledgeLines: number;
   knowledgeEntries: number;
@@ -22,22 +25,33 @@ export interface BrainDetectionResult {
   vitalsPresent: boolean;
 }
 
-export async function detectBrainNeeds(cwd: string): Promise<BrainDetectionResult> {
+export interface DetectBrainNeedsOptions {
+  syncIntervalMinutes?: number;
+}
+
+export async function detectBrainNeeds(
+  cwd: string,
+  options: DetectBrainNeedsOptions = {},
+): Promise<BrainDetectionResult> {
   const nexusDir = path.join(cwd, '.nexus');
   const reasons: BrainDetectionReason[] = [];
+  const syncInterval = options.syncIntervalMinutes ?? 60;
 
-  const [lastSyncAt, doctorWarnOrHigher, knowledge, stalePlanCount, vitalsPresent] = await Promise.all([
+  const [lastSyncAt, hasNewCommitsSinceSync, doctorWarnOrHigher, knowledge, stalePlanCount, vitalsPresent] = await Promise.all([
     readLastSync(cwd),
+    readHasNewCommitsSinceSync(cwd),
     readDoctorWarnCount(cwd),
     readKnowledgeStats(cwd),
     readStalePlans(nexusDir),
     hasVitalSignsFence(cwd),
   ]);
 
-  if (!lastSyncAt || isOlderThan(lastSyncAt, 60)) {
+  if (!lastSyncAt || isOlderThan(lastSyncAt, syncInterval) || hasNewCommitsSinceSync) {
     reasons.push({
       code: 'sync-stale',
-      message: 'Last sync is older than 60 minutes (or missing).',
+      message: hasNewCommitsSinceSync
+        ? 'Repository has new commits since the last sync snapshot.'
+        : `Last sync is older than ${syncInterval} minutes (or missing).`,
     });
   }
 
@@ -75,6 +89,7 @@ export async function detectBrainNeeds(cwd: string): Promise<BrainDetectionResul
     shouldDoctor: reasons.some((reason) => reason.code === 'doctor-warn' || reason.code === 'stale-plan'),
     reasons,
     lastSyncAt,
+  hasNewCommitsSinceSync,
     doctorWarnOrHigher,
     knowledgeLines: knowledge.lines,
     knowledgeEntries: knowledge.entries,
@@ -100,6 +115,21 @@ async function readLastSync(cwd: string): Promise<string | null> {
     return typeof parsed.capturedAt === 'string' ? parsed.capturedAt : null;
   } catch {
     return null;
+  }
+}
+
+async function readHasNewCommitsSinceSync(cwd: string): Promise<boolean> {
+  const lastSyncAt = await readLastSync(cwd);
+  if (!lastSyncAt) return false;
+
+  try {
+    const { stdout } = await execa('git', ['log', '-1', '--format=%ct'], { cwd });
+    const lastCommitEpoch = Number(stdout.trim());
+    if (!Number.isFinite(lastCommitEpoch)) return false;
+
+    return (lastCommitEpoch * 1000) > new Date(lastSyncAt).getTime();
+  } catch {
+    return false;
   }
 }
 
