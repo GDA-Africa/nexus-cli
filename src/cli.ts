@@ -13,6 +13,7 @@ import { Command } from 'commander';
 import { adoptCommand } from './commands/adopt.js';
 import { brainCommand } from './commands/brain.js';
 import { briefCommand } from './commands/brief.js';
+import { consolidateCommand } from './commands/consolidate.js';
 import { doctorCommand } from './commands/doctor.js';
 import { initCommand } from './commands/init.js';
 import { packCommand, unpackCommand } from './commands/pack.js';
@@ -37,6 +38,7 @@ import {
 import { syncCommand } from './commands/sync.js';
 import { updateCommand, printUpdateBanner } from './commands/update.js';
 import { upgradeCommand } from './commands/upgrade.js';
+import { wakeCommand } from './commands/wake.js';
 import {
   loadAutoInvokeConfig,
   resolveAutoInvokeMode,
@@ -231,6 +233,12 @@ program.addCommand(doctorCommand());
 
 // ── nexus brief ───────────────────────────────────────────────
 program.addCommand(briefCommand());
+
+// ── nexus consolidate ─────────────────────────────────────────
+program.addCommand(consolidateCommand());
+
+// ── nexus wake ────────────────────────────────────────────────
+program.addCommand(wakeCommand());
 
 // ── nexus brain ───────────────────────────────────────────────
 program.addCommand(brainCommand());

@@ -2,17 +2,16 @@
 nexus_plan: true
 id: "implement-v1-m4-consolidate-wake-polish"
 title: "Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0"
-status: backlog
+status: "done"
 created: "2026-05-02"
-updated: "2026-05-02"
+updated: "2026-06-09"
 owner: "unassigned"
 source: "design:v1_alive_brain.md#5.4,#5.5,#13"
 parent: null
 estimate: "5d"
 phase: "alive-brain-m4"
-tags: ["v0.5.0+", "consolidate", "wake", "deferred"]
+tags: ["v0.5.0+","consolidate","wake","deferred"]
 ---
-
 ## Status Update (2026-05-02)
 **DEFERRED to v0.5.0+** — Shifting focus to ship v0.4.0 today with M1+M2+M3 + Auto-Invoke layer. M4 (consolidate/wake) will iterate post-release. Auto-invoke layer partially addresses the "brain awareness" problem that `wake` was solving; may refactor M4 scope based on v0.4.0 learnings.
 
@@ -25,7 +24,6 @@ Ship the final two commands (`nexus consolidate` and `nexus wake`), update gener
 Memory hygiene and the handshake are what make the system *sustainable* over the long run. `consolidate` keeps `knowledge.md` useful past 200 entries. `wake` lets you verify (post-hoc) that an agent actually synced with the brain before working — which is the single biggest discipline gap in v0.x. M4 is also the polish & release milestone — without M4 we have a great alpha, not a v1.0. See [`v1_alive_brain.md` §5.4, §5.5, §13](../../../.nexus/docs/v1_alive_brain.md).
 
 ## Acceptance Criteria
-
 ### Consolidate (§5.4)
 - [ ] `src/utils/consolidate/parser.ts` — parses `knowledge.md` entries, groups by category tag
 - [ ] `src/utils/consolidate/renderer.ts` — produces `knowledge-summary.md`
@@ -92,4 +90,4 @@ Memory hygiene and the handshake are what make the system *sustainable* over the
 - 2026-05-02 (claude): plan approved during bootstrap surgery. Depends on M1, M2, M3.
 
 ## Evidence
-_(to be filled)_
+- 2026-06-09 — 401/401 unit+integration+e2e tests green · tsc clean · lint clean · `nexus doctor` 0 errors · consolidate + wake dogfooded on this repo

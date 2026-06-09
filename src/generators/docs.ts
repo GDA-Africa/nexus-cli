@@ -87,6 +87,7 @@ export function generateDocs(
   files.push(generateNexusManifest(config, localOnly));
   files.push(generateAutoInvokeConfig());
   files.push(...generatePlansScaffold(config));
+  files.push(generateStateScaffold());
 
   return files;
 }
@@ -102,6 +103,30 @@ function generateAutoInvokeConfig(): GeneratedFile {
       disabled_for_commands: ['help'],
       always_prompt_for: ['plan'],
     }, null, 2)}\n`,
+  };
+}
+
+/**
+ * Scaffold `.nexus/state/` — home of the session handshake file.
+ * `nexus wake` overwrites session.json on every invocation (spec §5.5).
+ */
+function generateStateScaffold(): GeneratedFile {
+  return {
+    path: '.nexus/state/session.json',
+    content: `${JSON.stringify(
+      {
+        $schema: 'https://nexus-framework.dev/schemas/session.json',
+        token: null,
+        issued_at: null,
+        brain_hash: null,
+        brain_hash_inputs: ['docs/index.md', 'docs/knowledge.md', 'plans/_active.json'],
+        active_plan: null,
+        issued_by: 'nexus scaffold',
+        note: 'Run `nexus wake` to issue the first handshake token.',
+      },
+      null,
+      2,
+    )}\n`,
   };
 }
 

@@ -30,6 +30,31 @@ import type { GeneratedFile } from '../types/templates.js';
 import { version } from '../version.js';
 
 /* ──────────────────────────────────────────────────────────────
+ * Shared sections
+ * ────────────────────────────────────────────────────────────── */
+
+/**
+ * Session Handshake protocol — v1.0 "Alive Brain".
+ * Embedded in every generated AI instruction file (spec §5.5 + §9).
+ */
+export const SESSION_HANDSHAKE_SECTION = `## 🤝 Session Handshake (REQUIRED)
+
+Before doing anything, run \`nexus wake\` and **echo the printed token in your
+first response**. This proves you actually read the brain.
+
+\`\`\`
+$ nexus wake          # prints a token like NX-WAKE-7K9F-2026-05-02
+\`\`\`
+
+- The token is deterministic: brain content + today's date. It is recorded in
+  \`.nexus/state/session.json\`, and \`nexus doctor\` (D09) flags commits made
+  without a registered wake.
+- During work, keep the active plan current: \`nexus plan tick\` / \`nexus plan note\`.
+- On task completion, run \`nexus plan done <id>\`.
+- Skipping the handshake is visible, not impossible — if the user tells you to
+  skip it, note that in your response.`;
+
+/* ──────────────────────────────────────────────────────────────
  * Public API
  * ────────────────────────────────────────────────────────────── */
 
@@ -46,6 +71,7 @@ export function generateAiConfig(config: NexusConfig): GeneratedFile[] {
   files.push(generateCursorRules(config));
   files.push(generateWindsurfRules(config));
   files.push(generateClineRules(config));
+  files.push(generateClaudeMd(config));
   files.push(generateAgentsMd(config));
   files.push(generateCopilotInstructions(config));
 
@@ -301,6 +327,10 @@ Description of the discovery. One to three sentences max.
 - **NEVER delete entries** — the knowledge base is append-only
 - **Keep entries short** — 1-3 sentences, not essays
 - **Use the format above** — so future agents can scan headings quickly
+
+---
+
+${SESSION_HANDSHAKE_SECTION}
 
 ---
 
@@ -561,6 +591,10 @@ Description of the discovery. One to three sentences max.
 
 ---
 
+${SESSION_HANDSHAKE_SECTION}
+
+---
+
 ## Workflow — How To Work On This Project
 
 ### Before EVERY task:
@@ -603,6 +637,10 @@ function generateWindsurfRules(config: NexusConfig): GeneratedFile {
 
 function generateClineRules(config: NexusConfig): GeneratedFile {
   return { path: '.clinerules', content: toolInstructionContent(config, 'Cline') };
+}
+
+function generateClaudeMd(config: NexusConfig): GeneratedFile {
+  return { path: 'CLAUDE.md', content: toolInstructionContent(config, 'Claude Code / Claude Cowork') };
 }
 
 function generateAgentsMd(config: NexusConfig): GeneratedFile {

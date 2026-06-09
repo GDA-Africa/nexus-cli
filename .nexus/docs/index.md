@@ -9,23 +9,18 @@
 
 ---
 
-<!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` (currently hand-maintained, see plan implement-v1-m1-sensors-sync) -->
+<!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` -->
 ## 🩺 Vital Signs (auto)
 
-_Last sync: 2026-05-02 15:30 UTC · branch `fix-backend-scaffolding` · 8 commits ahead of `main` · working tree dirty (3 files)_
+_Last sync: 2026-06-09T21:43:21.189Z · branch `main` · 0 commits ahead of main · working tree dirty_
 
 | Sensor | Reading |
 |--------|---------|
-| Last commit | `092d7e7` — feat: release v0.3.2 — live skill registry... · Glenhalton · **8 weeks ago** |
-| Tests | 306 passed · 0 failed · 0 skipped (claimed by index — not verified, M1 will run live) |
+| Last commit | adc2934 — chore: bump version to 0.4.1 in package.json · Glenhalton · 5 weeks ago |
+| Tests | not yet measured |
 | Coverage | not collected · M1 sensor adds `vitest --coverage` parsing |
-| Stale folders | ⚠ `src/commands` 56 days · `src/utils` 56 days · `src/generators` 56 days · `tests/e2e` never created |
-| Packages | not yet measured · M1 `packages.ts` adds `npm outdated` summary |
-| Plans | 1 active · 3 approved · 1 done · 0 blocked · 0 stale |
-| Manifest | ⚠ `manifest.json` reports v0.1.3 vs published v0.3.2 — proposed doctor check `D-stale-manifest` |
-| Missing docs | ⚠ 02_architecture, 03_data_contracts, 04_api_contracts, 05_business_logic, 06_test_strategy, 08_deployment (6 of 8) |
-
-> **Active plan:** [`implement-v1-m1-sensors-sync`](../plans/implement-v1-m1-sensors-sync.md) (step 1/13) — wake token: `NX-WAKE-BOOT-2026-05-02`
+| Stale folders | src/commands 0 days · src/utils 0 days · src/generators 0 days · tests/e2e 0 days · tests/unit 0 days · tests/integration 37 days |
+| Packages | not yet measured |
 <!-- NEXUS:VITAL_SIGNS:END -->
 
 ---
@@ -255,6 +250,10 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | **0.4.0** | **May 3, 2026** | **Auto-invoke layer — Brain detection & self-update. Alive Brain complete with sync, plan, doctor, brief, and brain commands. 364 unit tests.** |
 
 ---
+
+## ✅ Progress Log
+
+- 2026-06-09 — ✅ Completed plan `implement-v1-m4-consolidate-wake-polish`: Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0
 
 ## ⏭️ What's Next
 

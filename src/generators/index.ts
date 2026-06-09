@@ -137,6 +137,7 @@ export async function adoptProject(
       { path: '.nexus/docs' },
       { path: '.nexus/ai' },
       { path: '.nexus/plans' },
+      { path: '.nexus/state' },
       { path: '.nexus/skills' },
       { path: '.nexus/skills/core' },
       { path: '.nexus/skills/custom' },
@@ -202,6 +203,7 @@ const ALWAYS_REPLACE: ReadonlySet<string> = new Set([
   '.cursorrules',
   '.windsurfrules',
   '.clinerules',
+  'CLAUDE.md',
   'AGENTS.md',
   '.github/copilot-instructions.md',
 ]);
@@ -271,6 +273,7 @@ export async function reconcileNexusFiles(
     { path: '.nexus/docs' },
     { path: '.nexus/ai' },
     { path: '.nexus/plans' },
+    { path: '.nexus/state' },
     { path: '.nexus/skills' },
     { path: '.nexus/skills/core' },
     { path: '.nexus/skills/custom' },
@@ -340,6 +343,14 @@ export async function reconcileNexusFiles(
     }
 
     // ── Upgrade mode: apply the upgrade strategy ──
+
+    // Plans and session state are runtime data, not scaffolding — a valid
+    // existing file always wins over a fresh template (v1.0: upgrade must
+    // never lose plan or handshake state).
+    if (file.path.startsWith('.nexus/plans/') || file.path.startsWith('.nexus/state/')) {
+      result.preserved.push(file.path);
+      continue;
+    }
 
     if (ALWAYS_REPLACE.has(file.path)) {
       await writeFile(fullPath, file.content);

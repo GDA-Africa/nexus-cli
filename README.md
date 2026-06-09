@@ -73,10 +73,11 @@ Interactive setup:
 | `nexus upgrade [path]` | Regenerate templates, preserve your populated docs |
 | `nexus repair [path]` | Fix missing or corrupted `.nexus/` files |
 
-### Alive Brain — v0.4.0
+### Alive Brain — v1.0
 
 | Command | What it does |
 |---------|-------------|
+| `nexus wake` | Issue a session handshake token proving the brain was read |
 | `nexus sync` | Capture live repo state → Vital Signs block in project brain |
 | `nexus plan new` | Create a tracked work plan from a template |
 | `nexus plan list` | See all plans with status and progress |
@@ -87,6 +88,7 @@ Interactive setup:
 | `nexus plan done <id>` | Complete a plan — appends to progress log |
 | `nexus doctor` | Run ten drift checks against your project structure |
 | `nexus brief` | Human-readable status digest |
+| `nexus consolidate` | Roll knowledge.md up into a generated summary (`--check`, `--archive`) |
 | `nexus brain status` | Live brain health dashboard |
 | `nexus brain check` | On-demand drift detection |
 
@@ -138,6 +140,7 @@ Interactive setup:
 .cursorrules
 .windsurfrules
 .clinerules
+CLAUDE.md
 AGENTS.md
 .github/copilot-instructions.md
 ```
@@ -146,11 +149,13 @@ Every AI config file embeds the full agent protocol. Open the project in any sup
 
 ---
 
-## The Alive Brain — v0.4.0
+## The Alive Brain — v1.0
 
 Before v0.4.0, NEXUS gave every project a brain. It was a documentation system — useful, but passive.
 
-v0.4.0 makes it active.
+v0.4.0 made it active. v1.0 completes it: the brain senses (`sync`), tracks
+(`plan`), audits (`doctor`), speaks (`brief`), remembers cleanly (`consolidate`),
+and proves itself read (`wake`).
 
 ### `nexus sync`
 
@@ -240,6 +245,43 @@ $ nexus brief
   Suggested
     nexus doctor --fix
 ```
+
+### `nexus wake`
+
+Session handshake — proves an agent actually read the brain before working:
+
+```
+$ nexus wake
+
+NEXUS HANDSHAKE
+Project:    my-app @ /path/to/my-app
+Brain hash: brain-2026-06-09-a3f1c0  (sha256 of docs/index.md + docs/knowledge.md + plans/_active.json)
+Active plan: add-oauth2-provider (in_progress)
+Token:      NX-WAKE-7K9F-2026-06-09
+
+To prove you've synced with the brain, echo this token in your first response:
+NX-WAKE-7K9F-2026-06-09
+```
+
+The token is deterministic (brain content + date) and recorded in
+`.nexus/state/session.json`. Generated AI instructions tell agents to echo it
+in their first response; `nexus doctor` (D09) flags commits made without one.
+Skipping is visible, not impossible. `--quiet` prints just the token.
+
+### `nexus consolidate`
+
+Keeps `knowledge.md` useful at scale. Append-only stays append-only — a summary
+layer is generated on top, never replacing the raw file:
+
+```
+$ nexus consolidate
+✔ knowledge-summary.md regenerated (32 entries across 6 categories).
+
+$ nexus consolidate --check    # CI gate: fails if the summary is stale
+$ nexus consolidate --archive  # move entries older than 1 year to knowledge-archive.md
+```
+
+Agents read the summary first; the raw file is the archaeology.
 
 ### Brain Auto-Invoke
 

@@ -10,7 +10,9 @@ const TRANSITIONS: Record<PlanStatus, PlanStatus[]> = {
 };
 
 export function canTransition(from: PlanStatus, to: PlanStatus): boolean {
-  return TRANSITIONS[from].includes(to);
+  // Tolerate unknown statuses from hand-edited plan files — fail with a
+  // clean "invalid transition" error instead of a TypeError.
+  return TRANSITIONS[from]?.includes(to) ?? false;
 }
 
 export function assertTransition(from: PlanStatus, to: PlanStatus): void {

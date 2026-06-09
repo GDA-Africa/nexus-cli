@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { checkForUpdate } from '../../src/utils/update-check.js';
+import { version as currentVersion } from '../../src/version.js';
 
 /* ──────────────────────────────────────────────────────────────
  * Helpers
@@ -145,12 +146,15 @@ describe('semver comparison via checkForUpdate()', () => {
     fetchSpy.mockRestore();
   });
 
+  // Cases are derived from the CURRENT version so they never go stale
+  // when the CLI version is bumped (gotcha: hardcoded versions broke at 1.0.0).
+  const [major, minor] = currentVersion.split('.').map(Number);
   const cases: Array<[string, boolean, string]> = [
-    ['99.0.0', true,  'major bump is newer'],
-    ['0.99.0', true,  'minor bump is newer'],
-    ['0.0.99', false, 'patch bump — depends on current, use an obviously large number'],
-    ['0.1.0',  false, 'very old version is not newer'],
-    ['0.0.0',  false, 'zero version is not newer'],
+    [`${major + 1}.0.0`, true, 'major bump is newer'],
+    [`${major}.${minor + 1}.0`, true, 'minor bump is newer'],
+    [currentVersion, false, 'same version is not newer'],
+    ['0.1.0', false, 'very old version is not newer'],
+    ['0.0.0', false, 'zero version is not newer'],
   ];
 
   for (const [version, expectedHasUpdate, description] of cases) {
