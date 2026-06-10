@@ -25,22 +25,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: yarn
+          cache: npm
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Lint
-        run: yarn lint
+        run: npm run lint
 
       - name: Type check
         run: npx tsc --noEmit
 
       - name: Run tests
-        run: yarn test
+        run: npm test
 
       - name: Build
-        run: yarn build
+        run: npm run build
 
       - name: Verify CLI executable
         run: |
@@ -61,7 +61,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: yarn
+          cache: npm
 
       - name: Install commitlint
         run: npm install -g @commitlint/cli @commitlint/config-conventional
@@ -84,19 +84,22 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Check if version changed
+      # Compare against the npm REGISTRY, not HEAD~1. This means a publish
+      # that failed mid-run (e.g. expired NPM_TOKEN, 2026-06-09) can be
+      # retried by simply re-running the workflow — the gate only skips
+      # when the version is actually live on npm.
+      - name: Check if version needs publishing
         id: version
         run: |
           CURRENT=$(node -p "require('./package.json').version")
-          PREVIOUS=$(git show HEAD~1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version" 2>/dev/null || echo "0.0.0")
+          PUBLISHED=$(npm view "$(node -p "require('./package.json').name")@$CURRENT" version 2>/dev/null || echo "")
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
-          echo "previous=$PREVIOUS" >> $GITHUB_OUTPUT
-          if [ "$CURRENT" != "$PREVIOUS" ]; then
+          if [ "$PUBLISHED" != "$CURRENT" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "📦 Version changed: $PREVIOUS → $CURRENT"
+            echo "📦 v$CURRENT is not on npm — publishing"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "⏭️ Version unchanged ($CURRENT) — skipping publish"
+            echo "⏭️ v$CURRENT already on npm — skipping publish"
           fi
 
       - name: Setup Node.js
@@ -104,16 +107,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: yarn
+          cache: npm
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         if: steps.version.outputs.changed == 'true'
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Build
         if: steps.version.outputs.changed == 'true'
-        run: yarn build
+        run: npm run build
 
       - name: Publish to npm
         if: steps.version.outputs.changed == 'true'

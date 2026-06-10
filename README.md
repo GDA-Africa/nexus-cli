@@ -77,6 +77,7 @@ Interactive setup:
 
 | Command | What it does |
 |---------|-------------|
+| `nexus mcp` | **Start the brain MCP server (stdio) — the v1.0 headline.** 13 schema-validated tools for Claude Code, Codex, Cursor & any MCP client |
 | `nexus wake` | Issue a session handshake token proving the brain was read |
 | `nexus sync` | Capture live repo state → Vital Signs block in project brain |
 | `nexus plan new` | Create a tracked work plan from a template |
@@ -155,7 +156,30 @@ Before v0.4.0, NEXUS gave every project a brain. It was a documentation system �
 
 v0.4.0 made it active. v1.0 completes it: the brain senses (`sync`), tracks
 (`plan`), audits (`doctor`), speaks (`brief`), remembers cleanly (`consolidate`),
-and proves itself read (`wake`).
+proves itself read (`wake`) — and now **serves itself to agents (`mcp`)**.
+
+### `nexus mcp` — the headline
+
+The brain as an MCP server. Generated projects include a `.mcp.json`, so
+Claude Code, Claude Cowork, OpenAI Codex, Cursor, and any MCP client connect
+automatically:
+
+```json
+{ "mcpServers": { "nexus-brain": { "command": "npx", "args": ["-y", "@nexus-framework/cli", "mcp"] } } }
+```
+
+Agents get 13 schema-validated tools instead of "please read these files":
+
+- `nexus_wake` — handshake token + active plan + next step + doctor counts, one call
+- `nexus_query_knowledge` — targeted gotcha/pattern retrieval, not whole-file reads
+- `nexus_get_active_plan`, `nexus_list_plans`, `nexus_get_plan` — durable work context
+- `nexus_get_vital_signs`, `nexus_brief`, `nexus_doctor` — live repo reality & drift
+- `nexus_list_skills`, `nexus_get_skill` — task-matched skills (custom > core > community)
+- `nexus_plan_tick`, `nexus_plan_note`, `nexus_add_knowledge_entry` — validated writes;
+  malformed frontmatter becomes impossible, not just detectable
+
+Markdown stays the source of truth. No database, no daemon — the server is
+spawned per client over stdio and exits with it.
 
 ### `nexus sync`
 

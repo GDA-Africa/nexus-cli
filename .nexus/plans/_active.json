@@ -1,8 +1,8 @@
 {
   "active": [],
-  "set_at": "2026-06-09T21:50:00.000Z",
-  "by": "m4 completion cleanup",
-  "note": "v1.0.0 ready: M1-M4 complete. m2/auto-invoke entries were stale (plans done since v0.4.0).",
+  "set_at": "2026-06-10T09:15:05.171674Z",
+  "by": "plan done: release-v1-mcp-headline",
+  "note": "v1.0.0 (MCP headline) built & validated. Human steps: renew NPM_TOKEN, re-run publish, publish skills 0.2.0.",
   "blockers": [],
   "parallel": false,
   "target_version": "1.0.0"

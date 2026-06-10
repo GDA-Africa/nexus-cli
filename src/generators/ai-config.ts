@@ -17,7 +17,9 @@
  *     .windsurfrules                   — Windsurf (full content)
  *     .clinerules                      — Cline (full content)
  *     AGENTS.md                        — Claude Code / OpenAI Codex (full content)
+ *     CLAUDE.md                        — Claude Code / Claude Cowork (full content)
  *     .github/copilot-instructions.md  — GitHub Copilot (full content)
+ *     .mcp.json                        — NEXUS brain MCP server registration
  *
  *   Every file is project-aware — it references the actual framework, data
  *   strategy, test framework, and patterns chosen during `nexus init`.
@@ -52,7 +54,39 @@ $ nexus wake          # prints a token like NX-WAKE-7K9F-2026-05-02
 - During work, keep the active plan current: \`nexus plan tick\` / \`nexus plan note\`.
 - On task completion, run \`nexus plan done <id>\`.
 - Skipping the handshake is visible, not impossible — if the user tells you to
-  skip it, note that in your response.`;
+  skip it, note that in your response.
+- **MCP alternative:** if the \`nexus-brain\` MCP server is connected (see
+  \`.mcp.json\`), call the \`nexus_wake\` tool instead — same token, plus the
+  active plan and doctor counts in one call.`;
+
+/**
+ * MCP server section — v1.0 headline feature.
+ * Embedded in every generated AI instruction file.
+ */
+export const MCP_SECTION = `## 🔌 NEXUS Brain MCP Server (PREFERRED INTERFACE)
+
+This project ships an MCP server that exposes the brain as tools. It is
+registered in \`.mcp.json\` (command: \`npx -y @nexus-framework/cli mcp\`) and
+works with Claude Code, Claude Cowork, OpenAI Codex, Cursor, and any other
+MCP client.
+
+**If the \`nexus_*\` tools are available, PREFER them over reading brain files
+by hand** — they return targeted data and validate every write.
+
+| Tool | Use for |
+|------|---------|
+| \`nexus_wake\` | Session start — handshake token + active plan + doctor counts |
+| \`nexus_get_active_plan\` | Current unit of work + next unchecked step |
+| \`nexus_query_knowledge\` | Targeted gotcha/pattern lookup before decisions & debugging |
+| \`nexus_get_vital_signs\` | Live repo sensors (git, tests, files, packages) |
+| \`nexus_brief\` / \`nexus_doctor\` | Status digest / drift report |
+| \`nexus_list_plans\` / \`nexus_get_plan\` | Plan orientation |
+| \`nexus_list_skills\` / \`nexus_get_skill\` | Match tasks against skills, then read the match |
+| \`nexus_plan_tick\` / \`nexus_plan_note\` | Update plan progress (schema-validated — never hand-edit) |
+| \`nexus_add_knowledge_entry\` | Append a learned insight to the knowledge base |
+
+Reading the markdown files directly remains correct when MCP is unavailable —
+markdown stays the source of truth; the MCP server is just the interface.`;
 
 /* ──────────────────────────────────────────────────────────────
  * Public API
@@ -75,7 +109,32 @@ export function generateAiConfig(config: NexusConfig): GeneratedFile[] {
   files.push(generateAgentsMd(config));
   files.push(generateCopilotInstructions(config));
 
+  // MCP server registration — Claude Code / Codex / Cursor pick this up
+  files.push(generateMcpJson());
+
   return files;
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * MCP registration (.mcp.json)
+ * ────────────────────────────────────────────────────────────── */
+
+/**
+ * Register the NEXUS brain MCP server for MCP-aware clients.
+ * Claude Code and Codex read `.mcp.json` at the project root; Cursor
+ * users can copy the same entry into `.cursor/mcp.json`.
+ */
+function generateMcpJson(): GeneratedFile {
+  const config = {
+    mcpServers: {
+      'nexus-brain': {
+        command: 'npx',
+        args: ['-y', '@nexus-framework/cli', 'mcp'],
+      },
+    },
+  };
+
+  return { path: '.mcp.json', content: `${JSON.stringify(config, null, 2)}\n` };
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -331,6 +390,10 @@ Description of the discovery. One to three sentences max.
 ---
 
 ${SESSION_HANDSHAKE_SECTION}
+
+---
+
+${MCP_SECTION}
 
 ---
 
@@ -592,6 +655,10 @@ Description of the discovery. One to three sentences max.
 ---
 
 ${SESSION_HANDSHAKE_SECTION}
+
+---
+
+${MCP_SECTION}
 
 ---
 

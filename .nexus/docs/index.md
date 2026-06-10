@@ -119,6 +119,7 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | `nexus pack [path]` | `src/commands/pack.ts` | Zip `.nexus/` into a portable `nexus-backup-<timestamp>.zip` |
 | `nexus unpack [path]` | `src/commands/pack.ts` | Extract a backup zip and verify the restored `.nexus/` structure |
 | `nexus update` | `src/commands/update.ts` | Check npm registry and auto-install the latest NEXUS CLI version |
+| `nexus mcp [path]` ⬅ **NEW v1.0.0** | `src/commands/mcp.ts` | Stdio MCP server — 13 schema-validated brain tools (`src/mcp/{context,tools,server}.ts`) for Claude Code, Codex, Cursor & any MCP client |
 
 ### Source Modules (src/)
 
@@ -253,7 +254,9 @@ Result: a project brain that not only records state but detects drift, tracks wo
 
 ## ✅ Progress Log
 
+- 2026-06-10 — ✅ Completed plan `release-v1-mcp-headline`: v1.0.0 reboot — **`nexus mcp` server (13 read/write brain tools, @modelcontextprotocol/sdk + zod)**, brain-aware CI (PR brief comment job in generated workflows), `.mcp.json` + MCP sections in all generated AI instruction files, registry-based publish gate in own ci.yml (fixes 2026-06-09 failed-publish retry), publish runbook (`docs/publish-runbook.md`), nexus-skills v0.2.0 prepped (3 new shared skills). 419/419 tests. **Remaining human step: renew NPM_TOKEN + re-run publish.**
 - 2026-06-09 — ✅ Completed plan `implement-v1-m4-consolidate-wake-polish`: Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0
+- 2026-06-09 — ❌ v1.0.0 npm publish FAILED in CI: expired NPM_TOKEN. Never reached the registry → window used to fold the MCP server into v1.0.0.
 
 ## ⏭️ What's Next
 

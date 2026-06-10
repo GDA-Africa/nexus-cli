@@ -16,6 +16,7 @@ import { briefCommand } from './commands/brief.js';
 import { consolidateCommand } from './commands/consolidate.js';
 import { doctorCommand } from './commands/doctor.js';
 import { initCommand } from './commands/init.js';
+import { mcpCommand } from './commands/mcp.js';
 import { packCommand, unpackCommand } from './commands/pack.js';
 import {
   planDoneCommand,
@@ -243,6 +244,9 @@ program.addCommand(wakeCommand());
 // ── nexus brain ───────────────────────────────────────────────
 program.addCommand(brainCommand());
 
+// ── nexus mcp ─────────────────────────────────────────────────
+program.addCommand(mcpCommand());
+
 // ── nexus update ──────────────────────────────────────────────
 
 program
@@ -278,9 +282,18 @@ program
 // If a newer version exists, prints a short non-blocking banner
 // at the end of the command output.
 
+/**
+ * `nexus mcp` speaks the MCP protocol over stdout — auto-invoke output,
+ * interactive prompts, and the update banner would corrupt the stream.
+ */
+function isMcpInvocation(): boolean {
+  return process.argv[2] === 'mcp';
+}
+
 async function runWithUpdateCheck(): Promise<void> {
-  // Fire update check in background — does not block CLI startup
-  const updatePromise = checkForUpdate(4000);
+  // Fire update check in background — does not block CLI startup.
+  // Skipped entirely for `nexus mcp` (stdout must stay protocol-clean).
+  const updatePromise = isMcpInvocation() ? Promise.resolve(null) : checkForUpdate(4000);
 
   program.hook('preAction', async (_thisCommand, actionCommand) => {
     await runAutoInvokePre(actionCommand);
@@ -303,6 +316,8 @@ async function runWithUpdateCheck(): Promise<void> {
 void runWithUpdateCheck();
 
 async function runAutoInvokePre(actionCommand: Command): Promise<void> {
+  if (isMcpInvocation()) return;
+
   const cwd = process.cwd();
   const nexusDir = getNexusDir(cwd);
   if (!nexusDir) return;
@@ -372,6 +387,8 @@ async function runAutoInvokePre(actionCommand: Command): Promise<void> {
 }
 
 async function runAutoInvokePost(actionCommand: Command): Promise<void> {
+  if (isMcpInvocation()) return;
+
   const cwd = process.cwd();
   const nexusDir = getNexusDir(cwd);
   if (!nexusDir) return;

@@ -5,7 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] — 2026-06-09
+## [1.0.0] — 2026-06-10
+
+> The 2026-06-09 publish run failed in CI (expired npm token) before reaching
+> the registry, so v1.0.0 was re-cut on 2026-06-10 with the MCP server included.
+
+### 🔌 `nexus mcp` — the brain becomes a tool server (HEADLINE)
+
+NEXUS now ships an MCP (Model Context Protocol) server. Run `nexus mcp` — or
+let the generated `.mcp.json` register it automatically — and any MCP client
+(Claude Code, Claude Cowork, OpenAI Codex, Cursor, …) gets the project brain
+as 13 schema-validated tools:
+
+- **Read:** `nexus_wake`, `nexus_get_vital_signs`, `nexus_query_knowledge`,
+  `nexus_get_active_plan`, `nexus_list_plans`, `nexus_get_plan`,
+  `nexus_brief`, `nexus_doctor`, `nexus_list_skills`, `nexus_get_skill`
+- **Write:** `nexus_plan_tick`, `nexus_plan_note`, `nexus_add_knowledge_entry`
+
+Why this matters:
+
+- **Accuracy** — targeted retrieval (`nexus_query_knowledge`) instead of whole-file
+  reads; schema-validated writes make malformed plan frontmatter impossible
+- **Speed** — `nexus_wake` returns the handshake token, active plan, next step,
+  and doctor counts in one call; no more re-deriving plans each session
+- **Compliance becomes structural** — tools agents naturally call replace
+  "READ index.md EVERY TIME" rules they might skip
+
+Markdown stays the source of truth — no database, no daemon. The server is
+stdio-spawned per client and exits when the client disconnects.
+
+### 🧠 Brain-aware CI (deterministic tier)
+
+- Generated `.github/workflows/ci.yml` gains a `brain` job: on every PR it runs
+  `nexus sync` + `nexus brief --md` and upserts the digest as a sticky PR
+  comment (`<!-- nexus-brain-brief -->`), so reviewers see brain state next to
+  the diff. The existing `nexus doctor` gate remains the only blocking check.
+- Zero LLM dependency — pure deterministic markdown.
+
+### 🤝 Multi-agent serving
+
+- New generated `.mcp.json` registers the `nexus-brain` server for Claude Code,
+  Codex, and Cursor
+- All generated instruction files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`,
+  `.windsurfrules`, `.clinerules`, copilot-instructions) gain an
+  **MCP Server (PREFERRED INTERFACE)** section documenting the tool surface
+- Session Handshake section now offers the `nexus_wake` tool as the MCP-native
+  handshake path
 
 ### Alive Brain — complete (M4)
 

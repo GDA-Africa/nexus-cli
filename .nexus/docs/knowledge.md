@@ -105,3 +105,22 @@
 **2026-05-02** — Recomputing `.nexus/plans/index.md` after each command (`new/start/tick/note/done`) keeps dashboard drift at zero and removes a whole class of stale-state bugs. The rebuild is fast because it only scans `.nexus/plans/*.md` and parses frontmatter.
 
 **How to apply:** Treat `plans/index.md` as a derived artifact, never as user-edited source-of-truth.
+
+### [gotcha] MCP stdio purity — anything on stdout corrupts the protocol
+**2026-06-10** — `nexus mcp` speaks JSON-RPC over stdout, so the auto-invoke hooks (interactive Brain Check prompt, post-command "→ Brain:" line) and the update banner must be bypassed for the `mcp` command, and all server diagnostics must go to stderr.
+
+**Why:** A single stray `console.log` breaks every connected MCP client with a cryptic parse error.
+
+**How to apply:** `cli.ts` guards with `isMcpInvocation()` (argv[2] === 'mcp'); MCP tool handlers throw `McpToolError` instead of calling logger/process.exit. Any new global CLI output must respect this guard.
+
+### [architecture] MCP server is an interface, not a new source of truth
+**2026-06-10** — v1.0's `nexus mcp` wraps the same utils the CLI commands use (brief/doctor/sensors/plan parser/knowledge parser); markdown in `.nexus/` remains the only persistent state. Write tools (plan_tick, plan_note, add_knowledge_entry) get schema validation for free by reusing the parser layer.
+
+**Why:** No database/daemon keeps the v1.0 philosophy; reusing command internals means CLI and MCP can never disagree on semantics.
+
+**How to apply:** New brain capabilities should land as a pure util first, then get both a CLI command and an MCP tool as thin wrappers.
+
+### [pattern] Publish gate should compare against the npm registry, not git history
+**2026-06-10** — The CI publish job previously compared package.json between HEAD~1 and HEAD, so a publish that failed mid-run (expired NPM_TOKEN, 2026-06-09) could never be retried without a dummy version bump. The gate now checks `npm view <pkg>@<version>` — publish runs whenever the version is not live.
+
+**How to apply:** Idempotent release gates: ask the destination registry, not the repo, whether work is needed.
