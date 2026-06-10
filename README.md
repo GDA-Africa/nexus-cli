@@ -4,10 +4,11 @@
 
 **The open-source AI-native scaffolding CLI by [GDA Africa](https://gdaafrica.org).**
 
-Give every project a structured brain. AI agents read it, build from it, and remember what they learn.
+Give every project a structured brain. AI agents read it, build from it, remember what they learn — and since v1.0, **call it as MCP tools**.
 
 [![npm](https://img.shields.io/npm/v/@nexus-framework/cli?style=flat-square&logo=npm&logoColor=white&label=npm&color=CB3837)](https://www.npmjs.com/package/@nexus-framework/cli)
-[![Tests](https://img.shields.io/badge/tests-364_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![MCP](https://img.shields.io/badge/MCP-13_brain_tools-8A2BE2?style=flat-square)](https://modelcontextprotocol.io)
+[![Tests](https://img.shields.io/badge/tests-419_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
 [![Website](https://img.shields.io/badge/nexus.glenhalton.com-8A2BE2?style=flat-square&logo=googlechrome&logoColor=white)](https://nexus.glenhalton.com)
@@ -20,9 +21,11 @@ Give every project a structured brain. AI agents read it, build from it, and rem
 
 Scaffolding tools generate files. NEXUS generates **understanding**.
 
-Run `nexus init` and your project gets a structured documentation system AI agents can parse, a persistent knowledge base they write to after discoveries, a project brain that tracks priorities and progress — and in v0.4.0, an alive brain that monitors repo state, tracks work across sessions, and surfaces issues before they compound.
+Run `nexus init` and your project gets a structured documentation system AI agents can parse, a persistent knowledge base they write to after discoveries, a project brain that tracks priorities and progress, and an alive brain that monitors repo state, tracks work across sessions, and surfaces issues before they compound.
 
-Your AI coding tool opens the project and already knows the architecture, the decisions, and what to build next.
+**v1.0 makes the brain callable.** Every generated project ships a `.mcp.json` that registers the `nexus-brain` MCP server — Claude Code, Claude Cowork, OpenAI Codex, Cursor, and any MCP client get the brain as 13 schema-validated tools instead of a pile of files they're told to read. One `nexus_wake` call returns the session handshake, the active plan, its next step, and drift counts. Writes go through validated tools, so malformed brain state becomes impossible rather than merely detectable.
+
+Your AI coding tool opens the project and already knows the architecture, the decisions, and what to build next — and can prove it.
 
 ---
 
@@ -373,11 +376,13 @@ Set once at `nexus init`. Adjust anytime with `nexus upgrade`.
 
 ## AI Tool Support
 
-Works with any tool that reads project files.
+Two integration layers, both generated for you:
 
-Cursor · GitHub Copilot · Windsurf · Cline · Claude Code · Gemini CLI
+**MCP (preferred)** — `.mcp.json` registers the `nexus-brain` server. Clients with MCP support (Claude Code, Claude Cowork, OpenAI Codex, Cursor, …) call the brain as tools: targeted knowledge queries, live repo sensors, validated plan updates.
 
-Supported config files: `.cursorrules` · `.windsurfrules` · `.clinerules` · `AGENTS.md` · `.github/copilot-instructions.md`
+**Instruction files (universal)** — works with any tool that reads project files: Cursor · GitHub Copilot · Windsurf · Cline · Claude Code · Gemini CLI
+
+Generated config files: `.mcp.json` · `CLAUDE.md` · `AGENTS.md` · `.cursorrules` · `.windsurfrules` · `.clinerules` · `.github/copilot-instructions.md`
 
 ---
 
