@@ -30,6 +30,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # npm bug #4828: lockfiles can lose platform-specific optional deps
+      # (rollup/esbuild natives), breaking vitest on runners. Verify and
+      # self-heal instead of failing the whole pipeline.
+      - name: Ensure platform-native optional deps
+        run: node -e "require('@rollup/rollup-linux-x64-gnu')" 2>/dev/null || npm install --no-save @rollup/rollup-linux-x64-gnu @esbuild/linux-x64
+
       - name: Lint
         run: npm run lint
 
