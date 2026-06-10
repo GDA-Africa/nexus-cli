@@ -31,10 +31,17 @@ jobs:
         run: npm ci
 
       # npm bug #4828: lockfiles can lose platform-specific optional deps
-      # (rollup/esbuild natives), breaking vitest on runners. Verify and
-      # self-heal instead of failing the whole pipeline.
-      - name: Ensure platform-native optional deps
-        run: node -e "require('@rollup/rollup-linux-x64-gnu')" 2>/dev/null || npm install --no-save @rollup/rollup-linux-x64-gnu @esbuild/linux-x64
+      # (rollup/esbuild/unrs-resolver natives), breaking vitest and eslint
+      # on runners. Probe the known natives; if ANY is missing the lock is
+      # incomplete — rebuild the whole tree from the registry, which restores
+      # every native (not just the probed ones).
+      - name: Heal platform-native optional deps
+        run: |
+          node -e "require('@rollup/rollup-linux-x64-gnu'); require('@esbuild/linux-x64'); require('@unrs/resolver-binding-linux-x64-gnu')" 2>/dev/null \
+            && echo "✓ native bindings present" \
+            || (echo "⚠ incomplete lockfile (npm#4828) — rebuilding node_modules" \
+                && rm -rf node_modules package-lock.json \
+                && npm install --no-audit --no-fund)
 
       - name: Lint
         run: npm run lint
