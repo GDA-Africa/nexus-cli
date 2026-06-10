@@ -124,3 +124,10 @@
 **2026-06-10** — The CI publish job previously compared package.json between HEAD~1 and HEAD, so a publish that failed mid-run (expired NPM_TOKEN, 2026-06-09) could never be retried without a dummy version bump. The gate now checks `npm view <pkg>@<version>` — publish runs whenever the version is not live.
 
 **How to apply:** Idempotent release gates: ask the destination registry, not the repo, whether work is needed.
+
+### [gotcha] npm bug #4828 — lockfiles can silently drop platform-native optionals
+**2026-06-10** — A package-lock.json regenerated in a sandboxed/odd environment recorded only the darwin variants of rollup/esbuild natives, so `npm ci` on GitHub's Linux runners crashed vitest with "Cannot find module @rollup/rollup-linux-x64-gnu". CI now self-heals (verifies the native after `npm ci`, installs if absent).
+
+**Why:** npm derives optional-dep entries from local install state, not the full packument matrix, when cache/tree state is partial.
+
+**How to apply:** Regenerate lockfiles on a normal dev machine with `rm -rf node_modules package-lock.json && npm install`; after any lock regen, grep it for `rollup-linux-x64-gnu` before pushing. Keep the self-heal step in ci.yml.
