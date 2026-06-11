@@ -138,3 +138,10 @@
 **Why:** Init was designed for empty directories; dogfooding v1.0 in this repo exposed the missing guard. One accidental command = total brain loss in any uncommitted project.
 
 **How to apply:** Backlogged for v1.1: init must detect an existing brain and refuse (suggesting `nexus upgrade`), behind an explicit `--force`. Until fixed: never run `init` inside a brain-ed repo. Related: generated content showed "(undefined, local-only)" — framework value missing in template context; same backlog.
+
+### [bug-fix] Upgrade data loss — root cause was `isCorrupted` + an inverted replace gate (CORRECTION)
+**2026-06-11** — Correction to the earlier entry: the 2026-06-11 brain wipe was caused by `nexus upgrade` (not `init`). Two compounding flaws: (1) `isCorrupted()` treated any `.nexus/docs/` file without YAML frontmatter as corrupted, and corrupted files are force-replaced in BOTH upgrade and repair modes; (2) the smart check replaced everything not explicitly `status: populated`. Hand-written, frontmatter-less brains hit both.
+
+**Why:** "Repair" semantics assumed all docs are generator-born. Hand-written brains (like this repo's) are first-class and must never be classified as broken scaffolding.
+
+**How to apply:** Fixed pre-v1.0.0-publish: missing frontmatter is not corruption (only empty files, bad JSON, unclosed frontmatter); the replace gate is now `isTemplate()` — only explicit `status: template` is replaceable; every reconcile overwrite is first mirrored to `.nexus/state/upgrade-backup/<stamp>/`. Destructive-by-default is never acceptable in reconcile logic — preserve and back up.

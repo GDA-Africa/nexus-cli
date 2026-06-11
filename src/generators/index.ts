@@ -218,16 +218,35 @@ const ALWAYS_PRESERVE: ReadonlySet<string> = new Set([
  * Checks YAML frontmatter for `status: populated`.
  */
 export function isPopulated(content: string): boolean {
-  return /^---[\s\S]*?status:\s*populated[\s\S]*?---/m.test(content);
+  return /^---[\s\S]*?status:\s*"?populated"?[\s\S]*?---/m.test(content);
+}
+
+/**
+ * Determine whether a file is still in its scaffolded template state.
+ * ONLY an explicit `status: template` in frontmatter qualifies.
+ *
+ * This is the replace gate for the smart file strategy. Everything else —
+ * `status: populated`, frontmatter without a status, or NO frontmatter at
+ * all (hand-written brains) — is treated as user content and preserved.
+ *
+ * History: before v1.0.0 the gate was inverted (`!isPopulated`), which
+ * destroyed hand-written, frontmatter-less brain docs on upgrade
+ * (2026-06-11 dogfooding incident). Preserve-by-default is the contract.
+ */
+export function isTemplate(content: string): boolean {
+  return /^---[\s\S]*?status:\s*"?template"?[\s\S]*?---/m.test(content);
 }
 
 /**
  * Determine whether a NEXUS file is structurally corrupted.
  *
- * A file is considered corrupted if:
+ * A file is considered corrupted ONLY if:
  *   - It's empty or only whitespace
- *   - It's a .nexus/docs/ file that should have YAML frontmatter but doesn't
  *   - It's a JSON file that doesn't parse
+ *   - It OPENS a YAML frontmatter block that never closes
+ *
+ * Missing frontmatter is NOT corruption — hand-written brain docs
+ * legitimately have none, and "repairing" them destroys user work.
  */
 export function isCorrupted(filePath: string, content: string): boolean {
   // Empty or whitespace-only
@@ -243,10 +262,8 @@ export function isCorrupted(filePath: string, content: string): boolean {
     }
   }
 
-  // .nexus/docs/ markdown files should have YAML frontmatter (except knowledge.md)
-  if (filePath.startsWith('.nexus/docs/') && !filePath.endsWith('knowledge.md')) {
-    if (!content.startsWith('---')) return true;
-    // Frontmatter must close
+  // A frontmatter block that opens but never closes is broken markdown
+  if (content.startsWith('---')) {
     const secondDashes = content.indexOf('---', 3);
     if (secondDashes === -1) return true;
   }
@@ -299,6 +316,9 @@ export async function reconcileNexusFiles(
     repaired: [],
   };
 
+  // One backup folder per reconcile run: .nexus/state/upgrade-backup/<stamp>/
+  const backupStamp = new Date().toISOString().replace(/[:.]/g, '-');
+
   for (const file of freshFiles) {
     const fullPath = path.join(targetDir, file.path);
     const exists = await fileExists(fullPath);
@@ -329,6 +349,7 @@ export async function reconcileNexusFiles(
 
     // ── Corrupted → always repair (both modes) — except custom/ skills ──
     if (corrupted) {
+      await backupBeforeOverwrite(targetDir, file.path, content, backupStamp);
       await writeFile(fullPath, file.content);
       result.repaired.push(file.path);
       continue;
@@ -353,6 +374,7 @@ export async function reconcileNexusFiles(
     }
 
     if (ALWAYS_REPLACE.has(file.path)) {
+      await backupBeforeOverwrite(targetDir, file.path, content, backupStamp);
       await writeFile(fullPath, file.content);
       result.replaced.push(file.path);
       continue;
@@ -377,16 +399,37 @@ export async function reconcileNexusFiles(
       continue;
     }
 
-    // Smart check for docs with frontmatter
-    if (isPopulated(content)) {
-      result.preserved.push(file.path);
-    } else {
+    // Smart check: replace ONLY files explicitly still in template state.
+    // Populated docs, frontmatter without status, and hand-written docs
+    // with no frontmatter are all user content — preserve by default.
+    if (isTemplate(content)) {
+      await backupBeforeOverwrite(targetDir, file.path, content, backupStamp);
       await writeFile(fullPath, file.content);
       result.replaced.push(file.path);
+    } else {
+      result.preserved.push(file.path);
     }
   }
 
   return result;
+}
+
+/**
+ * Safety net: before reconcile overwrites ANY existing non-empty file, the
+ * old content is mirrored to .nexus/state/upgrade-backup/<stamp>/<path>.
+ * state/ is gitignored, so backups never pollute the repo — but a bad
+ * upgrade is always recoverable even without version control.
+ */
+async function backupBeforeOverwrite(
+  targetDir: string,
+  relPath: string,
+  oldContent: string,
+  stamp: string,
+): Promise<void> {
+  if (oldContent.trim().length === 0) return;
+  const backupPath = path.join(targetDir, '.nexus', 'state', 'upgrade-backup', stamp, relPath);
+  await ensureDirectory(path.dirname(backupPath));
+  await writeFile(backupPath, oldContent);
 }
 
 /** Result summary from a reconcile (upgrade or repair) operation */

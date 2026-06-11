@@ -269,8 +269,8 @@ Result: a project brain that not only records state but detects drift, tracks wo
 
 ### 🐛 Bugs found dogfooding v1.0 (2026-06-11 incident)
 
-- [ ] **`nexus init` has no existing-brain guard** — running it inside a repo with a populated `.nexus/` overwrote populated docs + pointer files with templates (recovered via git). Init should detect a brain and refuse / redirect to `upgrade`.
-- [ ] **Framework displays as "undefined"** in generated content when config is missing/partial (seen in generated CLAUDE.md: "(undefined, local-only)").
+- [x] **`nexus upgrade` destroyed populated brain docs** — FIXED 2026-06-11 (pre-publish). Root cause was twofold: `isCorrupted()` classified frontmatter-less docs as corrupted (auto-replaced in BOTH modes), and the smart check replaced anything not explicitly `status: populated`. Now: missing frontmatter ≠ corruption; replace gate is explicit `status: template` only (preserve-by-default via new `isTemplate()`); every overwrite is backed up to `.nexus/state/upgrade-backup/<stamp>/` first. 4 regression tests.
+- [ ] **Framework displays as "undefined"** in generated content when manifest config is missing/partial (seen in generated CLAUDE.md: "(undefined, local-only)"). Still open — fix in v1.0.1 or v1.1.
 
 ### 🎯 SHIPPED (history): v0.4.0 plan (M1+M2+M3 + Auto-Invoke)
 

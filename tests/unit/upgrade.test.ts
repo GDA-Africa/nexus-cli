@@ -92,8 +92,10 @@ describe('isCorrupted', () => {
     expect(isCorrupted('.nexus/docs/01_vision.md', '   \n  \n  ')).toBe(true);
   });
 
-  it('should detect missing frontmatter on .nexus/docs/ files', () => {
-    expect(isCorrupted('.nexus/docs/01_vision.md', '# Just a heading\nNo frontmatter')).toBe(true);
+  it('should NOT treat missing frontmatter as corruption (hand-written brains)', () => {
+    // Regression: 2026-06-11 dogfooding incident — frontmatter-less populated
+    // docs were classified corrupted and destroyed by upgrade/repair.
+    expect(isCorrupted('.nexus/docs/01_vision.md', '# Just a heading\nNo frontmatter')).toBe(false);
   });
 
   it('should detect unclosed frontmatter as corrupted', () => {
@@ -386,14 +388,50 @@ status: template
     expect(vision).toContain('---');
   });
 
-  it('should repair docs with missing frontmatter during upgrade', async () => {
+  it('should PRESERVE docs with missing frontmatter during upgrade (hand-written brains)', async () => {
+    // Regression: 2026-06-11 dogfooding incident
+    const handWritten = '# My hand-written architecture\nMonths of decisions live here.';
     await fs.writeFile(
       path.join(tempDir, '.nexus', 'docs', '02_architecture.md'),
-      '# Just a heading\nNo frontmatter here',
+      handWritten,
     );
 
     const result = await upgradeProject(tempDir, baseConfig);
-    expect(result.repaired).toContain('.nexus/docs/02_architecture.md');
+    expect(result.preserved).toContain('.nexus/docs/02_architecture.md');
+    const after = await fs.readFile(path.join(tempDir, '.nexus', 'docs', '02_architecture.md'), 'utf-8');
+    expect(after).toBe(handWritten);
+  });
+
+  it('should preserve docs whose frontmatter has no status field', async () => {
+    const content = '---\nid: "custom"\ntitle: "Custom doc"\n---\n# Content';
+    await fs.writeFile(path.join(tempDir, '.nexus', 'docs', '02_architecture.md'), content);
+
+    const result = await upgradeProject(tempDir, baseConfig);
+    expect(result.preserved).toContain('.nexus/docs/02_architecture.md');
+  });
+
+  it('should still replace docs explicitly in template state', async () => {
+    const template = '---\nnexus_doc: true\nstatus: template\n---\n# TODO';
+    await fs.writeFile(path.join(tempDir, '.nexus', 'docs', '02_architecture.md'), template);
+
+    const result = await upgradeProject(tempDir, baseConfig);
+    expect(result.replaced).toContain('.nexus/docs/02_architecture.md');
+  });
+
+  it('should back up overwritten files to .nexus/state/upgrade-backup/', async () => {
+    const template = '---\nnexus_doc: true\nstatus: template\n---\n# Old template content';
+    await fs.writeFile(path.join(tempDir, '.nexus', 'docs', '02_architecture.md'), template);
+
+    await upgradeProject(tempDir, baseConfig);
+
+    const backupRoot = path.join(tempDir, '.nexus', 'state', 'upgrade-backup');
+    const stamps = await fs.readdir(backupRoot);
+    expect(stamps.length).toBeGreaterThan(0);
+    const backedUp = await fs.readFile(
+      path.join(backupRoot, stamps[0]!, '.nexus', 'docs', '02_architecture.md'),
+      'utf-8',
+    );
+    expect(backedUp).toBe(template);
   });
 });
 

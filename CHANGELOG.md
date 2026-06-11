@@ -81,6 +81,13 @@ and proves itself read (`wake`).
   (previously `_active.json` and the starter plan could be clobbered on upgrade)
 
 #### Fixes
+- **Upgrade data loss (critical, found dogfooding 2026-06-11):** `nexus upgrade`
+  destroyed hand-written brain docs. `isCorrupted()` treated missing YAML
+  frontmatter as corruption (force-replaced in both upgrade and repair), and
+  the smart check replaced anything not explicitly `status: populated`. Now:
+  missing frontmatter is never corruption; only explicit `status: template`
+  files are replaceable (preserve-by-default); and every file reconcile
+  overwrites is first backed up to `.nexus/state/upgrade-backup/<stamp>/`.
 - `src/version.ts` drift: CLI reported 0.4.0 while package.json said 0.4.1
 - End-to-end release-gate test: scaffold → wake → plan lifecycle → sync → consolidate → doctor
 
