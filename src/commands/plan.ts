@@ -163,6 +163,15 @@ export async function planDoneCommand(id: string, summary?: string): Promise<voi
   await appendProgressLog(nexusDir, id, nextPlan.frontmatter.title);
 
   logger.success(`Plan marked done: ${id}`);
+
+  // v1.1 verification gate (advisory here; doctor D11 makes it visible)
+  const evidenceSection = getSection(nextPlan, 'Evidence');
+  if (!evidenceSection || evidenceSection.content.trim().length === 0) {
+    logger.warn('⚠ Evidence section is empty — this plan completes UNVERIFIED.');
+    logger.info(`Record test results:  nexus plan note ${id} "tests: NNN passing"`);
+    logger.info(`Or an explicit waiver: nexus plan note ${id} "WAIVER: …"  (doctor D11 flags unverified done plans)`);
+  }
+
   logger.info('Tip: if you learned something non-obvious, append it to `.nexus/docs/knowledge.md`.');
 }
 

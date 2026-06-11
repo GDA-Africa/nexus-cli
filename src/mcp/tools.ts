@@ -16,6 +16,8 @@ import fs from 'fs-extra';
 
 import { buildBriefData, renderBriefMarkdown } from '../commands/brief.js';
 import { issueWakeToken } from '../commands/wake.js';
+import { collectAgentSummaries, resolveAgent } from '../utils/agents/parser.js';
+import type { AgentSummary } from '../utils/agents/types.js';
 import { buildDoctorContext } from '../utils/doctor/context.js';
 import { runDoctor } from '../utils/doctor/index.js';
 import type { DoctorReport } from '../utils/doctor/types.js';
@@ -52,8 +54,10 @@ export interface WakeToolResult {
 }
 
 /** Session handshake: token + compact brain digest in one call. */
-export async function wakeTool(ctx: BrainContext): Promise<WakeToolResult> {
-  const result = await issueWakeToken(ctx.nexusDir, { issuedBy: 'nexus mcp (nexus_wake)' });
+export async function wakeTool(ctx: BrainContext, input: { agent?: string } = {}): Promise<WakeToolResult> {
+  const result = await issueWakeToken(ctx.nexusDir, {
+    issuedBy: input.agent ? `nexus mcp (agent: ${input.agent})` : 'nexus mcp (nexus_wake)',
+  });
 
   let nextStep: string | null = null;
   if (result.activePlan) {
@@ -272,6 +276,135 @@ export async function getSkillTool(
   throw new McpToolError(
     `Skill "${input.name}" not found in .nexus/skills/{custom,core,community}. Use nexus_list_skills to browse.`,
   );
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Agents tools (v1.1 — precedence: custom > core > community)
+ * ────────────────────────────────────────────────────────────── */
+
+function agentsDir(ctx: BrainContext): string {
+  return path.join(ctx.nexusDir, 'agents');
+}
+
+/** List installed agent definitions. */
+export async function listAgentsTool(ctx: BrainContext): Promise<{ agents: AgentSummary[] }> {
+  return { agents: await collectAgentSummaries(agentsDir(ctx)) };
+}
+
+/** Read one agent definition by name. */
+export async function getAgentTool(
+  ctx: BrainContext,
+  input: { name: string },
+): Promise<{ name: string; source: string; markdown: string }> {
+  const resolved = await resolveAgent(agentsDir(ctx), input.name);
+  if (!resolved) {
+    throw new McpToolError(
+      `Agent "${input.name}" not found in .nexus/agents/{custom,core,community}. Use nexus_list_agents to browse.`,
+    );
+  }
+  const markdown = await fs.readFile(resolved.filePath, 'utf-8');
+  return { name: input.name, source: resolved.source, markdown };
+}
+
+export interface GetContextInput {
+  /** Task description — used to match knowledge entries and skill triggers */
+  task: string;
+  /** Optional agent whose context recipe scopes the composition */
+  agent?: string;
+  /** Soft cap on composed payload size (default 12000 chars) */
+  maxChars?: number;
+}
+
+export interface ComposedContext {
+  task: string;
+  agent: string | null;
+  plan: { id: string; status: string; nextStep: string | null } | null;
+  knowledge: KnowledgeMatch[];
+  skills: Array<{ name: string; source: string; matchedTrigger: string }>;
+  vitals: { branch: string | null; dirty: boolean | null; testsSummary: string };
+  docs: Array<{ file: string; excerpt: string }>;
+  truncated: boolean;
+}
+
+/**
+ * The v1.1 keystone: compose ONE scoped context pack for a task instead of
+ * N piecemeal reads. Deterministic — keyword/trigger matching, no LLM.
+ */
+export async function getContextTool(ctx: BrainContext, input: GetContextInput): Promise<ComposedContext> {
+  const maxChars = Math.max(2000, Math.min(input.maxChars ?? 12000, 60000));
+  let budget = maxChars;
+  let truncated = false;
+
+  // Agent recipe (optional)
+  const resolved = input.agent ? await resolveAgent(agentsDir(ctx), input.agent) : null;
+  const recipe = resolved?.definition.frontmatter.context ?? null;
+
+  // 1. Plan slice
+  let plan: ComposedContext['plan'] = null;
+  if (recipe?.plan_scope !== 'none') {
+    const state = await readActivePlans(ctx.plansDir);
+    const activeId = state.active[0] ?? null;
+    if (activeId) {
+      const planDoc = await readPlanIfExists(ctx, activeId);
+      if (planDoc) {
+        plan = { id: activeId, status: planDoc.frontmatter.status, nextStep: firstUncheckedStep(planDoc) };
+      }
+    }
+  }
+
+  // 2. Knowledge — task keywords, optionally restricted to recipe categories
+  const terms = input.task.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
+  let knowledge: KnowledgeMatch[] = [];
+  const knowledgePath = path.join(ctx.docsDir, 'knowledge.md');
+  if (await fs.pathExists(knowledgePath)) {
+    const parsed = parseKnowledge(await fs.readFile(knowledgePath, 'utf-8'));
+    knowledge = parsed.entries
+      .filter((e) => !recipe || recipe.knowledge_categories.length === 0 || recipe.knowledge_categories.includes(e.category))
+      .filter((e) => {
+        const hay = `${e.category} ${e.title} ${e.raw.join(' ')}`.toLowerCase();
+        return terms.some((t) => hay.includes(t));
+      })
+      .slice(-5)
+      .reverse()
+      .map(toKnowledgeMatch);
+  }
+
+  // 3. Skills — trigger matching against the task
+  const { skills: allSkills } = await listSkillsTool(ctx);
+  const skills: ComposedContext['skills'] = [];
+  for (const skill of allSkills) {
+    const matched = skill.triggers.find((trigger) => input.task.toLowerCase().includes(trigger.toLowerCase()));
+    if (matched) skills.push({ name: skill.name, source: skill.source, matchedTrigger: matched });
+  }
+
+  // 4. Vitals digest (cheap snapshot, no test run)
+  const vs = await captureVitalSigns({ cwd: ctx.projectRoot, timeoutMs: 1500 });
+  const vitals = {
+    branch: (vs.git as { branch?: string | null }).branch ?? null,
+    dirty: (vs.git as { dirty?: boolean | null }).dirty ?? null,
+    testsSummary: JSON.stringify(vs.tests).slice(0, 200),
+  };
+
+  // 5. Recipe-named docs — excerpts within budget
+  const docs: ComposedContext['docs'] = [];
+  budget -= JSON.stringify({ plan, knowledge, skills, vitals }).length;
+  for (const docFile of recipe?.docs ?? []) {
+    const docPath = path.join(ctx.docsDir, docFile);
+    if (!(await fs.pathExists(docPath))) continue;
+    const content = await fs.readFile(docPath, 'utf-8');
+    const excerpt = content.length > budget ? content.slice(0, Math.max(0, budget)) : content;
+    if (excerpt.length < content.length) truncated = true;
+    if (excerpt.length > 0) {
+      docs.push({ file: docFile, excerpt });
+      budget -= excerpt.length;
+    }
+    if (budget <= 0) {
+      truncated = true;
+      break;
+    }
+  }
+
+  return { task: input.task, agent: input.agent ?? null, plan, knowledge, skills, vitals, docs, truncated };
 }
 
 /* ──────────────────────────────────────────────────────────────

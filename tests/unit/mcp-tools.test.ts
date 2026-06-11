@@ -307,9 +307,12 @@ describe('buildMcpServer (end-to-end)', () => {
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(13);
+    expect(tools).toHaveLength(16);
     const toolNames = tools.map((t) => t.name);
     for (const name of [
+      'nexus_list_agents',
+      'nexus_get_agent',
+      'nexus_get_context',
       'nexus_wake',
       'nexus_get_vital_signs',
       'nexus_query_knowledge',
@@ -342,6 +345,17 @@ describe('buildMcpServer (end-to-end)', () => {
     // Handler errors surface as isError, not protocol crashes
     const bad = await client.callTool({ name: 'nexus_get_plan', arguments: { id: 'nope' } });
     expect(bad.isError).toBe(true);
+
+    // v1.1: composed context round-trip
+    const ctxCall = await client.callTool({
+      name: 'nexus_get_context',
+      arguments: { task: 'fix the npm mount ENOTEMPTY problem' },
+    });
+    expect(ctxCall.isError ?? false).toBe(false);
+    const ctxText = (ctxCall.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    const composed = JSON.parse(ctxText);
+    expect(composed.plan?.id).toBe('test-plan');
+    expect(composed.knowledge.some((e: { title: string }) => e.title.includes('Mount renames'))).toBe(true);
 
     await client.close();
     await server.close();

@@ -82,6 +82,8 @@ by hand** — they return targeted data and validate every write.
 | \`nexus_brief\` / \`nexus_doctor\` | Status digest / drift report |
 | \`nexus_list_plans\` / \`nexus_get_plan\` | Plan orientation |
 | \`nexus_list_skills\` / \`nexus_get_skill\` | Match tasks against skills, then read the match |
+| \`nexus_get_context\` | **v1.1** — ONE composed context pack for a task (plan + knowledge + skills + vitals) |
+| \`nexus_list_agents\` / \`nexus_get_agent\` | **v1.1** — discover agent roles; adopt the matching working agreement |
 | \`nexus_plan_tick\` / \`nexus_plan_note\` | Update plan progress (schema-validated — never hand-edit) |
 | \`nexus_add_knowledge_entry\` | Append a learned insight to the knowledge base |
 

@@ -11,6 +11,14 @@ import { select } from '@inquirer/prompts';
 import { Command } from 'commander';
 
 import { adoptCommand } from './commands/adopt.js';
+import {
+  agentInstallCommand,
+  agentListCommand,
+  agentNewCommand,
+  agentRemoveCommand,
+  agentStatusCommand,
+  agentSyncCommand,
+} from './commands/agent.js';
 import { brainCommand } from './commands/brain.js';
 import { briefCommand } from './commands/brief.js';
 import { consolidateCommand } from './commands/consolidate.js';
@@ -142,6 +150,19 @@ skillCmd
   .action(async () => {
     await skillStatusCommand();
   });
+
+// ── nexus agent ──────────────────────────────────────────────
+
+const agentCmd = program
+  .command('agent')
+  .description('Manage brain-grounded agent definitions in .nexus/agents/ (v1.1)');
+
+agentCmd.command('list').description('List all agents (custom / core / community)').action(agentListCommand);
+agentCmd.command('new [name]').description('Scaffold a new custom agent').action(agentNewCommand);
+agentCmd.command('install <name>').description('Install a community agent from the registry').action(agentInstallCommand);
+agentCmd.command('remove <name>').description('Remove a community agent (refuses core/custom)').action(agentRemoveCommand);
+agentCmd.command('status').description('Validate agent frontmatter and context recipes').action(agentStatusCommand);
+agentCmd.command('sync').description('Regenerate client outputs (.claude/agents/ + Agent Roles blocks)').action(agentSyncCommand);
 
 // ── nexus plan ───────────────────────────────────────────────
 

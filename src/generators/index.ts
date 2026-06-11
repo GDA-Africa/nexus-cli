@@ -17,6 +17,7 @@ import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
 import { logger, writeGeneratorResult, readFile, fileExists, writeFile, ensureDirectory, getInstallCommand, gitInit, toDisplayName } from '../utils/index.js';
 import type { ProjectInfo } from '../utils/project-detector.js';
 
+import { generateAgents } from './agents.js';
 import { generateAiConfig } from './ai-config.js';
 import { generateCiCd } from './ci-cd.js';
 import { generateConfigs } from './config.js';
@@ -55,6 +56,7 @@ export async function generateProject(config: NexusConfig): Promise<void> {
       ...generateLandingPage(config),
       ...generateAiConfig(config),
       ...generateSkills(config),
+      ...generateAgents(config),
     ];
 
     // Add Spring Boot files if backend is Spring Boot
@@ -151,6 +153,7 @@ export async function adoptProject(
       ...generateDocs(config, adoptionContext.localOnly, adoptionContext),
       ...generateAiConfig(config),
       ...generateSkills(config),
+      ...generateAgents(config),
     ];
 
     // If local-only mode, add .nexus/ to .gitignore
@@ -295,6 +298,12 @@ export async function reconcileNexusFiles(
     { path: '.nexus/skills/core' },
     { path: '.nexus/skills/custom' },
     { path: '.nexus/skills/community' },
+    { path: '.nexus/agents' },
+    { path: '.nexus/agents/core' },
+    { path: '.nexus/agents/custom' },
+    { path: '.nexus/agents/community' },
+    { path: '.claude' },
+    { path: '.claude/agents' },
     { path: '.github' },
   ];
 
@@ -307,6 +316,7 @@ export async function reconcileNexusFiles(
     ...generateDocs(config),
     ...generateAiConfig(config),
     ...generateSkills(config),
+    ...generateAgents(config),
   ];
 
   const result: ReconcileResult = {
@@ -323,8 +333,8 @@ export async function reconcileNexusFiles(
     const fullPath = path.join(targetDir, file.path);
     const exists = await fileExists(fullPath);
 
-    // ── Skills: custom/ is SACRED — never read, never written, never deleted ──
-    if (file.path.startsWith('.nexus/skills/custom/')) {
+    // ── Skills & Agents: custom/ is SACRED — never read, never written, never deleted ──
+    if (file.path.startsWith('.nexus/skills/custom/') || file.path.startsWith('.nexus/agents/custom/')) {
       // Only create if it doesn't exist yet (first init)
       if (!exists) {
         await writeFile(fullPath, file.content);
@@ -387,13 +397,18 @@ export async function reconcileNexusFiles(
 
     // Skills: core/ and README are always replaced on upgrade (regenerated from latest templates)
     // community/ skills are preserved — reinstallable via `nexus skill install`
-    if (file.path.startsWith('.nexus/skills/community/')) {
+    if (file.path.startsWith('.nexus/skills/community/') || file.path.startsWith('.nexus/agents/community/')) {
       result.preserved.push(file.path);
       continue;
     }
 
-    if (file.path.startsWith('.nexus/skills/')) {
-      // core/ skills and README.md — replace on upgrade, preserve on repair
+    if (
+      file.path.startsWith('.nexus/skills/') ||
+      file.path.startsWith('.nexus/agents/') ||
+      file.path.startsWith('.claude/agents/')
+    ) {
+      // core content and READMEs — replace on upgrade, preserve on repair
+      await backupBeforeOverwrite(targetDir, file.path, content, backupStamp);
       await writeFile(fullPath, file.content);
       result.replaced.push(file.path);
       continue;

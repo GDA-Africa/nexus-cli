@@ -145,3 +145,10 @@
 **Why:** "Repair" semantics assumed all docs are generator-born. Hand-written brains (like this repo's) are first-class and must never be classified as broken scaffolding.
 
 **How to apply:** Fixed pre-v1.0.0-publish: missing frontmatter is not corruption (only empty files, bad JSON, unclosed frontmatter); the replace gate is now `isTemplate()` — only explicit `status: template` is replaceable; every reconcile overwrite is first mirrored to `.nexus/state/upgrade-backup/<stamp>/`. Destructive-by-default is never acceptable in reconcile logic — preserve and back up.
+
+### [architecture] v1.1 Agents — roles are generated views over one source of truth
+**2026-06-11** — Agent definitions live in `.nexus/agents/` (custom > core > community, custom sacred — identical ownership model to skills); `.claude/agents/` subagents and the fenced "Agent Roles" blocks are regenerated views (`nexus agent sync`), never hand-edited. The registry copies are exported FROM the CLI generator, not duplicated.
+
+**Why:** Client subagent formats will drift; views can be regenerated, sources cannot be un-forked.
+
+**How to apply:** New client formats = new render target in agent sync, never a new authoring location. The same fence pattern (NEXUS:AGENT_ROLES) as Vital Signs keeps instruction files machine-patchable.

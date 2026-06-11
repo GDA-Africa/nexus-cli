@@ -82,6 +82,8 @@ export interface NexusConfig {
   localOnly?: boolean;
   /** Whether to generate .nexus/skills/ with framework-matched core skills */
   enableSkills?: boolean;
+  /** Generate .nexus/agents/ + client subagent outputs (v1.1, default on) */
+  enableAgents?: boolean;
 }
 
 /** Partial config for incremental prompt building */

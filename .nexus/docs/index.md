@@ -254,6 +254,7 @@ Result: a project brain that not only records state but detects drift, tracks wo
 
 ## ✅ Progress Log
 
+- 2026-06-11 — ✅ Completed plan `implement-v1-1-contextualized-agents`: **v1.1.0 — Contextualized Agents.** `.nexus/agents/` primitive (core four: implementer / test-writer / reviewer / doc-keeper; custom sacred), `nexus agent` CLI (6 subcommands), `.claude/agents/` + fenced Agent Roles generation, 3 new MCP tools (16 total) incl. `nexus_get_context` composition, doctor **D11 unverified-done** gate + plan-done evidence warning, registry v0.3.0 (agents/ area + nexus-agent-authoring). Ships WITH the upgrade data-loss fix. 438/438 tests. **Human step: push → publish v1.1.0 + tag skills v0.3.0.**
 - 2026-06-10 — ✅ Completed plan `release-v1-mcp-headline`: v1.0.0 reboot — **`nexus mcp` server (13 read/write brain tools, @modelcontextprotocol/sdk + zod)**, brain-aware CI (PR brief comment job in generated workflows), `.mcp.json` + MCP sections in all generated AI instruction files, registry-based publish gate in own ci.yml (fixes 2026-06-09 failed-publish retry), publish runbook (`docs/publish-runbook.md`), nexus-skills v0.2.0 prepped (3 new shared skills). 419/419 tests. **Remaining human step: renew NPM_TOKEN + re-run publish.**
 - 2026-06-09 — ✅ Completed plan `implement-v1-m4-consolidate-wake-polish`: Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0
 - 2026-06-09 — ❌ v1.0.0 npm publish FAILED in CI: expired NPM_TOKEN. Never reached the registry → window used to fold the MCP server into v1.0.0.

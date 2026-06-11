@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-06-11
+
+### 🎭 Contextualized Agents (HEADLINE)
+
+The brain stops contextualizing one generic agent and starts defining
+specialized, brain-grounded agents. New primitive: `.nexus/agents/` with the
+same ownership model as skills (core regenerated / custom SACRED / community
+installable; precedence custom > core > community).
+
+- **The core four**, generated for every project:
+  - `nexus-implementer` — works the active plan's next step; never re-derives plans
+  - `nexus-test-writer` — the verification keystone: detects test setup via
+    sensors, writes tests matching `06_test_strategy.md`, **asks before
+    scaffolding test infra** (never silent), records waivers visibly
+  - `nexus-reviewer` — reviews against recorded conventions, citing knowledge
+    entries; read-only tool allowlist by design
+  - `nexus-doc-keeper` — progress log, knowledge hygiene, doctor triage
+- **Agent definitions** carry context recipes (docs, knowledge categories,
+  skills, plan scope), least-privilege MCP tool allowlists, and handoff contracts
+- **`nexus agent`** command: `list · new · install · remove · status · sync`
+- **Client outputs:** `.claude/agents/<name>.md` (Claude Code subagents) +
+  fenced "Agent Roles" blocks in AGENTS.md/CLAUDE.md/instructions (degrades
+  gracefully for non-subagent clients); regenerate with `nexus agent sync`
+- **3 new MCP tools** (16 total): `nexus_list_agents`, `nexus_get_agent`, and
+  **`nexus_get_context`** — composes ONE scoped context pack per task (plan
+  slice + matching knowledge + trigger-matched skills + vitals digest + recipe
+  docs), deterministic, with a payload budget
+- `nexus_wake` accepts an `agent` identity, recorded in session.json
+
+### ✅ Verification gate
+
+- **Doctor D11 — Unverified Done:** plans marked `done` whose Evidence section
+  has neither test results nor an explicit waiver are flagged (11 checks total)
+- `nexus plan done` warns when completing with an empty Evidence section
+- Registry v0.3.0 (`@nexus-framework/skills`): `agents/` content area + the
+  `nexus-agent-authoring` meta-skill
+
+### 🛡 Fixed: upgrade data loss (critical)
+
+Found dogfooding v1.0 on 2026-06-11: `nexus upgrade` destroyed hand-written,
+frontmatter-less brain docs. Two compounding flaws — `isCorrupted()` treated
+missing frontmatter as corruption (force-replaced in both modes), and the
+smart check replaced anything not explicitly `status: populated`. Now:
+
+- Missing frontmatter is **never** corruption (only empty files, invalid JSON,
+  or an unclosed frontmatter block)
+- The replace gate is `isTemplate()`: only explicit `status: template` files
+  are replaceable — **preserve-by-default**
+- Every reconcile overwrite is first backed up to
+  `.nexus/state/upgrade-backup/<stamp>/` — always recoverable, even without git
+
+### Migration
+
+`nexus upgrade` (now safe for hand-written brains) adds `.nexus/agents/`,
+`.claude/agents/`, and the Agent Roles sections. Additive — nothing existing
+changes behavior. Agents are skippable via `enableAgents: false` in the manifest.
+
 ## [1.0.0] — 2026-06-10
 
 > The 2026-06-09 publish run failed in CI (expired npm token) before reaching

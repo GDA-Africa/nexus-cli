@@ -7,10 +7,11 @@
  *
  * stdout is reserved for the MCP protocol — all diagnostics go to stderr.
  *
- * Tool surface (13):
+ * Tool surface (16):
  *   Read:   nexus_wake, nexus_get_vital_signs, nexus_query_knowledge,
  *           nexus_get_active_plan, nexus_list_plans, nexus_get_plan,
- *           nexus_brief, nexus_doctor, nexus_list_skills, nexus_get_skill
+ *           nexus_brief, nexus_doctor, nexus_list_skills, nexus_get_skill,
+ *           nexus_list_agents, nexus_get_agent, nexus_get_context (v1.1)
  *   Write:  nexus_plan_tick, nexus_plan_note, nexus_add_knowledge_entry
  */
 
@@ -27,10 +28,13 @@ import {
   briefTool,
   doctorTool,
   getActivePlanTool,
+  getAgentTool,
+  getContextTool,
   getPlanTool,
   getSkillTool,
   getVitalSignsTool,
   KNOWLEDGE_CATEGORIES,
+  listAgentsTool,
   listPlansTool,
   listSkillsTool,
   planNoteTool,
@@ -82,9 +86,11 @@ export function buildMcpServer(options: BuildMcpServerOptions = {}): McpServer {
         'Start of every session. Issues the NX-WAKE handshake token, returns the active plan, ' +
         'its next step, and doctor warn/error counts in one compact call. Echo the token in ' +
         'your first response to prove the brain was read.',
-      inputSchema: {},
+      inputSchema: {
+        agent: z.string().optional().describe('Agent identity (e.g. nexus-implementer) recorded in session.json'),
+      },
     },
-    wrap(async (ctx) => wakeTool(ctx)),
+    wrap(wakeTool),
   );
 
   server.registerTool(
@@ -206,6 +212,51 @@ export function buildMcpServer(options: BuildMcpServerOptions = {}): McpServer {
       },
     },
     wrap(getSkillTool),
+  );
+
+  // ── Agents tools (v1.1) ────────────────────────────────────
+
+  server.registerTool(
+    'nexus_list_agents',
+    {
+      title: 'List agents',
+      description:
+        'List brain-grounded agent definitions in .nexus/agents/ (precedence: custom > core > ' +
+        'community) with role, status, and triggers. Match your task against the triggers and ' +
+        'adopt the matching agent\'s working agreement.',
+      inputSchema: {},
+    },
+    wrap(async (ctx) => listAgentsTool(ctx)),
+  );
+
+  server.registerTool(
+    'nexus_get_agent',
+    {
+      title: 'Get agent',
+      description: 'Read one agent definition (frontmatter + working agreement) by name.',
+      inputSchema: {
+        name: z.string().min(1).describe('Agent name, e.g. nexus-test-writer'),
+      },
+    },
+    wrap(getAgentTool),
+  );
+
+  server.registerTool(
+    'nexus_get_context',
+    {
+      title: 'Get composed context',
+      description:
+        'THE context tool: composes one scoped pack for a task — active plan slice, matching ' +
+        'knowledge entries, trigger-matched skills, live vitals digest, and (when an agent is ' +
+        'named) the docs from its context recipe. Deterministic; call this instead of N ' +
+        'piecemeal reads at task start.',
+      inputSchema: {
+        task: z.string().min(3).describe('Task description used for matching'),
+        agent: z.string().optional().describe('Agent whose context recipe scopes the composition'),
+        maxChars: z.number().int().min(2000).max(60000).optional().describe('Payload budget (default 12000)'),
+      },
+    },
+    wrap(getContextTool),
   );
 
   // ── Write tools ────────────────────────────────────────────

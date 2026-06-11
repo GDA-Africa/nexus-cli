@@ -14,6 +14,7 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
+import { generateAgents } from '../../src/generators/agents.js';
 import { generateAiConfig } from '../../src/generators/ai-config.js';
 import { generateDocs } from '../../src/generators/docs.js';
 import { upgradeProject, repairProject, isPopulated, isCorrupted } from '../../src/generators/index.js';
@@ -365,7 +366,8 @@ status: template
     const allDocs = generateDocs(baseConfig);
     const allAi = generateAiConfig(baseConfig);
     const allSkills = generateSkills(baseConfig);
-    const totalGenerated = allDocs.length + allAi.length + allSkills.length;
+    const allAgents = generateAgents(baseConfig);
+    const totalGenerated = allDocs.length + allAi.length + allSkills.length + allAgents.length;
 
     const totalResult = result.created.length + result.replaced.length + result.preserved.length + result.repaired.length;
     expect(totalResult).toBe(totalGenerated);
@@ -556,7 +558,8 @@ status: populated
     const allDocs = generateDocs(baseConfig);
     const allAi = generateAiConfig(baseConfig);
     const allSkills = generateSkills(baseConfig);
-    for (const file of [...allDocs, ...allAi, ...allSkills]) {
+    const allAgents = generateAgents(baseConfig);
+    for (const file of [...allDocs, ...allAi, ...allSkills, ...allAgents]) {
       const fullPath = path.join(tempDir, file.path);
       await fs.ensureDir(path.dirname(fullPath));
       await fs.writeFile(fullPath, file.content);
@@ -577,7 +580,8 @@ status: populated
     const allDocs = generateDocs(baseConfig);
     const allAi = generateAiConfig(baseConfig);
     const allSkills = generateSkills(baseConfig);
-    const totalGenerated = allDocs.length + allAi.length + allSkills.length;
+    const allAgents = generateAgents(baseConfig);
+    const totalGenerated = allDocs.length + allAi.length + allSkills.length + allAgents.length;
 
     const totalResult = result.created.length + result.replaced.length + result.preserved.length + result.repaired.length;
     expect(totalResult).toBe(totalGenerated);

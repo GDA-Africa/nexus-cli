@@ -4,11 +4,12 @@
 
 **The open-source AI-native scaffolding CLI by [GDA Africa](https://gdaafrica.org).**
 
-Give every project a structured brain. AI agents read it, build from it, remember what they learn — and since v1.0, **call it as MCP tools**.
+Give every project a structured brain. AI agents read it, call it as MCP tools — and since v1.1, **specialize into brain-grounded roles**.
 
 [![npm](https://img.shields.io/npm/v/@nexus-framework/cli?style=flat-square&logo=npm&logoColor=white&label=npm&color=CB3837)](https://www.npmjs.com/package/@nexus-framework/cli)
-[![MCP](https://img.shields.io/badge/MCP-13_brain_tools-8A2BE2?style=flat-square)](https://modelcontextprotocol.io)
-[![Tests](https://img.shields.io/badge/tests-419_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![MCP](https://img.shields.io/badge/MCP-16_brain_tools-8A2BE2?style=flat-square)](https://modelcontextprotocol.io)
+[![Agents](https://img.shields.io/badge/agents-core_four-34d399?style=flat-square)](https://nexus.glenhalton.com/docs)
+[![Tests](https://img.shields.io/badge/tests-438_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
 [![Website](https://img.shields.io/badge/nexus.glenhalton.com-8A2BE2?style=flat-square&logo=googlechrome&logoColor=white)](https://nexus.glenhalton.com)
@@ -80,7 +81,8 @@ Interactive setup:
 
 | Command | What it does |
 |---------|-------------|
-| `nexus mcp` | **Start the brain MCP server (stdio) — the v1.0 headline.** 13 schema-validated tools for Claude Code, Codex, Cursor & any MCP client |
+| `nexus mcp` | **Start the brain MCP server (stdio).** 16 schema-validated tools for Claude Code, Codex, Cursor & any MCP client |
+| `nexus agent <sub>` | **v1.1 — Contextualized Agents.** Manage brain-grounded roles: `list · new · install · remove · status · sync` |
 | `nexus wake` | Issue a session handshake token proving the brain was read |
 | `nexus sync` | Capture live repo state → Vital Signs block in project brain |
 | `nexus plan new` | Create a tracked work plan from a template |
@@ -157,9 +159,14 @@ Every AI config file embeds the full agent protocol. Open the project in any sup
 
 Before v0.4.0, NEXUS gave every project a brain. It was a documentation system — useful, but passive.
 
-v0.4.0 made it active. v1.0 completes it: the brain senses (`sync`), tracks
-(`plan`), audits (`doctor`), speaks (`brief`), remembers cleanly (`consolidate`),
-proves itself read (`wake`) — and now **serves itself to agents (`mcp`)**.
+v0.4.0 made it active. v1.0 made it callable (`mcp`). v1.1 makes it
+**staffed**: the brain defines specialized, brain-grounded agents
+(`.nexus/agents/`) — an implementer that works your actual plan, a
+**test-writer that gates completion on evidence** (and asks before installing
+test infra), a reviewer that cites your recorded conventions, and a doc-keeper
+that keeps the brain truthful. Generated as Claude Code subagents, degraded
+gracefully everywhere else, and fed by `nexus_get_context` — one composed
+context pack per task instead of N file reads.
 
 ### `nexus mcp` — the headline
 
