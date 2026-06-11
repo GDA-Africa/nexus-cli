@@ -131,3 +131,10 @@
 **Why:** npm derives optional-dep entries from local install state, not the full packument matrix, when cache/tree state is partial.
 
 **How to apply:** Regenerate lockfiles on a normal dev machine with `rm -rf node_modules package-lock.json && npm install`; after any lock regen, grep it for `rollup-linux-x64-gnu` before pushing. Keep the self-heal step in ci.yml.
+
+### [bug-fix] `nexus init` overwrites populated brains — no existing-brain guard
+**2026-06-11** — Running `nexus init --local` inside this repo replaced the populated index.md, 01/07 docs, ai/instructions.md, manifest, and every pointer file with fresh templates. Recovered via `git checkout` (all good versions were committed). The smart file strategy lives in `upgrade`/`repair` — `init` never checks for an existing `.nexus/`.
+
+**Why:** Init was designed for empty directories; dogfooding v1.0 in this repo exposed the missing guard. One accidental command = total brain loss in any uncommitted project.
+
+**How to apply:** Backlogged for v1.1: init must detect an existing brain and refuse (suggesting `nexus upgrade`), behind an explicit `--force`. Until fixed: never run `init` inside a brain-ed repo. Related: generated content showed "(undefined, local-only)" — framework value missing in template context; same backlog.

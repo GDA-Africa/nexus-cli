@@ -260,7 +260,19 @@ Result: a project brain that not only records state but detects drift, tracks wo
 
 ## ⏭️ What's Next
 
-### 🎯 TODAY: Ship v0.4.0 (M1+M2+M3 + Auto-Invoke)
+### 🟣 NEXT INITIATIVE: v1.1 — Contextualized Agents (awaiting approval)
+
+- **Design:** root `.nexus/docs/v1_1_contextualized_agents.md` (2026-06-10)
+- **Plan:** [`implement-v1-1-contextualized-agents`](../plans/implement-v1-1-contextualized-agents.md) — status `draft`, run `nexus plan start` after Halton approves
+- **Scope:** `.nexus/agents/` primitive + `nexus agent` CLI + core four agents (implementer / **test-writer** / reviewer / doc-keeper) + `nexus_get_context` MCP tool + doctor **D11 "unverified done"** gate + registry v0.3.0 agent packs
+- **Blocked by:** v1.0.0 npm publish (human step)
+
+### 🐛 Bugs found dogfooding v1.0 (2026-06-11 incident)
+
+- [ ] **`nexus init` has no existing-brain guard** — running it inside a repo with a populated `.nexus/` overwrote populated docs + pointer files with templates (recovered via git). Init should detect a brain and refuse / redirect to `upgrade`.
+- [ ] **Framework displays as "undefined"** in generated content when config is missing/partial (seen in generated CLAUDE.md: "(undefined, local-only)").
+
+### 🎯 SHIPPED (history): v0.4.0 plan (M1+M2+M3 + Auto-Invoke)
 
 **Full spec:** See root `.nexus/docs/v1_alive_brain.md` — implementation-ready design document.
 
