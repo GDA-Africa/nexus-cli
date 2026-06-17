@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { BrainDetectionResult } from './brain-detector.js';
 import { fileExists } from './file-system.js';
 
 export type AutoInvokeMode = 'silent' | 'interactive' | 'disabled';
@@ -97,23 +96,30 @@ export function shouldSkipAutoInvoke(
   return config.disabled_for_commands.some((entry) => entry === rootCommand || entry === fullPath);
 }
 
-export function shouldPromptInteractively(
-  mode: AutoInvokeMode,
-  commandPath: string[],
-  config: AutoInvokeConfig,
-  detection: BrainDetectionResult,
-): boolean {
-  if (mode === 'interactive') return true;
+/**
+ * Whether the auto-invoke layer is allowed to put an interactive prompt on
+ * screen. ONLY `interactive` mode prompts — `silent` and `disabled` never do.
+ *
+ * This is deliberately strict: a stale repo or an `always_prompt_for` command
+ * must NOT escalate `silent` mode into a prompt, because that prompt crashes
+ * (ExitPromptError) the moment there is no TTY — i.e. every AI agent / CI / pipe
+ * session. Staleness now drives *silent* auto-actions instead (see
+ * `runSilentAutoActions` in cli.ts), never a prompt.
+ */
+export function shouldPromptInteractively(mode: AutoInvokeMode): boolean {
+  return mode === 'interactive';
+}
 
-  const root = commandPath[0] ?? '';
-  const full = commandPath.join(' ');
-  const forcedPrompt = config.always_prompt_for.includes(root) || config.always_prompt_for.includes(full);
-
-  const syncVeryStale = detection.lastSyncAt
-    ? Date.now() - new Date(detection.lastSyncAt).getTime() > 12 * 60 * 60 * 1000
-    : true;
-
-  return forcedPrompt || syncVeryStale;
+/**
+ * True only when it is actually safe to render an interactive prompt: a real
+ * TTY on both stdin and stdout, not under CI, and not explicitly opted out via
+ * `NEXUS_NONINTERACTIVE=1`. Callers must gate every prompt on this so the CLI
+ * degrades gracefully instead of throwing in non-interactive environments.
+ */
+export function isInteractiveEnvironment(): boolean {
+  if (process.env.NEXUS_NONINTERACTIVE === '1') return false;
+  if (process.env.CI) return false;
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }
 
 function isMode(value: unknown): value is AutoInvokeMode {

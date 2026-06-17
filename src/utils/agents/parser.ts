@@ -71,6 +71,7 @@ export function parseAgentContent(content: string): AgentDefinition {
     tools: {
       read: asStringArray(tools['read']),
       write: asStringArray(tools['write']),
+      exec: asStringArray(tools['exec']),
     },
     context: {
       docs: asStringArray(context['docs']),

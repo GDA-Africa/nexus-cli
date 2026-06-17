@@ -15,8 +15,17 @@ export const AGENT_SOURCES = ['custom', 'core', 'community'] as const;
 export type AgentSource = (typeof AGENT_SOURCES)[number];
 
 export interface AgentToolAllowlist {
+  /** Read-only brain MCP tools (nexus_*) this agent may call. */
   read: string[];
+  /** Mutating brain MCP tools (nexus_*) this agent may call. */
   write: string[];
+  /**
+   * Native client execution tools the agent needs to actually do its work
+   * (e.g. Read, Edit, Write, Bash, Grep, Glob in Claude Code). Distinct from
+   * the brain MCP tools above: without these, a generated subagent cannot edit
+   * files. Empty/absent means "inherit role default" at render time.
+   */
+  exec: string[];
 }
 
 export interface AgentContextRecipe {

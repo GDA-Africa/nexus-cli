@@ -3,7 +3,7 @@ nexus_doc: true
 id: "plans_index"
 title: "NEXUS Plans Dashboard"
 status: auto
-generated_at: "2026-06-09"
+generated_at: "2026-06-17"
 ---
 
 # Plans Dashboard
@@ -38,6 +38,11 @@ generated_at: "2026-06-09"
 
 | ID | Title | Status | Owner | Updated | Phase |
 |----|-------|--------|-------|---------|-------|
+| [`fix-agent-handoff-orchestration`](./fix-agent-handoff-orchestration.md) | Fix: agent handoff chain is prose, not a runnable orchestration | ✅ done | unassigned | 2026-06-17 | v1.1-fixes |
+| [`fix-auto-invoke-noninteractive-crash`](./fix-auto-invoke-noninteractive-crash.md) | Fix: auto-invoke Brain Check crashes / hijacks non-interactive sessions | ✅ done | unassigned | 2026-06-17 | v1.1-fixes |
+| [`fix-subagent-exec-tools`](./fix-subagent-exec-tools.md) | Fix: generated subagents have no execution tools (can't edit files) | ✅ done | unassigned | 2026-06-17 | v1.1-fixes |
+| [`implement-v1-1-contextualized-agents`](./implement-v1-1-contextualized-agents.md) | Implement v1.1 — Contextualized Agents (A1–A3) | ✅ done | unassigned | 2026-06-11 | v1.1-agents |
+| [`release-v1-mcp-headline`](./release-v1-mcp-headline.md) | v1.0.0 reboot — MCP server as the headline feature | ✅ done | nexus-agent | 2026-06-10 | v1.0-mcp |
 | [`implement-v1-m4-consolidate-wake-polish`](./implement-v1-m4-consolidate-wake-polish.md) | Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0 | ✅ done | unassigned | 2026-06-09 | alive-brain-m4 |
 | [`bootstrap-v1-brain-by-hand`](./bootstrap-v1-brain-by-hand.md) | Bootstrap the v1.0 brain shape by hand (the meta-plan) | ✅ done | claude (cowork) | 2026-05-02 | alive-brain-m0 |
 | [`implement-auto-invoke-layer`](./implement-auto-invoke-layer.md) | Auto-Invoke Layer — Brain Detection & Self-Update | ✅ done | unassigned | 2026-05-02 | alive-brain-auto-invoke |

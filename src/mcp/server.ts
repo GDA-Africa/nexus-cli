@@ -7,11 +7,12 @@
  *
  * stdout is reserved for the MCP protocol — all diagnostics go to stderr.
  *
- * Tool surface (16):
+ * Tool surface (17):
  *   Read:   nexus_wake, nexus_get_vital_signs, nexus_query_knowledge,
  *           nexus_get_active_plan, nexus_list_plans, nexus_get_plan,
  *           nexus_brief, nexus_doctor, nexus_list_skills, nexus_get_skill,
- *           nexus_list_agents, nexus_get_agent, nexus_get_context (v1.1)
+ *           nexus_list_agents, nexus_get_agent, nexus_get_context (v1.1),
+ *           nexus_get_handoff (main-thread orchestration)
  *   Write:  nexus_plan_tick, nexus_plan_note, nexus_add_knowledge_entry
  */
 
@@ -30,6 +31,7 @@ import {
   getActivePlanTool,
   getAgentTool,
   getContextTool,
+  getHandoffTool,
   getPlanTool,
   getSkillTool,
   getVitalSignsTool,
@@ -239,6 +241,22 @@ export function buildMcpServer(options: BuildMcpServerOptions = {}): McpServer {
       },
     },
     wrap(getAgentTool),
+  );
+
+  server.registerTool(
+    'nexus_get_handoff',
+    {
+      title: 'Get agent handoff — what to dispatch next',
+      description:
+        'Return the agent pipeline (implementer → test-writer → reviewer → doc-keeper, or the ' +
+        "project's custom chain) and, given the current agent, the next one to dispatch. Handoffs " +
+        'are MAIN-THREAD orchestrated: subagents cannot call subagents, so the main thread reads ' +
+        '`next` and dispatches that agent itself. Call after finishing an agent\'s work.',
+      inputSchema: {
+        agent: z.string().optional().describe('The agent you are currently acting as (e.g. nexus-implementer)'),
+      },
+    },
+    wrap(getHandoffTool),
   );
 
   server.registerTool(
