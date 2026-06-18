@@ -31,6 +31,7 @@ import {
   resolveAgent,
   AgentParseError,
 } from '../../src/utils/agents/parser.js';
+import { buildHandoffChain, nextInChain } from '../../src/utils/agents/handoff.js';
 import { buildDoctorContext } from '../../src/utils/doctor/context.js';
 import { D11_unverified_done } from '../../src/utils/doctor/checks/D11.js';
 
@@ -186,6 +187,92 @@ describe('generateAgents', () => {
 
   it('returns nothing when enableAgents is false', () => {
     expect(generateAgents({ ...baseConfig, enableAgents: false } as NexusConfig)).toEqual([]);
+  });
+
+  /** Pull the `tools:` line out of a Claude subagent's frontmatter. */
+  function subagentToolsLine(content: string): string {
+    const line = content.split('\n').find((l) => l.startsWith('tools:'));
+    return line ?? '';
+  }
+
+  it('implementer subagent can actually edit files (Edit + Write granted)', () => {
+    const files = generateAgents(baseConfig);
+    const impl = files.find((f) => f.path === '.claude/agents/nexus-implementer.md');
+    const tools = subagentToolsLine(impl?.content ?? '');
+    expect(tools).toContain('Edit');
+    expect(tools).toContain('Write');
+    expect(tools).toContain('Bash');
+  });
+
+  it('reviewer subagent is read-only — no Edit/Write (separation of duties)', () => {
+    const files = generateAgents(baseConfig);
+    const reviewer = files.find((f) => f.path === '.claude/agents/nexus-reviewer.md');
+    const tools = subagentToolsLine(reviewer?.content ?? '');
+    expect(tools).toContain('Read');
+    expect(tools).not.toContain('Edit');
+    expect(tools).not.toContain('Write');
+  });
+
+  it('subagent MCP tools are namespaced as mcp__nexus-brain__*', () => {
+    const files = generateAgents(baseConfig);
+    const impl = files.find((f) => f.path === '.claude/agents/nexus-implementer.md');
+    const tools = subagentToolsLine(impl?.content ?? '');
+    expect(tools).toContain('mcp__nexus-brain__nexus_wake');
+    expect(tools).toContain('mcp__nexus-brain__nexus_plan_tick');
+    // Bare (un-namespaced) brain tool names must not leak into the tools list.
+    expect(tools).not.toMatch(/(?:^|,\s)nexus_wake/);
+  });
+
+  it('subagent description states real capability, not "MCP tools only"', () => {
+    const files = generateAgents(baseConfig);
+    const impl = files.find((f) => f.path === '.claude/agents/nexus-implementer.md');
+    expect(impl?.content).toContain('Can read, edit, and run code');
+    const reviewer = files.find((f) => f.path === '.claude/agents/nexus-reviewer.md');
+    expect(reviewer?.content).toContain('Read-only');
+  });
+
+  it('core agent source frontmatter persists tools.exec (round-trips through parser)', () => {
+    const files = generateAgents(baseConfig);
+    const impl = files.find((f) => f.path === '.nexus/agents/core/nexus-implementer.md');
+    const def = parseAgentContent(impl?.content ?? '');
+    expect(def.frontmatter.tools.exec).toContain('Edit');
+    const reviewerFile = files.find((f) => f.path === '.nexus/agents/core/nexus-reviewer.md');
+    const reviewer = parseAgentContent(reviewerFile?.content ?? '');
+    expect(reviewer.frontmatter.tools.exec).not.toContain('Edit');
+  });
+});
+
+describe('buildHandoffChain', () => {
+  it('orders the core four pipeline from handoff.after links', () => {
+    const chain = buildHandoffChain([
+      { name: 'nexus-reviewer', after: 'nexus-test-writer' },
+      { name: 'nexus-implementer' },
+      { name: 'nexus-doc-keeper', after: 'nexus-reviewer' },
+      { name: 'nexus-test-writer', after: 'nexus-implementer' },
+    ]);
+    expect(chain).toEqual([
+      'nexus-implementer',
+      'nexus-test-writer',
+      'nexus-reviewer',
+      'nexus-doc-keeper',
+    ]);
+  });
+
+  it('nextInChain returns the successor, or null at the end', () => {
+    const chain = ['a', 'b', 'c'];
+    expect(nextInChain(chain, 'a')).toBe('b');
+    expect(nextInChain(chain, 'c')).toBeNull();
+    expect(nextInChain(chain, 'missing')).toBeNull();
+  });
+
+  it('tolerates cycles and orphans without looping, placing every agent once', () => {
+    const chain = buildHandoffChain([
+      { name: 'x', after: 'y' },
+      { name: 'y', after: 'x' }, // cycle
+      { name: 'z', after: 'nonexistent' }, // orphan → treated as a root
+    ]);
+    expect([...chain].sort()).toEqual(['x', 'y', 'z']);
+    expect(chain).toHaveLength(3);
   });
 });
 

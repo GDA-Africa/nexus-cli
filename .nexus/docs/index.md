@@ -12,14 +12,14 @@
 <!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` -->
 ## 🩺 Vital Signs (auto)
 
-_Last sync: 2026-06-09T21:43:21.189Z · branch `main` · 0 commits ahead of main · working tree dirty_
+_Last sync: 2026-06-17T16:25:04.468Z · branch `main` · 0 commits ahead of main · working tree dirty_
 
 | Sensor | Reading |
 |--------|---------|
-| Last commit | adc2934 — chore: bump version to 0.4.1 in package.json · Glenhalton · 5 weeks ago |
+| Last commit | 745890d — feat: release v1.1.0 — contextualized agents (brain-grounded roles + verification gate) · Glenhalton · 6 days ago |
 | Tests | not yet measured |
 | Coverage | not collected · M1 sensor adds `vitest --coverage` parsing |
-| Stale folders | src/commands 0 days · src/utils 0 days · src/generators 0 days · tests/e2e 0 days · tests/unit 0 days · tests/integration 37 days |
+| Stale folders | src/commands 0 days · src/utils 0 days · src/generators 0 days · tests/e2e 7 days · tests/unit 0 days · tests/integration 45 days |
 | Packages | not yet measured |
 <!-- NEXUS:VITAL_SIGNS:END -->
 
@@ -258,6 +258,18 @@ Result: a project brain that not only records state but detects drift, tracks wo
 - 2026-06-10 — ✅ Completed plan `release-v1-mcp-headline`: v1.0.0 reboot — **`nexus mcp` server (13 read/write brain tools, @modelcontextprotocol/sdk + zod)**, brain-aware CI (PR brief comment job in generated workflows), `.mcp.json` + MCP sections in all generated AI instruction files, registry-based publish gate in own ci.yml (fixes 2026-06-09 failed-publish retry), publish runbook (`docs/publish-runbook.md`), nexus-skills v0.2.0 prepped (3 new shared skills). 419/419 tests. **Remaining human step: renew NPM_TOKEN + re-run publish.**
 - 2026-06-09 — ✅ Completed plan `implement-v1-m4-consolidate-wake-polish`: Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0
 - 2026-06-09 — ❌ v1.0.0 npm publish FAILED in CI: expired NPM_TOKEN. Never reached the registry → window used to fold the MCP server into v1.0.0.
+
+## ✅ Progress Log
+
+- 2026-06-17 — ✅ Completed plan `fix-auto-invoke-noninteractive-crash`: Fix: auto-invoke Brain Check crashes / hijacks non-interactive sessions
+
+## ✅ Progress Log
+
+- 2026-06-17 — ✅ Completed plan `fix-subagent-exec-tools`: Fix: generated subagents have no execution tools (can't edit files)
+
+## ✅ Progress Log
+
+- 2026-06-17 — ✅ Completed plan `fix-agent-handoff-orchestration`: Fix: agent handoff chain is prose, not a runnable orchestration
 
 ## ⏭️ What's Next
 

@@ -299,7 +299,7 @@ describe('skills tools', () => {
  * ────────────────────────────────────────────────────────────── */
 
 describe('buildMcpServer (end-to-end)', () => {
-  it('registers all 13 tools and serves calls over a transport', async () => {
+  it('registers all 17 tools and serves calls over a transport', async () => {
     const server = buildMcpServer({ rootDir: tmpDir });
     const client = new Client({ name: 'test-client', version: '0.0.0' });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -307,12 +307,13 @@ describe('buildMcpServer (end-to-end)', () => {
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(16);
+    expect(tools).toHaveLength(17);
     const toolNames = tools.map((t) => t.name);
     for (const name of [
       'nexus_list_agents',
       'nexus_get_agent',
       'nexus_get_context',
+      'nexus_get_handoff',
       'nexus_wake',
       'nexus_get_vital_signs',
       'nexus_query_knowledge',
@@ -356,6 +357,15 @@ describe('buildMcpServer (end-to-end)', () => {
     const composed = JSON.parse(ctxText);
     expect(composed.plan?.id).toBe('test-plan');
     expect(composed.knowledge.some((e: { title: string }) => e.title.includes('Mount renames'))).toBe(true);
+
+    // Fix #3: handoff orchestration round-trip — main-thread driven, never crashes
+    const handoff = await client.callTool({
+      name: 'nexus_get_handoff',
+      arguments: { agent: 'nexus-implementer' },
+    });
+    expect(handoff.isError ?? false).toBe(false);
+    const handoffText = (handoff.content as Array<{ type: string; text: string }>)[0]?.text ?? '';
+    expect(JSON.parse(handoffText).orchestration).toBe('main-thread');
 
     await client.close();
     await server.close();

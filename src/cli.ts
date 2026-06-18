@@ -49,13 +49,15 @@ import { updateCommand, printUpdateBanner } from './commands/update.js';
 import { upgradeCommand } from './commands/upgrade.js';
 import { wakeCommand } from './commands/wake.js';
 import {
+  isInteractiveEnvironment,
   loadAutoInvokeConfig,
   resolveAutoInvokeMode,
   saveAutoInvokeConfig,
   shouldPromptInteractively,
   shouldSkipAutoInvoke,
+  type AutoInvokeConfig,
 } from './utils/auto-invoke-config.js';
-import { detectBrainNeeds } from './utils/brain-detector.js';
+import { detectBrainNeeds, type BrainDetectionResult } from './utils/brain-detector.js';
 import { getNexusDir } from './utils/brain.js';
 import { buildDoctorContext } from './utils/doctor/context.js';
 import { runDoctor } from './utils/doctor/index.js';
@@ -367,21 +369,35 @@ async function runAutoInvokePre(actionCommand: Command): Promise<void> {
     return;
   }
 
-  if (!shouldPromptInteractively(mode, commandPath, config, detection)) {
+  // Only `interactive` mode prompts, and only when a real TTY is present.
+  // Everything else (silent/disabled, or any non-interactive environment such
+  // as an AI agent, CI, or a pipe) degrades to safe silent auto-actions — never
+  // a prompt that would throw ExitPromptError and abort the real command.
+  if (!shouldPromptInteractively(mode) || !isInteractiveEnvironment()) {
+    await runSilentAutoActions(projectRoot, nexusDir, config, detection);
     return;
   }
 
-  const choice = await select<string>({
-    message: '🧠 Brain Check: choose an action',
-    choices: [
-      { value: 'sync', name: 'Run nexus sync (refresh repo state)' },
-      { value: 'doctor', name: 'Run doctor checks (warn+)' },
-      { value: 'both', name: 'Run sync and doctor' },
-      { value: 'skip', name: 'Skip for now' },
-      { value: 'disable', name: 'Always skip brain checks (disable auto-invoke)' },
-    ],
-    default: 'both',
-  });
+  let choice: string;
+  try {
+    choice = await select<string>({
+      message: '🧠 Brain Check: choose an action',
+      choices: [
+        { value: 'sync', name: 'Run nexus sync (refresh repo state)' },
+        { value: 'doctor', name: 'Run doctor checks (warn+)' },
+        { value: 'both', name: 'Run sync and doctor' },
+        { value: 'skip', name: 'Skip for now' },
+        { value: 'disable', name: 'Always skip brain checks (disable auto-invoke)' },
+      ],
+      default: 'both',
+    });
+  } catch {
+    // Prompt was closed (Ctrl-C / ExitPromptError) or the environment turned out
+    // to be non-interactive after all. Degrade to safe silent actions instead of
+    // crashing the command the user actually asked for.
+    await runSilentAutoActions(projectRoot, nexusDir, config, detection);
+    return;
+  }
 
   if (choice === 'disable') {
     await saveAutoInvokeConfig(projectRoot, {
@@ -401,6 +417,33 @@ async function runAutoInvokePre(actionCommand: Command): Promise<void> {
   }
 
   if (choice === 'doctor' || choice === 'both') {
+    const ctx = await buildDoctorContext(projectRoot, nexusDir);
+    const report = await runDoctor(ctx, { minSeverity: 'warn' });
+    await persistDoctorState(nexusDir, report);
+  }
+}
+
+/**
+ * Non-interactive fallback for the pre-action auto-invoke hook.
+ *
+ * Runs only the actions the user has opted into via `auto_fix_doctor` — by
+ * default this does nothing (read-only detection), so a NEXUS command run by an
+ * agent or in CI never surprises the caller with file writes. When opted in, it
+ * refreshes Vital Signs and/or persists a doctor report silently.
+ */
+async function runSilentAutoActions(
+  projectRoot: string,
+  nexusDir: string,
+  config: AutoInvokeConfig,
+  detection: BrainDetectionResult,
+): Promise<void> {
+  if (!config.auto_fix_doctor) return;
+
+  if (detection.shouldSync) {
+    await syncCommand(projectRoot, { write: true });
+  }
+
+  if (detection.shouldDoctor) {
     const ctx = await buildDoctorContext(projectRoot, nexusDir);
     const report = await runDoctor(ctx, { minSeverity: 'warn' });
     await persistDoctorState(nexusDir, report);

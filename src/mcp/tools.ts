@@ -16,6 +16,7 @@ import fs from 'fs-extra';
 
 import { buildBriefData, renderBriefMarkdown } from '../commands/brief.js';
 import { issueWakeToken } from '../commands/wake.js';
+import { buildHandoffChain, nextInChain } from '../utils/agents/handoff.js';
 import { collectAgentSummaries, resolveAgent } from '../utils/agents/parser.js';
 import type { AgentSummary } from '../utils/agents/types.js';
 import { buildDoctorContext } from '../utils/doctor/context.js';
@@ -304,6 +305,55 @@ export async function getAgentTool(
   }
   const markdown = await fs.readFile(resolved.filePath, 'utf-8');
   return { name: input.name, source: resolved.source, markdown };
+}
+
+export interface HandoffResult {
+  /** Ordered agent pipeline derived from each agent's handoff.after link. */
+  chain: string[];
+  /** The agent the caller is currently acting as, if it matched the chain. */
+  current: string | null;
+  /** The agent the main thread should dispatch next, or null if the chain is done. */
+  next: string | null;
+  /** Handoffs are executed by the main thread — subagents cannot call subagents. */
+  orchestration: 'main-thread';
+  /** One-line instruction the main thread can act on directly. */
+  guidance: string;
+}
+
+/**
+ * Return the agent handoff pipeline and, given the current agent, the next one
+ * to dispatch. The chain is derived from each agent's `handoff.after` link so it
+ * reflects custom overrides, not a hardcoded order. Because Claude Code
+ * subagents cannot invoke other subagents, the MAIN THREAD is the orchestrator:
+ * it reads `next` and dispatches that agent itself.
+ */
+export async function getHandoffTool(
+  ctx: BrainContext,
+  input: { agent?: string } = {},
+): Promise<HandoffResult> {
+  const summaries = await collectAgentSummaries(agentsDir(ctx));
+  const valid = summaries.filter((s) => s.status !== 'invalid');
+
+  const nodes = await Promise.all(
+    valid.map(async (s) => {
+      const resolved = await resolveAgent(agentsDir(ctx), s.name);
+      return { name: s.name, after: resolved?.definition.frontmatter.handoff.after };
+    }),
+  );
+
+  const chain = buildHandoffChain(nodes);
+  const current = input.agent && chain.includes(input.agent) ? input.agent : null;
+  const next = current ? nextInChain(chain, current) : (chain[0] ?? null);
+
+  const guidance = next
+    ? current
+      ? `Dispatch the "${next}" subagent next (it runs after "${current}").`
+      : `Start the pipeline by dispatching the "${next}" subagent.`
+    : current
+      ? `"${current}" is the last agent in the pipeline — no further handoff.`
+      : 'No agents are defined for this project.';
+
+  return { chain, current, next, orchestration: 'main-thread', guidance };
 }
 
 export interface GetContextInput {

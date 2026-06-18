@@ -152,3 +152,24 @@
 **Why:** Client subagent formats will drift; views can be regenerated, sources cannot be un-forked.
 
 **How to apply:** New client formats = new render target in agent sync, never a new authoring location. The same fence pattern (NEXUS:AGENT_ROLES) as Vital Signs keeps instruction files machine-patchable.
+
+### [bug-fix] Auto-invoke must be non-interactive-safe — silent never prompts
+**2026-06-17** — The pre-action "Brain Check" `select()` had no TTY guard and `shouldPromptInteractively` returned true even in `silent` mode when sync was >12h stale, so `nexus wake` (and any non-skipped command) threw `ExitPromptError` under any AI agent / CI / pipe and aborted before running. Fix: `shouldPromptInteractively(mode)` returns true ONLY for `interactive`; the prompt is additionally gated on `isInteractiveEnvironment()` (real stdin+stdout TTY, not CI, not `NEXUS_NONINTERACTIVE=1`); `select()` is wrapped in try/catch that degrades to `runSilentAutoActions`.
+
+**Why:** NEXUS is built for AI agents — the one environment where there is never a TTY — so any unguarded interactive prompt is a guaranteed crash, not an edge case.
+
+**How to apply:** Never call an inquirer prompt without first checking `isInteractiveEnvironment()` AND wrapping it to degrade gracefully. "Silent" mode must be genuinely silent; staleness drives opt-in silent actions (`auto_fix_doctor`), never a prompt.
+
+### [bug-fix] Subagent tool allowlist must include native exec tools + namespaced MCP
+**2026-06-17** — Generated `.claude/agents/*.md` subagents emitted only `name`+`description` and framed agents as "Uses the nexus-brain MCP tools", because the agent model (`AgentToolAllowlist`) tracked only `read`/`write` MCP tools. Any derived `tools:` listed only `nexus_*`, so the implementer could not edit files. Fix: added `tools.exec` (native client tools) per role — implementer/test-writer/doc-keeper get Edit+Write, reviewer is read-only (Read/Grep/Glob/Bash) — and `renderClaudeSubagent` now emits `tools: <exec> + mcp__nexus-brain__<tool>`. Both render paths (generator + `agent sync`) share `claudeSubagentTools`/`subagentDescription`.
+
+**Why:** A Claude Code subagent's capability is its `tools:` frontmatter; MCP tools must be namespaced `mcp__<server>__<tool>`. Brain MCP tools are not execution tools — conflating them strips an agent of the ability to do its job.
+
+**How to apply:** Keep `.nexus/agents/` source client-neutral (bare `exec` + `nexus_*` names); translate to client form only at render time. Existing projects must run `nexus agent sync` to pick up corrected subagents.
+
+### [architecture] Agent handoffs are main-thread-orchestrated (subagents can't call subagents)
+**2026-06-17** — The implementer→test-writer→reviewer→doc-keeper `handoff.after` chain was prose only; Claude Code subagents cannot invoke other subagents, so nothing sequenced the pipeline and D11's verification gate was reached by luck. Chose Option A: the MAIN THREAD is the orchestrator. Added `buildHandoffChain`/`nextInChain` (utils/agents/handoff.ts), the `nexus_get_handoff { agent? }` MCP tool (17 tools now), and an "Orchestration" section in the generated Agent Roles block. Option B (a `nexus orchestrate` command) is a deferred follow-up.
+
+**Why:** A handoff that no component can execute is documentation, not control flow. The only actor that can dispatch subagents in sequence is the top-level thread.
+
+**How to apply:** After an agent finishes, the main thread calls `nexus_get_handoff` and dispatches `next` itself. Keep `.nexus/agents/` chain client-neutral via `handoff.after`; the chain is derived, not hardcoded, so custom agents reorder it.

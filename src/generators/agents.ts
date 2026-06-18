@@ -15,10 +15,17 @@
 
 import type { NexusConfig } from '../types/config.js';
 import type { GeneratedFile } from '../types/templates.js';
+import { buildHandoffChain } from '../utils/agents/handoff.js';
 import { version } from '../version.js';
 
 export const AGENT_ROLES_START = '<!-- NEXUS:AGENT_ROLES:START — managed by `nexus agent sync` -->';
 export const AGENT_ROLES_END = '<!-- NEXUS:AGENT_ROLES:END -->';
+
+/**
+ * MCP server name as registered in generated `.mcp.json`. Claude Code namespaces
+ * MCP tools in a subagent's `tools:` list as `mcp__<server>__<tool>`.
+ */
+const MCP_SERVER_NAME = 'nexus-brain';
 
 interface CoreAgentSpec {
   name: string;
@@ -26,6 +33,11 @@ interface CoreAgentSpec {
   triggers: string[];
   read: string[];
   write: string[];
+  /**
+   * Native Claude Code execution tools this agent needs. The reviewer is
+   * deliberately read-only (no Edit/Write); builders get the full edit set.
+   */
+  exec: string[];
   docs: string[];
   knowledge: string[];
   skills: (framework: string) => string[];
@@ -33,6 +45,11 @@ interface CoreAgentSpec {
   handoffAfter?: string;
   body: string;
 }
+
+/** Full edit capability for agents that write code/docs. */
+const EXEC_EDIT = ['Read', 'Edit', 'Write', 'Bash', 'Grep', 'Glob'];
+/** Read-only capability for the reviewer — must never mutate the tree. */
+const EXEC_READONLY = ['Read', 'Grep', 'Glob', 'Bash'];
 
 /* ──────────────────────────────────────────────────────────────
  * The core four
@@ -45,6 +62,7 @@ const CORE_AGENTS: CoreAgentSpec[] = [
     triggers: ['implement', 'build', 'add feature', 'fix bug', 'refactor', 'next step'],
     read: ['nexus_wake', 'nexus_get_active_plan', 'nexus_query_knowledge', 'nexus_get_vital_signs', 'nexus_list_skills', 'nexus_get_skill', 'nexus_get_context'],
     write: ['nexus_plan_tick', 'nexus_plan_note'],
+    exec: EXEC_EDIT,
     docs: ['02_architecture.md', '05_business_logic.md'],
     knowledge: ['architecture', 'pattern', 'gotcha', 'convention'],
     skills: (fw) => [`${fw}: all matching task triggers`],
@@ -75,6 +93,7 @@ The step is ticked, decisions are noted, code compiles/lints, and the test-write
     triggers: ['write tests', 'test this', 'coverage', 'verify', 'step complete'],
     read: ['nexus_wake', 'nexus_get_active_plan', 'nexus_query_knowledge', 'nexus_get_vital_signs', 'nexus_list_skills', 'nexus_get_skill'],
     write: ['nexus_plan_note', 'nexus_add_knowledge_entry'],
+    exec: EXEC_EDIT,
     docs: ['06_test_strategy.md'],
     knowledge: ['gotcha', 'pattern', 'convention'],
     skills: (fw) => ['testing-strategy', `${fw}/testing`],
@@ -106,6 +125,7 @@ Tests pass and the count is in the plan's Evidence section — or a waiver note 
     triggers: ['review', 'check this', 'pr', 'pull request', 'before merge'],
     read: ['nexus_wake', 'nexus_query_knowledge', 'nexus_get_vital_signs', 'nexus_doctor', 'nexus_brief', 'nexus_get_active_plan'],
     write: [],
+    exec: EXEC_READONLY,
     docs: ['02_architecture.md'],
     knowledge: ['convention', 'gotcha', 'architecture', 'bug-fix'],
     skills: () => ['code-review'],
@@ -135,6 +155,7 @@ Every comment cites its source; acceptance criteria are checked off or challenge
     triggers: ['update docs', 'progress log', 'knowledge entry', 'session end', 'brain hygiene'],
     read: ['nexus_wake', 'nexus_get_active_plan', 'nexus_list_plans', 'nexus_query_knowledge', 'nexus_doctor', 'nexus_brief'],
     write: ['nexus_plan_note', 'nexus_add_knowledge_entry'],
+    exec: ['Read', 'Edit', 'Write', 'Grep', 'Glob'],
     docs: ['index.md'],
     knowledge: ['convention'],
     skills: () => ['knowledge-logging', 'documentation'],
@@ -175,6 +196,7 @@ triggers: ${fmList(spec.triggers.map((t) => `"${t}"`))}
 tools:
   read: ${fmList(spec.read)}
   write: ${fmList(spec.write)}
+  exec: ${fmList(spec.exec)}
 context:
   docs: ${fmList(spec.docs)}
   knowledge_categories: ${fmList(spec.knowledge)}
@@ -194,11 +216,46 @@ ${spec.body}
 `;
 }
 
+/**
+ * Translate a brain MCP tool name into the namespaced form Claude Code expects
+ * in a subagent `tools:` list: `mcp__<server>__<tool>`.
+ */
+function mcpToolName(tool: string): string {
+  return `mcp__${MCP_SERVER_NAME}__${tool}`;
+}
+
+/**
+ * The full `tools:` allowlist for a Claude Code subagent: native execution
+ * tools (so it can actually edit/run) + the agent's namespaced brain MCP tools.
+ * Without the exec tools the subagent inherits nothing useful and cannot edit
+ * files — the bug this fixes.
+ */
+export function claudeSubagentTools(spec: Pick<CoreAgentSpec, 'exec' | 'read' | 'write'>): string[] {
+  const exec = spec.exec.length > 0 ? spec.exec : EXEC_EDIT;
+  const mcp = [...spec.read, ...spec.write].map(mcpToolName);
+  return [...exec, ...mcp];
+}
+
+/**
+ * The `description:` line for a Claude Code subagent. States the real capability
+ * set (so the model knows it can edit) instead of implying MCP-only access.
+ */
+export function subagentDescription(role: string, triggers: string[], exec: string[]): string {
+  const effective = exec.length > 0 ? exec : EXEC_EDIT;
+  const writes = effective.includes('Edit') || effective.includes('Write');
+  const capability = writes
+    ? `Can read, edit, and run code (${effective.join(', ')})`
+    : `Read-only — reviews without modifying the tree (${effective.join(', ')})`;
+  return `${role} agent for this NEXUS project. Triggers: ${triggers.join(', ')}. ${capability}, plus the nexus-brain MCP tools.`;
+}
+
 /** Claude Code subagent format: same body, client-appropriate frontmatter. */
 function renderClaudeSubagent(spec: CoreAgentSpec, framework: string): string {
+  const tools = claudeSubagentTools(spec);
   return `---
 name: ${spec.name}
-description: ${spec.role} agent for this NEXUS project. Triggers: ${spec.triggers.join(', ')}. Uses the nexus-brain MCP tools (${[...spec.read, ...spec.write].join(', ')}).
+description: ${subagentDescription(spec.role, spec.triggers, spec.exec)}
+tools: ${tools.join(', ')}
 ---
 
 You are **${spec.name}**, a brain-grounded ${spec.role} agent in a NEXUS project.
@@ -211,11 +268,19 @@ Context recipe: docs ${spec.docs.join(', ')}; knowledge categories ${spec.knowle
 `;
 }
 
+/** The core agent pipeline order, derived from each agent's handoff.after link. */
+export function coreHandoffChain(): string[] {
+  return buildHandoffChain(
+    CORE_AGENTS.map((a) => ({ name: a.name, after: a.handoffAfter })),
+  );
+}
+
 /** Fenced Agent Roles block for AGENTS.md-style files (non-subagent clients). */
 export function renderAgentRolesBlock(summaries: Array<{ name: string; role: string; mission: string }>): string {
   const rows = summaries
     .map((s) => `| \`${s.name}\` | ${s.role} | ${s.mission} |`)
     .join('\n');
+  const chain = coreHandoffChain().map((n) => `\`${n}\``).join(' → ');
   return `${AGENT_ROLES_START}
 ## 🎭 Agent Roles (v1.1 Contextualized Agents)
 
@@ -226,6 +291,19 @@ adopt the matching role's working agreement when its triggers match your task.
 | Agent | Role | Mission |
 |-------|------|---------|
 ${rows}
+
+### Orchestration — the main thread drives the handoff
+
+Subagents **cannot invoke other subagents**, so the pipeline is sequenced by the
+**main thread (you)**, not by the agents themselves:
+
+${chain}
+
+After an agent finishes, call \`nexus_get_handoff { agent: "<current>" }\` (or
+follow the chain above) and dispatch the \`next\` agent yourself. A plan reaches
+\`done\` only after the test-writer has produced Evidence — doctor **D11** flags
+completions that skipped it. "Hand off to X" in an agent's body means *ask the
+main thread to dispatch X*, never a subagent-to-subagent call.
 
 Full definitions: \`.nexus/agents/\` (custom > core > community). Regenerate
 client outputs with \`nexus agent sync\`.

@@ -18,9 +18,11 @@ import { input } from '@inquirer/prompts';
 import fs from 'fs-extra';
 
 import {
+  claudeSubagentTools,
   coreAgentRolesSummaries,
   renderAgentRolesBlock,
   replaceAgentRolesBlock,
+  subagentDescription,
 } from '../generators/agents.js';
 import { collectAgentSummaries, resolveAgent } from '../utils/agents/parser.js';
 import { getNexusDir } from '../utils/brain.js';
@@ -93,6 +95,7 @@ triggers: ["describe", "when", "to use me"]
 tools:
   read: [nexus_wake, nexus_get_active_plan, nexus_query_knowledge]
   write: [nexus_plan_note]
+  exec: [Read, Edit, Write, Bash, Grep, Glob]
 context:
   docs: []
   knowledge_categories: [gotcha, convention]
@@ -227,9 +230,12 @@ export async function agentSyncCommand(): Promise<void> {
     const resolved = await resolveAgent(agentsDir, summary.name);
     if (!resolved) continue;
     const def = resolved.definition;
+    const { tools } = def.frontmatter;
+    const subagentTools = claudeSubagentTools({ exec: tools.exec, read: tools.read, write: tools.write });
     const out = `---
 name: ${def.frontmatter.agent}
-description: ${def.frontmatter.role} agent for this NEXUS project. Triggers: ${def.frontmatter.triggers.join(', ')}. Uses the nexus-brain MCP tools.
+description: ${subagentDescription(def.frontmatter.role, def.frontmatter.triggers, tools.exec)}
+tools: ${subagentTools.join(', ')}
 ---
 
 You are **${def.frontmatter.agent}**, a brain-grounded ${def.frontmatter.role} agent in a NEXUS project.
