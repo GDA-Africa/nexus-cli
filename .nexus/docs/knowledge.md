@@ -173,3 +173,17 @@
 **Why:** A handoff that no component can execute is documentation, not control flow. The only actor that can dispatch subagents in sequence is the top-level thread.
 
 **How to apply:** After an agent finishes, the main thread calls `nexus_get_handoff` and dispatches `next` itself. Keep `.nexus/agents/` chain client-neutral via `handoff.after`; the chain is derived, not hardcoded, so custom agents reorder it.
+
+### [gotcha] D11 v1 evidence check is a keyword sniff — prose can't catch prose
+**2026-07-05** — `EVIDENCE_SIGNALS = /\b(test|tests|passing|…)\b/i` passes any Evidence section that *mentions* tests: "tests skipped, didn't run them" satisfies the gate. The exact failure mode D11 exists for (agents claiming completion) walks through it.
+
+**Why:** A regex over agent-written prose trusts the agent's words; the gate must trust machine facts (command, exit code, output hash) instead.
+
+**How to apply:** Don't extend the regex — replace it. v1.2 design (`v1_2_provable_done.md`) specifies parseable evidence blocks + `doctor --verify` re-run. Until then treat D11 passes as advisory.
+
+### [bug-fix] Never trust manifest.config raw — normalize at the read boundary
+**2026-07-05** — `upgrade`/`repair` did `JSON.parse(raw) as NexusManifest` and handed `manifest.config` straight to generators; partial manifests (older CLIs, `adopt` on backend projects) rendered literal "undefined" into generated docs. Fixed with `normalizeManifestConfig()` (utils/manifest.ts): explicit defaults for every field, persona merged over DEFAULT_PERSONA, optional flags omitted not invented.
+
+**Why:** `as`-casting external JSON gives compile-time confidence with zero runtime guarantee — the manifest is written by *other versions* of the CLI, so its shape is an input, not an invariant.
+
+**How to apply:** Any new reader of manifest.json (or other cross-version state files) must go through a normalizer; add a display-level fallback too when interpolating into templates.

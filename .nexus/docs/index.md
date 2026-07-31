@@ -27,23 +27,19 @@ _Last sync: 2026-06-17T16:25:04.468Z · branch `main` · 0 commits ahead of main
 
 ## 🎯 Current Objective
 
-**🔴 STRATEGY SHIFT (2026-05-02):** Fast-track milestone delivery. Ship M1 + M2 + M3 together as **v0.4.0 stable** today (not alpha). Add **Auto-Invoke Layer** to close UX gap. Defer M4 to later iteration.
+**Current phase:** 🟣 v1.2 — Provable Done (design drafted, awaiting Halton approval)
 
-**Why:** 
-- M1 (sensors) is complete and tested
-- M2 (plans) and M3 (doctor/brief) are scoped and ready
-- Users won't know when to run commands — auto-invoke solves this
-- Better to ship three cohesive features (sync → plan → audit) than one in isolation
-- M4 (consolidate/wake) can iterate post-release
+**State:** v1.1.2 is published on npm. No active plan. The v1.2 design
+(`../../../.nexus/docs/v1_2_provable_done.md`) and draft plan
+([`implement-v1-2-provable-done`](../plans/implement-v1-2-provable-done.md))
+are ready for review — run `nexus plan start implement-v1-2-provable-done`
+after approval.
 
-**Active phase:** 🚀 **v0.4.0 — Multi-Milestone Release**  
-**Active plans:** 
-  - [`implement-v1-m1-sensors-sync`](../plans/implement-v1-m1-sensors-sync.md) — ✅ DONE (staged to commit)
-  - [`implement-v1-m2-plans-mvp`](../plans/implement-v1-m2-plans-mvp.md) — 📋 Ready to start
-  - [`implement-v1-m3-doctor-brief`](../plans/implement-v1-m3-doctor-brief.md) — 📋 Ready to start
-  - [`implement-auto-invoke-layer`](../plans/implement-auto-invoke-layer.md) — 📋 NEW (brain self-awareness)
+**Why v1.2:** review session 2026-07-05 found D11 v1 is a gameable keyword
+regex ("tests skipped" passes), D09/D11 severities never gate CI, and
+evidence is unverifiable prose. v1.2 = machine evidence + `doctor --strict`.
 
-**Design source:** [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md) — implementation-ready PRD for the six v1.0 commands and the Plans subsystem.
+---
 
 ### What v0.4.0 adds (M1+M2+M3)
 
@@ -254,6 +250,8 @@ Result: a project brain that not only records state but detects drift, tracks wo
 
 ## ✅ Progress Log
 
+- 2026-07-05 — ✅ Review + housekeeping session: fixed **"framework displays as undefined"** bug (manifest normalization + tests, 456/456), synced homepage/llms drift (17 tools / 450→456 tests / v1.1.2 / added `nexus_get_handoff` to docs+llms), drafted **v1.2 "Provable Done"** design + plan (draft, awaiting approval), populated root monorepo brain index. Found: D11 keyword-regex bypass, advisory-only D09/D11 severities, `nexus_get_context` budget only constrains docs section.
+
 - 2026-06-11 — ✅ Completed plan `implement-v1-1-contextualized-agents`: **v1.1.0 — Contextualized Agents.** `.nexus/agents/` primitive (core four: implementer / test-writer / reviewer / doc-keeper; custom sacred), `nexus agent` CLI (6 subcommands), `.claude/agents/` + fenced Agent Roles generation, 3 new MCP tools (16 total) incl. `nexus_get_context` composition, doctor **D11 unverified-done** gate + plan-done evidence warning, registry v0.3.0 (agents/ area + nexus-agent-authoring). Ships WITH the upgrade data-loss fix. 438/438 tests. **Human step: push → publish v1.1.0 + tag skills v0.3.0.**
 - 2026-06-10 — ✅ Completed plan `release-v1-mcp-headline`: v1.0.0 reboot — **`nexus mcp` server (13 read/write brain tools, @modelcontextprotocol/sdk + zod)**, brain-aware CI (PR brief comment job in generated workflows), `.mcp.json` + MCP sections in all generated AI instruction files, registry-based publish gate in own ci.yml (fixes 2026-06-09 failed-publish retry), publish runbook (`docs/publish-runbook.md`), nexus-skills v0.2.0 prepped (3 new shared skills). 419/419 tests. **Remaining human step: renew NPM_TOKEN + re-run publish.**
 - 2026-06-09 — ✅ Completed plan `implement-v1-m4-consolidate-wake-polish`: Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0
@@ -273,17 +271,20 @@ Result: a project brain that not only records state but detects drift, tracks wo
 
 ## ⏭️ What's Next
 
-### 🟣 NEXT INITIATIVE: v1.1 — Contextualized Agents (awaiting approval)
+### 🟣 NEXT INITIATIVE: v1.2 — Provable Done (awaiting approval)
 
-- **Design:** root `.nexus/docs/v1_1_contextualized_agents.md` (2026-06-10)
-- **Plan:** [`implement-v1-1-contextualized-agents`](../plans/implement-v1-1-contextualized-agents.md) — status `draft`, run `nexus plan start` after Halton approves
-- **Scope:** `.nexus/agents/` primitive + `nexus agent` CLI + core four agents (implementer / **test-writer** / reviewer / doc-keeper) + `nexus_get_context` MCP tool + doctor **D11 "unverified done"** gate + registry v0.3.0 agent packs
-- **Blocked by:** v1.0.0 npm publish (human step)
+- **Design:** root `.nexus/docs/v1_2_provable_done.md` (2026-07-05)
+- **Plan:** [`implement-v1-2-provable-done`](../plans/implement-v1-2-provable-done.md) — status `draft`, run `nexus plan start` after Halton approves
+- **Scope:** `.nexus/verify.json` manifest + `nexus plan verify` machine evidence + **D11 v2** (parseable evidence or waiver — keyword regex dropped) + `doctor --strict` / `--verify` + configurable `wake.hashInputs` (protocol-extraction groundwork)
+- **Open questions:** 3 for Halton in design doc §5 (strict plan-done, evidence location, CI re-run default)
+- **Follow-on (v1.3):** standalone wake+verify spec repo + zero-dep reference implementation
+
+### ✅ SHIPPED: v1.1 — Contextualized Agents (v1.1.2 on npm)
 
 ### 🐛 Bugs found dogfooding v1.0 (2026-06-11 incident)
 
 - [x] **`nexus upgrade` destroyed populated brain docs** — FIXED 2026-06-11 (pre-publish). Root cause was twofold: `isCorrupted()` classified frontmatter-less docs as corrupted (auto-replaced in BOTH modes), and the smart check replaced anything not explicitly `status: populated`. Now: missing frontmatter ≠ corruption; replace gate is explicit `status: template` only (preserve-by-default via new `isTemplate()`); every overwrite is backed up to `.nexus/state/upgrade-backup/<stamp>/` first. 4 regression tests.
-- [ ] **Framework displays as "undefined"** in generated content when manifest config is missing/partial (seen in generated CLAUDE.md: "(undefined, local-only)"). Still open — fix in v1.0.1 or v1.1.
+- [x] **Framework displays as "undefined"** — FIXED 2026-07-05. Root cause: `upgrade`/`repair` blind-cast `manifest.config`; partial manifests reached generators with `frontendFramework: undefined`. Now normalized at the boundary (`utils/manifest.ts` `normalizeManifestConfig`, explicit defaults, persona merge) + display guard in both `getFrameworkDisplay` copies. 6 regression tests (456 total).
 
 ### 🎯 SHIPPED (history): v0.4.0 plan (M1+M2+M3 + Auto-Invoke)
 
