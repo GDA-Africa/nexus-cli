@@ -19,6 +19,7 @@ import fs from 'fs-extra';
 import { repairProject } from '../generators/index.js';
 import type { NexusManifest } from '../types/config.js';
 import { logger } from '../utils/logger.js';
+import { normalizeManifestConfig } from '../utils/manifest.js';
 import { version } from '../version.js';
 
 /**
@@ -53,7 +54,8 @@ export async function repairCommand(targetPath?: string): Promise<void> {
     return;
   }
 
-  const config = manifest.config;
+  // Normalize partial manifests before generators interpolate fields.
+  const config = normalizeManifestConfig(manifest.config, path.basename(targetDir));
 
   logger.nexus(`Repairing "${config.displayName}" NEXUS ecosystem...`);
   logger.newline();

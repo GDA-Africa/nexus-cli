@@ -20,6 +20,7 @@ import fs from 'fs-extra';
 import { upgradeProject } from '../generators/index.js';
 import type { NexusManifest } from '../types/config.js';
 import { logger } from '../utils/logger.js';
+import { normalizeManifestConfig } from '../utils/manifest.js';
 import { version } from '../version.js';
 
 const VITAL_SIGNS_START = '<!-- NEXUS:VITAL_SIGNS:START';
@@ -71,7 +72,9 @@ export async function upgradeCommand(targetPath?: string): Promise<void> {
     return; // unreachable but satisfies TS
   }
 
-  const config = manifest.config;
+  // Manifests from older CLIs or `adopt` runs can be partial — normalize
+  // before generators interpolate fields (avoids literal "undefined").
+  const config = normalizeManifestConfig(manifest.config, path.basename(targetDir));
   const oldVersion = manifest.cli?.version ?? 'unknown';
 
   logger.nexus(`Upgrading "${config.displayName}" NEXUS ecosystem...`);

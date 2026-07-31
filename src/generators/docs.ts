@@ -19,7 +19,7 @@ import { version } from '../version.js';
  * Display helpers
  * ────────────────────────────────────────────────────────────── */
 
-function getFrameworkDisplay(framework: string): string {
+function getFrameworkDisplay(framework: string | null | undefined): string {
   const map: Record<string, string> = {
     nextjs: 'Next.js 15 (App Router)',
     'react-vite': 'React + Vite',
@@ -27,7 +27,11 @@ function getFrameworkDisplay(framework: string): string {
     nuxt: 'Nuxt 3',
     astro: 'Astro',
     remix: 'Remix',
+    none: 'None (no frontend)',
   };
+  // Guard: partial manifests can leak null/undefined this far — never
+  // render the literal string "undefined" into generated docs.
+  if (!framework) return 'Unspecified';
   return map[framework] ?? framework;
 }
 
