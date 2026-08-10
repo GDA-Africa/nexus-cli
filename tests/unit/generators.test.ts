@@ -374,10 +374,34 @@ describe('generateAiConfig', () => {
     const cursor = files.find((f) => f.path === '.cursorrules')!;
     // Tool files must have full brain rules and onboarding embedded directly
     // because AI tools ignore cross-file pointers too often
-    expect(cursor.content).toContain('READ `.nexus/docs/index.md` FIRST. EVERY TIME. NO EXCEPTIONS.');
+    expect(cursor.content).toContain('nexus_get_context');
+    expect(cursor.content).toContain('Before You Do Anything');
     expect(cursor.content).toContain('Onboarding Protocol');
     expect(cursor.content).toContain('Scan the codebase');
     expect(cursor.content).toContain('Build the project brain');
+  });
+
+  it('leads with nexus_get_context and keeps whole-brain reading as the fallback', () => {
+    // v1.2 Track A2: the generated protocol used to open with "READ index.md
+    // FIRST. EVERY TIME. NO EXCEPTIONS." and mention the cheap MCP path 200
+    // lines later. Agents obey the first instruction, so orientation cost the
+    // whole brain every session — growing forever, since knowledge.md is
+    // append-only by protocol.
+    const files = generateAiConfig(baseConfig);
+
+    for (const path of ['.cursorrules', 'CLAUDE.md', 'AGENTS.md', '.nexus/ai/instructions.md']) {
+      const file = files.find((f) => f.path === path);
+      expect(file, `${path} should be generated`).toBeDefined();
+
+      const content = file!.content;
+      expect(content).toContain('nexus_get_context');
+      expect(content).toContain('Fallback');
+      expect(content).not.toContain('EVERY TIME. NO EXCEPTIONS.');
+
+      // The cheap path must come before the expensive one, or agents will
+      // never reach it.
+      expect(content.indexOf('nexus_get_context')).toBeLessThan(content.indexOf('Fallback'));
+    }
   });
 
   it('should embed full workflow in tool files — no cross-file pointers for critical behavior', () => {

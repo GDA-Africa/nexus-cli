@@ -161,29 +161,47 @@ function generateInstructions(config: NexusConfig): GeneratedFile {
 
 ---
 
-## ⚠️ Before You Do Anything — 3 Mandatory Steps
+## ⚠️ Before You Do Anything — Orient First
 
-You MUST complete these 3 steps before doing ANY work. This is not optional.
+Orienting is **one call**, not three file reads. Do it before ANY work.
 
-**Step 1. Read your brain — \`.nexus/docs/index.md\`**
+**Step 1. Compose your context — \`nexus_get_context\`**
 
-This file is your project brain. It tells you:
-- What has been built (do not recreate it)
-- What to work on next (the "What's Next" section)
-- The current objective and status of every component
-
-**Step 2. Scan the knowledge base — \`.nexus/docs/knowledge.md\`**
-
-This file is the project's long-term memory. It contains past decisions, bug fixes,
-architecture insights, and gotchas discovered during development. Read the headings
-to find entries relevant to your current task. This prevents you from repeating
-mistakes or contradicting past decisions.
-
-**Step 3. Read the relevant spec doc** from \`.nexus/docs/\` (01 through 08).
+If the \`nexus-brain\` MCP server is connected (see \`.mcp.json\`), call:
 
 \`\`\`
-RULE: Before EVERY task → read .nexus/docs/index.md (your brain)
-RULE: Before EVERY task → scan .nexus/docs/knowledge.md (your memory)
+nexus_get_context({ task: "<what you were just asked to do>" })
+\`\`\`
+
+One call returns one bounded pack: the active plan and its next unchecked
+step, the knowledge entries matching your task, the skills whose triggers
+fire, live repo vitals, and the relevant doc excerpts. It is deterministic
+keyword matching — the same information you would gather by hand, scoped to
+the task and capped in size.
+
+**Prefer this over reading brain files by hand.** Reading \`index.md\` and
+\`knowledge.md\` in full costs thousands of tokens *per session*, and that
+cost grows every time anyone appends to them — it scales with the project's
+history rather than with your task. A context pack is bounded and gets more
+relevant as the project grows, not less.
+
+**Step 2. Read the relevant spec doc** from \`.nexus/docs/\` (01 through 08) —
+only the one your task actually touches, and only if the pack did not
+already carry it.
+
+**Fallback — when MCP is unavailable.** Markdown stays the source of truth,
+so reading by hand always works:
+
+1. \`.nexus/docs/index.md\` — the "Current Objective" and "What's Next"
+   sections. You rarely need the rest of the file.
+2. \`.nexus/docs/knowledge-summary.md\` if it exists (\`nexus consolidate\`
+   creates it) — the rolled-up view. Read the full append-only
+   \`knowledge.md\` only for an entry the summary does not cover.
+3. The relevant numbered spec doc.
+
+\`\`\`
+RULE: Before EVERY task → nexus_get_context(task), or the fallback above
+RULE: NEVER read knowledge.md in full when the summary will do
 RULE: After EVERY task → update .nexus/docs/index.md
 RULE: After EVERY task → append to .nexus/docs/knowledge.md if you learned something
 RULE: NEVER ask "what should we work on?" → the index tells you
@@ -470,33 +488,48 @@ function toolInstructionContent(config: NexusConfig, toolName: string): string {
 
 ---
 
-## ⚠️ Before You Do Anything — 3 Mandatory Steps
+## ⚠️ Before You Do Anything — Orient First
 
-You MUST complete these 3 steps before doing ANY work. This is not optional.
+Orienting is **one call**, not three file reads. Do it before ANY work.
 
-**Step 1. Read your brain — \`.nexus/docs/index.md\`**
+**Step 1. Compose your context — \`nexus_get_context\`**
 
-READ \`.nexus/docs/index.md\` FIRST. EVERY TIME. NO EXCEPTIONS.
-
-This file is your project brain. It tells you:
-- What has been built (do not recreate it)
-- What to work on next (the "What's Next" section)
-- The current objective and status of every component
-- The feature backlog — your prioritized roadmap
-- The progress log — your session-by-session memory
-
-**Step 2. Scan the knowledge base — \`.nexus/docs/knowledge.md\`**
-
-This file is the project's long-term memory. It contains past decisions, bug fixes,
-architecture insights, and gotchas discovered during development. Read the headings
-to find entries relevant to your current task. This prevents you from repeating
-mistakes or contradicting past decisions.
-
-**Step 3. Read the relevant spec doc** from \`.nexus/docs/\` (01 through 08).
+If the \`nexus-brain\` MCP server is connected (see \`.mcp.json\`), call:
 
 \`\`\`
-RULE: Before EVERY task → read .nexus/docs/index.md (your brain)
-RULE: Before EVERY task → scan .nexus/docs/knowledge.md (your memory)
+nexus_get_context({ task: "<what you were just asked to do>" })
+\`\`\`
+
+One call returns one bounded pack: the active plan and its next unchecked
+step, the knowledge entries matching your task, the skills whose triggers
+fire, live repo vitals, and the relevant doc excerpts. It is deterministic
+keyword matching — the same information you would gather by hand, scoped to
+the task and capped in size.
+
+**Prefer this over reading brain files by hand.** Reading \`index.md\` and
+\`knowledge.md\` in full costs thousands of tokens *per session*, and that
+cost grows every time anyone appends to them — it scales with the project's
+history rather than with your task. A context pack is bounded and gets more
+relevant as the project grows, not less.
+
+**Step 2. Read the relevant spec doc** from \`.nexus/docs/\` (01 through 08) —
+only the one your task actually touches, and only if the pack did not
+already carry it.
+
+**Fallback — when MCP is unavailable.** Markdown stays the source of truth,
+so reading by hand always works:
+
+1. \`.nexus/docs/index.md\` — the "Current Objective" and "What's Next"
+   sections, plus the feature backlog when you need the roadmap. You rarely
+   need the whole file.
+2. \`.nexus/docs/knowledge-summary.md\` if it exists (\`nexus consolidate\`
+   creates it) — the rolled-up view. Read the full append-only
+   \`knowledge.md\` only for an entry the summary does not cover.
+3. The relevant numbered spec doc.
+
+\`\`\`
+RULE: Before EVERY task → nexus_get_context(task), or the fallback above
+RULE: NEVER read knowledge.md in full when the summary will do
 RULE: After EVERY task → update .nexus/docs/index.md
 RULE: After EVERY task → append to .nexus/docs/knowledge.md if you learned something
 RULE: NEVER ask "what enhancements would you like?" → the index has the answer
