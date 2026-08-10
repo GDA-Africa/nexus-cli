@@ -5,7 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] — 2026-08-10
+
+> **Note on 1.1.3.** Everything below was already inside the published 1.1.3
+> tarball — it was cut while this work sat under an `[Unreleased]` heading, so
+> 1.1.3 shipped a feature set its own changelog entry did not describe. 1.2.0
+> is the same code under the version it should have carried. Nothing is
+> removed from 1.1.3; if you installed it, upgrading to 1.2.0 changes only the
+> version number.
 
 ### 🦎 Chameleon UI delegation (opt-in)
 
@@ -54,7 +61,12 @@ block `chameleon agents init` splices between `<!-- chameleon:start -->`
 markers. NEXUS now captures that block before regenerating and restores it
 after. New `D12` doctor check flags a project where it went missing.
 
-## [1.1.3] — 2026-08-04
+## [1.1.3] — 2026-08-10
+
+> Published from a branch that also carried the v1.2 Chameleon work, so this
+> release contains more than the fix described below. See [1.2.0] for what was
+> actually in it. Prefer 1.2.0.
+
 
 ### 🛡 Fixed: "undefined" leaking into generated files
 
