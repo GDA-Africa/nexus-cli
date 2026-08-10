@@ -28,6 +28,7 @@ import { buildMcpServer } from '../../src/mcp/server.js';
 import {
   addKnowledgeEntryTool,
   getActivePlanTool,
+  getContextTool,
   getSkillTool,
   listSkillsTool,
   planNoteTool,
@@ -297,6 +298,81 @@ describe('skills tools', () => {
 /* ──────────────────────────────────────────────────────────────
  * Server end-to-end (InMemoryTransport)
  * ────────────────────────────────────────────────────────────── */
+
+/* ──────────────────────────────────────────────────────────────
+ * getContextTool — budget discipline
+ *
+ * Regression cover for the v1.2 Track A defect: the budget used to be
+ * subtracted only AFTER plan/knowledge/skills/vitals were fully composed, and
+ * `truncated` was only ever set inside the docs loop. So a pack could blow
+ * past `maxChars` and still report `truncated: false` — which is worse than
+ * being over budget, because callers trust that flag.
+ * ────────────────────────────────────────────────────────────── */
+
+/** Knowledge file with `count` entries whose bodies are `bodyChars` long. */
+function bigKnowledge(count: number, bodyChars: number): string {
+  const entries = Array.from({ length: count }, (_, i) =>
+    `### [gotcha] Budget overflow entry ${i}\n**2026-06-0${(i % 9) + 1}** — ${'x'.repeat(bodyChars)}\n`,
+  ).join('\n');
+
+  return `# Test Knowledge Base\n\n## Entries\n\n${entries}\n---\n\n*footer*\n`;
+}
+
+/** The sections the budget actually governs. */
+function chargedSize(result: Awaited<ReturnType<typeof getContextTool>>): number {
+  const { plan, knowledge, skills, vitals, docs } = result;
+  return JSON.stringify({ plan, knowledge, skills, vitals, docs }).length;
+}
+
+describe('getContextTool budget', () => {
+  it('keeps the composed pack within maxChars even when knowledge is huge', async () => {
+    await fs.writeFile(path.join(ctx.docsDir, 'knowledge.md'), bigKnowledge(5, 8000));
+
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 4000 });
+
+    expect(chargedSize(result)).toBeLessThanOrEqual(4000);
+  });
+
+  it('reports truncated:true when knowledge was dropped and no docs were requested', async () => {
+    // The exact defect: with no agent recipe there are no docs, so the old
+    // implementation never reached the only line that set `truncated`.
+    await fs.writeFile(path.join(ctx.docsDir, 'knowledge.md'), bigKnowledge(5, 8000));
+
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 2000 });
+
+    expect(result.docs).toHaveLength(0);
+    expect(result.truncated).toBe(true);
+  });
+
+  it('caps an individual knowledge body instead of letting one entry eat the pack', async () => {
+    await fs.writeFile(path.join(ctx.docsDir, 'knowledge.md'), bigKnowledge(1, 9000));
+
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 60000 });
+
+    expect(result.knowledge).toHaveLength(1);
+    // 1200-char cap plus the ellipsis marker.
+    expect(result.knowledge[0].body.length).toBeLessThanOrEqual(1201);
+    expect(result.truncated).toBe(true);
+  });
+
+  it('does not claim truncation when everything fits', async () => {
+    const result = await getContextTool(ctx, { task: 'markdown source of truth', maxChars: 60000 });
+
+    expect(result.truncated).toBe(false);
+    expect(chargedSize(result)).toBeLessThanOrEqual(60000);
+  });
+
+  it('still composes the high-priority plan slice under a tight budget', async () => {
+    await fs.writeFile(path.join(ctx.docsDir, 'knowledge.md'), bigKnowledge(5, 8000));
+
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 2000 });
+
+    // Plan is charged but never rejected — it is the most task-relevant slice
+    // and is bounded by construction.
+    expect(result.plan).not.toBeNull();
+    expect(result.plan?.id).toBe('test-plan');
+  });
+});
 
 describe('buildMcpServer (end-to-end)', () => {
   it('registers all 17 tools and serves calls over a transport', async () => {

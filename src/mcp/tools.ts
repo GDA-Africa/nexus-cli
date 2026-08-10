@@ -377,19 +377,45 @@ export interface ComposedContext {
 }
 
 /**
+ * Per-entry cap on knowledge bodies. Entries are freeform prose in an
+ * append-only log, so one long entry must never be able to consume the pack.
+ */
+const KNOWLEDGE_BODY_CAP = 1200;
+
+/**
  * The v1.1 keystone: compose ONE scoped context pack for a task instead of
  * N piecemeal reads. Deterministic — keyword/trigger matching, no LLM.
+ *
+ * `maxChars` is a hard cap on every unbounded section, not a suggestion:
+ * sections are composed in priority order (plan → vitals → skills →
+ * knowledge → docs) and charged as they are admitted. `truncated` is true
+ * whenever anything was cut or dropped, including when no docs were
+ * requested — callers rely on it to know the pack is partial.
  */
 export async function getContextTool(ctx: BrainContext, input: GetContextInput): Promise<ComposedContext> {
   const maxChars = Math.max(2000, Math.min(input.maxChars ?? 12000, 60000));
   let budget = maxChars;
   let truncated = false;
 
+  /**
+   * Charge the budget for one item. Returns false when it does not fit, so
+   * the caller can stop admitting rather than overrun. Every unbounded
+   * section goes through this — that is what makes `maxChars` a real cap
+   * instead of an advisory one.
+   */
+  const admit = (value: unknown): boolean => {
+    const cost = JSON.stringify(value)?.length ?? 0;
+    if (cost > budget) return false;
+    budget -= cost;
+    return true;
+  };
+
   // Agent recipe (optional)
   const resolved = input.agent ? await resolveAgent(agentsDir(ctx), input.agent) : null;
   const recipe = resolved?.definition.frontmatter.context ?? null;
 
-  // 1. Plan slice
+  // 1. Plan slice — the most task-relevant thing in the pack, and bounded by
+  //    construction (three short fields), so it is charged but never rejected.
   let plan: ComposedContext['plan'] = null;
   if (recipe?.plan_scope !== 'none') {
     const state = await readActivePlans(ctx.plansDir);
@@ -401,14 +427,44 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
       }
     }
   }
+  if (plan) budget -= JSON.stringify(plan).length;
 
-  // 2. Knowledge — task keywords, optionally restricted to recipe categories
+  // 2. Vitals digest (cheap snapshot, no test run). Also bounded — the tests
+  //    summary is capped at 200 chars — so it is charged, never rejected.
+  const vs = await captureVitalSigns({ cwd: ctx.projectRoot, timeoutMs: 1500 });
+  const vitals = {
+    branch: (vs.git as { branch?: string | null }).branch ?? null,
+    dirty: (vs.git as { dirty?: boolean | null }).dirty ?? null,
+    testsSummary: JSON.stringify(vs.tests).slice(0, 200),
+  };
+  budget -= JSON.stringify(vitals).length;
+
+  // 3. Skills — trigger matching against the task. Small per entry, but the
+  //    count is unbounded, so each one is admitted against the budget.
+  const { skills: allSkills } = await listSkillsTool(ctx);
+  const skills: ComposedContext['skills'] = [];
+  for (const skill of allSkills) {
+    const matched = skill.triggers.find((trigger) => input.task.toLowerCase().includes(trigger.toLowerCase()));
+    if (!matched) continue;
+
+    const entry = { name: skill.name, source: skill.source, matchedTrigger: matched };
+    if (!admit(entry)) {
+      truncated = true;
+      break;
+    }
+    skills.push(entry);
+  }
+
+  // 4. Knowledge — task keywords, optionally restricted to recipe categories.
+  //    Entry bodies are arbitrarily long prose, so each is capped individually
+  //    AND admitted against the remaining budget. Before this, five long
+  //    entries could consume the whole pack and leave nothing for docs.
   const terms = input.task.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
-  let knowledge: KnowledgeMatch[] = [];
+  const knowledge: KnowledgeMatch[] = [];
   const knowledgePath = path.join(ctx.docsDir, 'knowledge.md');
   if (await fs.pathExists(knowledgePath)) {
     const parsed = parseKnowledge(await fs.readFile(knowledgePath, 'utf-8'));
-    knowledge = parsed.entries
+    const candidates = parsed.entries
       .filter((e) => !recipe || recipe.knowledge_categories.length === 0 || recipe.knowledge_categories.includes(e.category))
       .filter((e) => {
         const hay = `${e.category} ${e.title} ${e.raw.join(' ')}`.toLowerCase();
@@ -417,40 +473,37 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
       .slice(-5)
       .reverse()
       .map(toKnowledgeMatch);
+
+    for (const match of candidates) {
+      if (match.body.length > KNOWLEDGE_BODY_CAP) {
+        match.body = `${match.body.slice(0, KNOWLEDGE_BODY_CAP).trimEnd()}…`;
+        truncated = true;
+      }
+      if (!admit(match)) {
+        truncated = true;
+        break;
+      }
+      knowledge.push(match);
+    }
   }
 
-  // 3. Skills — trigger matching against the task
-  const { skills: allSkills } = await listSkillsTool(ctx);
-  const skills: ComposedContext['skills'] = [];
-  for (const skill of allSkills) {
-    const matched = skill.triggers.find((trigger) => input.task.toLowerCase().includes(trigger.toLowerCase()));
-    if (matched) skills.push({ name: skill.name, source: skill.source, matchedTrigger: matched });
-  }
-
-  // 4. Vitals digest (cheap snapshot, no test run)
-  const vs = await captureVitalSigns({ cwd: ctx.projectRoot, timeoutMs: 1500 });
-  const vitals = {
-    branch: (vs.git as { branch?: string | null }).branch ?? null,
-    dirty: (vs.git as { dirty?: boolean | null }).dirty ?? null,
-    testsSummary: JSON.stringify(vs.tests).slice(0, 200),
-  };
-
-  // 5. Recipe-named docs — excerpts within budget
+  // 5. Recipe-named docs — whatever budget survives the sections above.
   const docs: ComposedContext['docs'] = [];
-  budget -= JSON.stringify({ plan, knowledge, skills, vitals }).length;
   for (const docFile of recipe?.docs ?? []) {
     const docPath = path.join(ctx.docsDir, docFile);
     if (!(await fs.pathExists(docPath))) continue;
+
+    if (budget <= 0) {
+      truncated = true;
+      break;
+    }
+
     const content = await fs.readFile(docPath, 'utf-8');
-    const excerpt = content.length > budget ? content.slice(0, Math.max(0, budget)) : content;
+    const excerpt = content.length > budget ? content.slice(0, budget) : content;
     if (excerpt.length < content.length) truncated = true;
     if (excerpt.length > 0) {
       docs.push({ file: docFile, excerpt });
       budget -= excerpt.length;
-    }
-    if (budget <= 0) {
-      truncated = true;
-      break;
     }
   }
 
