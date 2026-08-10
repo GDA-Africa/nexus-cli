@@ -245,10 +245,17 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | **0.3.1** | **Mar 7, 2026** | **Production bug fix: `dirExists` for skill directory checks. Comprehensive test coverage for all v0.3.x modules (295 tests). Homepage set to [nexus.glenhalton.com](https://nexus.glenhalton.com)** |
 | **0.3.2** | **Mar 7, 2026** | **Live skill registry — `nexus skill registry` now fetches the `@nexus-framework/skills` tarball directly from npm at runtime. New skills visible immediately without republishing nexus-cli. 306 unit tests.** |
 | **0.4.0** | **May 3, 2026** | **Auto-invoke layer — Brain detection & self-update. Alive Brain complete with sync, plan, doctor, brief, and brain commands. 364 unit tests.** |
+| **1.0.0** | **Jun 10, 2026** | **`nexus mcp` — the brain as an MCP server (13 schema-validated tools), brain-aware CI, generated `.mcp.json` + MCP sections in all AI instruction files, `wake` + `consolidate`. 419 unit tests.** |
+| **1.1.0** | **Jun 11, 2026** | **Contextualized Agents — `.nexus/agents/` core four, `nexus agent` (6 subcommands), `.claude/agents/` generation, 3 new MCP tools (16 total) inc. `nexus_get_context`, doctor D11 verification gate. Ships with the upgrade data-loss fix. 438 unit tests.** |
+| 1.1.1 | Jun 17, 2026 | Orchestration bug fixes: non-interactive-safe CLI, subagents given real execution tools, runnable agent handoff chain (`nexus_get_handoff` — 17 tools) |
+| 1.1.2 | Jun 17, 2026 | Follow-up orchestration fixes |
+| **1.1.3** | **Aug 4, 2026** | **Manifest normalization — `upgrade`/`repair` normalize partial manifests before generation, so older/backend-only manifests no longer render literal `undefined` into generated docs and AI config. Docs + homepage accuracy pass (17 tools, 11 doctor checks, 456 tests). 456 unit tests.** |
 
 ---
 
 ## ✅ Progress Log
+
+- 2026-08-04 — ✅ **Released v1.1.3** (patch — manifest normalization fix, the only code change since v1.1.2). Bumped `package.json` + `src/version.ts`, added the CHANGELOG entry. **CLI README accuracy pass:** 16→17 MCP tools (badge, `nexus mcp` row, tool list now includes `get_context`/`list_agents`/`get_agent`/`get_handoff`), 438→456 tests, ten→eleven doctor checks (+D11 in the example), added `.nexus/agents/` + `.mcp.json` + `.claude/agents/` to the generated tree, new **`nexus agent`** section with the core four and the verification gate. **Homepage:** version strings → 1.1.3 (index/agents/mcp JSON-LD, hero tag, docs breadcrumb v1.1.0→v1.1.3), docs.html meta 16→17 tools, v1.1.3 note in the Upgrading section, llms.txt + llms-full.txt version/release-history, sitemap lastmod → 2026-08-04, refreshed the stale `NEXUS_CLI_README.md` mirror (v0.x → current). 456/456 tests, tsc + lint clean.
 
 - 2026-07-05 — ✅ Review + housekeeping session: fixed **"framework displays as undefined"** bug (manifest normalization + tests, 456/456), synced homepage/llms drift (17 tools / 450→456 tests / v1.1.2 / added `nexus_get_handoff` to docs+llms), drafted **v1.2 "Provable Done"** design + plan (draft, awaiting approval), populated root monorepo brain index. Found: D11 keyword-regex bypass, advisory-only D09/D11 severities, `nexus_get_context` budget only constrains docs section.
 
@@ -279,7 +286,7 @@ Result: a project brain that not only records state but detects drift, tracks wo
 - **Open questions:** 3 for Halton in design doc §5 (strict plan-done, evidence location, CI re-run default)
 - **Follow-on (v1.3):** standalone wake+verify spec repo + zero-dep reference implementation
 
-### ✅ SHIPPED: v1.1 — Contextualized Agents (v1.1.2 on npm)
+### ✅ SHIPPED: v1.1 — Contextualized Agents (v1.1.3 on npm)
 
 ### 🐛 Bugs found dogfooding v1.0 (2026-06-11 incident)
 

@@ -47,6 +47,7 @@ import {
 import { syncCommand } from './commands/sync.js';
 import { updateCommand, printUpdateBanner } from './commands/update.js';
 import { upgradeCommand } from './commands/upgrade.js';
+import { useCommand } from './commands/use.js';
 import { wakeCommand } from './commands/wake.js';
 import {
   isInteractiveEnvironment,
@@ -78,8 +79,20 @@ program
   .description('Initialize a new NEXUS project with interactive setup')
   .option('--adopt', 'Shorthand: same as `nexus adopt` (add NEXUS to an existing project)')
   .option('--local', 'Configure NEXUS as local-only (not tracked by git)')
-  .action(async (projectName: string | undefined, options: { adopt?: boolean; local?: boolean }) => {
-    await initCommand(projectName, { adopt: options.adopt ?? false, local: options.local ?? false });
+  .option('--ui <provider>', 'UI generator for this run: chameleon | none (overrides saved preference)')
+  .option('--explain', 'Explain where the resolved UI preference came from')
+  .action(async (projectName: string | undefined, options: {
+    adopt?: boolean;
+    local?: boolean;
+    ui?: string;
+    explain?: boolean;
+  }) => {
+    await initCommand(projectName, {
+      adopt: options.adopt ?? false,
+      local: options.local ?? false,
+      ui: options.ui,
+      explain: options.explain ?? false,
+    });
   });
 
 program
@@ -253,6 +266,8 @@ program
   });
 
 // ── nexus doctor ──────────────────────────────────────────────
+program.addCommand(useCommand());
+
 program.addCommand(doctorCommand());
 
 // ── nexus brief ───────────────────────────────────────────────

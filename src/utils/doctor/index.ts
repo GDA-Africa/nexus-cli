@@ -9,6 +9,7 @@ import { D08_vital_signs_missing } from './checks/D08.js';
 import { D09_handshake_missed } from './checks/D09.js';
 import { D10_skills_drift } from './checks/D10.js';
 import { D11_unverified_done } from './checks/D11.js';
+import { D12_chameleon_block_lost } from './checks/D12.js';
 import type { DoctorCheck, DoctorContext, DoctorFinding, DoctorReport, DoctorSeverity } from './types.js';
 
 const SEVERITY_WEIGHT: Record<DoctorSeverity, number> = {
@@ -29,6 +30,7 @@ export const DEFAULT_CHECKS: DoctorCheck[] = [
   D09_handshake_missed,
   D10_skills_drift,
   D11_unverified_done,
+  D12_chameleon_block_lost,
 ];
 
 export interface RunDoctorOptions {

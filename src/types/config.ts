@@ -4,6 +4,8 @@
  * Core configuration types used throughout the CLI.
  */
 
+import type { UiProvider } from './chameleon.js';
+
 /** Supported project types */
 export type ProjectType = 'web' | 'api' | 'monorepo' | 'mobile' | 'desktop' | 'ui-library';
 
@@ -84,6 +86,13 @@ export interface NexusConfig {
   enableSkills?: boolean;
   /** Generate .nexus/agents/ + client subagent outputs (v1.1, default on) */
   enableAgents?: boolean;
+  /**
+   * Which UI generator this project delegates to. Opt-in and remembered —
+   * resolved from `--ui`, then project config, then global config, then `none`.
+   * `none` means NEXUS generates the UI itself, which every blueprint must
+   * support.
+   */
+  uiProvider?: UiProvider;
 }
 
 /** Partial config for incremental prompt building */

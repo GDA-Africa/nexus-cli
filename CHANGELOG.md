@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🦎 Chameleon UI delegation (opt-in)
+
+`nexus init` is the interview; [Chameleon](https://chameleon.glenhalton.com)
+(`@chameleon-ui-lib/react`) is the generator. NEXUS resolves what you want into
+an AppSpec, hands it over, and overlays the brain, tooling, CI, and tests
+around what Chameleon produces.
+
+**Opt-in, remembered, never required:**
+
+```bash
+nexus use chameleon            # this project
+nexus use chameleon --global   # every project
+nexus use none                 # opt back out
+nexus use --explain            # what's active, and which file said so
+nexus init my-app --ui none    # always one keystroke away
+```
+
+Resolution order: `--ui` flag → project `.nexus/config.json` → global
+`~/.config/nexus/config.json` → `none`. A saved preference is *stated* during
+`init`, never asked about again.
+
+- **No hard dependency.** Chameleon is resolved from your environment at
+  generation time (`NEXUS_CHAMELEON_BIN` → project `node_modules/.bin` → `npx
+  --no-install`). Absent, older, or broken, generation falls back to NEXUS with
+  a printed reason — every project still builds with `--ui none`.
+- **Capability-gated, not version-gated.** NEXUS asks what Chameleon can do and
+  disables the paths that aren't available, so new Chameleon releases light up
+  new paths without a NEXUS release.
+- **Validated before it runs.** NEXUS validates the AppSpec locally, then again
+  via `chameleon new --validate-only`, before anything is written.
+- **Recorded, not claimed.** Every `--json` envelope is written to
+  `.nexus/state/chameleon.json` as generation evidence.
+- **Native is skipped, deliberately.** Chameleon's tree is DOM-bound, so an
+  Expo target skips it and says so — a saved preference never produces a
+  project that cannot boot.
+- **Generated apps get a working toolchain.** NEXUS merges its scripts and
+  devDependencies into Chameleon's `package.json`, which is what makes the
+  `lint` script Chameleon ships actually runnable.
+
+### 🛡 Fixed: `upgrade` no longer deletes Chameleon's agent block
+
+`CLAUDE.md` and `AGENTS.md` are in NEXUS's `ALWAYS_REPLACE` set, so every
+`init` / `upgrade` / `repair` rewrote them wholesale — silently deleting the
+block `chameleon agents init` splices between `<!-- chameleon:start -->`
+markers. NEXUS now captures that block before regenerating and restores it
+after. New `D12` doctor check flags a project where it went missing.
+
+## [1.1.3] — 2026-08-04
+
+### 🛡 Fixed: "undefined" leaking into generated files
+
+`upgrade` and `repair` passed `manifest.config` straight to the generators.
+Manifests written by older CLIs, or by `adopt` on a backend-only project
+(frontend framework detected as `null`), are **partial** — so template literals
+rendered the literal string `undefined` into generated docs and AI config files.
+
+- New `normalizeManifestConfig()` (`src/utils/manifest.ts`) fills every
+  missing/null field with an explicit, valid default before generation.
+  Unknown enum values are **preserved** — forward-compatible with manifests
+  written by newer CLIs.
+- `upgrade` and `repair` now normalize before handing config to the generators.
+- `getFrameworkDisplay()` accepts `null`/`undefined` and renders `Unspecified`;
+  `none` renders `None (no frontend)`.
+
+No migration needed — the fix is transparent. If a previous `upgrade` wrote
+`undefined` into your brain docs or AI config, re-run `nexus upgrade` to
+regenerate them (populated docs stay preserved, as always).
+
+Found while dogfooding v1.0 (2026-06-11 incident). 456/456 tests pass.
+
+---
+
 ## [1.1.2] — 2026-06-11
 
 ### 🎭 Contextualized Agents (HEADLINE)

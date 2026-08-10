@@ -17,6 +17,7 @@ import { generateProject } from '../generators/index.js';
 import { runPrompts } from '../prompts/index.js';
 import { logger } from '../utils/logger.js';
 import { isExistingProject } from '../utils/project-detector.js';
+import { describeUiPreference, resolveUiPreference } from '../utils/ui-preference.js';
 import { validateProjectName, toSlug } from '../utils/validator.js';
 import { version } from '../version.js';
 
@@ -26,6 +27,10 @@ import { adoptCommand } from './adopt.js';
 export interface InitOptions {
   adopt?: boolean;
   local?: boolean;
+  /** `--ui chameleon` / `--ui none` — highest-precedence UI preference. */
+  ui?: string;
+  /** Print which config file the UI preference resolved from. */
+  explain?: boolean;
 }
 
 /**
@@ -75,8 +80,22 @@ export async function initCommand(
     // Run interactive prompts
     const config = await runPrompts(projectName, options.local);
 
+    // Resolve the UI provider from flag → project config → global config →
+    // `none`. A saved preference is stated, never asked about again: someone
+    // who ran `nexus use chameleon --global` once should not be re-prompted,
+    // and someone who never opted in should never see the question.
+    const uiPreference = await resolveUiPreference({
+      flag: options.ui,
+      projectRoot: process.cwd(),
+    });
+    config.uiProvider = uiPreference.provider;
+
     logger.newline();
     logger.nexus(`Creating "${config.displayName}" with ${config.frontendFramework}...`);
+    logger.nexus(`UI: ${describeUiPreference(uiPreference)}`);
+    if (options.explain && uiPreference.path) {
+      logger.info(`  resolved from ${uiPreference.path}`);
+    }
     logger.newline();
 
     // Generate the project

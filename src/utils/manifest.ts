@@ -55,5 +55,6 @@ export function normalizeManifestConfig(
     ...(source.localOnly !== undefined ? { localOnly: source.localOnly } : {}),
     ...(source.enableSkills !== undefined ? { enableSkills: source.enableSkills } : {}),
     ...(source.enableAgents !== undefined ? { enableAgents: source.enableAgents } : {}),
+    ...(source.uiProvider !== undefined ? { uiProvider: source.uiProvider } : {}),
   };
 }

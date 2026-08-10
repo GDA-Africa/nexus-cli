@@ -7,9 +7,9 @@
 Give every project a structured brain. AI agents read it, call it as MCP tools — and since v1.1, **specialize into brain-grounded roles**.
 
 [![npm](https://img.shields.io/npm/v/@nexus-framework/cli?style=flat-square&logo=npm&logoColor=white&label=npm&color=CB3837)](https://www.npmjs.com/package/@nexus-framework/cli)
-[![MCP](https://img.shields.io/badge/MCP-16_brain_tools-8A2BE2?style=flat-square)](https://modelcontextprotocol.io)
+[![MCP](https://img.shields.io/badge/MCP-17_brain_tools-8A2BE2?style=flat-square)](https://modelcontextprotocol.io)
 [![Agents](https://img.shields.io/badge/agents-core_four-34d399?style=flat-square)](https://nexus.glenhalton.com/docs)
-[![Tests](https://img.shields.io/badge/tests-438_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/tests-456_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
 [![Website](https://img.shields.io/badge/nexus.glenhalton.com-8A2BE2?style=flat-square&logo=googlechrome&logoColor=white)](https://nexus.glenhalton.com)
@@ -24,7 +24,9 @@ Scaffolding tools generate files. NEXUS generates **understanding**.
 
 Run `nexus init` and your project gets a structured documentation system AI agents can parse, a persistent knowledge base they write to after discoveries, a project brain that tracks priorities and progress, and an alive brain that monitors repo state, tracks work across sessions, and surfaces issues before they compound.
 
-**v1.0 makes the brain callable.** Every generated project ships a `.mcp.json` that registers the `nexus-brain` MCP server — Claude Code, Claude Cowork, OpenAI Codex, Cursor, and any MCP client get the brain as 13 schema-validated tools instead of a pile of files they're told to read. One `nexus_wake` call returns the session handshake, the active plan, its next step, and drift counts. Writes go through validated tools, so malformed brain state becomes impossible rather than merely detectable.
+**v1.0 made the brain callable.** Every generated project ships a `.mcp.json` that registers the `nexus-brain` MCP server — Claude Code, Claude Cowork, OpenAI Codex, Cursor, and any MCP client get the brain as 17 schema-validated tools instead of a pile of files they're told to read. One `nexus_wake` call returns the session handshake, the active plan, its next step, and drift counts. Writes go through validated tools, so malformed brain state becomes impossible rather than merely detectable.
+
+**v1.1 staffs it.** The brain defines specialized, brain-grounded agents in `.nexus/agents/` — implementer, test-writer, reviewer, doc-keeper — each with its own context recipe and least-privilege tool allowlist, plus a verification gate (doctor `D11`) so plans can't be marked done without evidence.
 
 Your AI coding tool opens the project and already knows the architecture, the decisions, and what to build next — and can prove it.
 
@@ -76,12 +78,13 @@ Interactive setup:
 | `nexus adopt [path]` | Add NEXUS docs and AI config to any existing project |
 | `nexus upgrade [path]` | Regenerate templates, preserve your populated docs |
 | `nexus repair [path]` | Fix missing or corrupted `.nexus/` files |
+| `nexus use [chameleon\|none]` | **v1.2 — opt-in UI delegation.** Show or set the UI generator (`--global`, `--explain`) |
 
 ### Alive Brain — v1.0
 
 | Command | What it does |
 |---------|-------------|
-| `nexus mcp` | **Start the brain MCP server (stdio).** 16 schema-validated tools for Claude Code, Codex, Cursor & any MCP client |
+| `nexus mcp` | **Start the brain MCP server (stdio).** 17 schema-validated tools for Claude Code, Codex, Cursor & any MCP client |
 | `nexus agent <sub>` | **v1.1 — Contextualized Agents.** Manage brain-grounded roles: `list · new · install · remove · status · sync` |
 | `nexus wake` | Issue a session handshake token proving the brain was read |
 | `nexus sync` | Capture live repo state → Vital Signs block in project brain |
@@ -92,7 +95,7 @@ Interactive setup:
 | `nexus plan tick <id>` | Toggle a step checkbox |
 | `nexus plan note <id>` | Add a timestamped note |
 | `nexus plan done <id>` | Complete a plan — appends to progress log |
-| `nexus doctor` | Run ten drift checks against your project structure |
+| `nexus doctor` | Run twelve drift checks against your project structure (incl. `D11` verification gate, `D12` Chameleon block) |
 | `nexus brief` | Human-readable status digest |
 | `nexus consolidate` | Roll knowledge.md up into a generated summary (`--check`, `--archive`) |
 | `nexus brain status` | Live brain health dashboard |
@@ -140,9 +143,16 @@ Interactive setup:
     core/                ← Framework-matched skills (auto-updated)
     custom/              ← Your skills — never overwritten
     community/           ← Registry-installed skills
+  agents/                ← Brain-grounded agent roles (v1.1)
+    core/                ← The core four — regenerated on upgrade
+    custom/              ← Your agents — never overwritten
+    community/           ← Registry-installed agents
   plans/                 ← Work tracking across sessions (v0.4.0)
   state/                 ← Cached sensor output (v0.4.0)
+  manifest.json          ← Project config the CLI reads on upgrade/repair
 
+.mcp.json
+.claude/agents/          ← Claude Code subagents, generated from .nexus/agents/
 .cursorrules
 .windsurfrules
 .clinerules
@@ -155,7 +165,7 @@ Every AI config file embeds the full agent protocol. Open the project in any sup
 
 ---
 
-## The Alive Brain — v1.0
+## The Alive Brain — v1.1
 
 Before v0.4.0, NEXUS gave every project a brain. It was a documentation system — useful, but passive.
 
@@ -178,18 +188,53 @@ automatically:
 { "mcpServers": { "nexus-brain": { "command": "npx", "args": ["-y", "@nexus-framework/cli", "mcp"] } } }
 ```
 
-Agents get 13 schema-validated tools instead of "please read these files":
+Agents get 17 schema-validated tools instead of "please read these files":
 
 - `nexus_wake` — handshake token + active plan + next step + doctor counts, one call
 - `nexus_query_knowledge` — targeted gotcha/pattern retrieval, not whole-file reads
 - `nexus_get_active_plan`, `nexus_list_plans`, `nexus_get_plan` — durable work context
 - `nexus_get_vital_signs`, `nexus_brief`, `nexus_doctor` — live repo reality & drift
 - `nexus_list_skills`, `nexus_get_skill` — task-matched skills (custom > core > community)
+- `nexus_get_context` — **v1.1 keystone.** ONE composed context pack per task:
+  plan slice + matching knowledge + trigger-matched skills + vitals, budget-capped
+- `nexus_list_agents`, `nexus_get_agent`, `nexus_get_handoff` — **v1.1.** Agent roles,
+  their context recipes, and the next agent to dispatch in the pipeline
 - `nexus_plan_tick`, `nexus_plan_note`, `nexus_add_knowledge_entry` — validated writes;
   malformed frontmatter becomes impossible, not just detectable
 
 Markdown stays the source of truth. No database, no daemon — the server is
 spawned per client over stdio and exits with it.
+
+### `nexus agent` — contextualized agents
+
+Every project gets the **core four**, generated into `.nexus/agents/core/` with
+the same ownership model as skills (core regenerated · custom sacred ·
+community installable, precedence `custom > core > community`):
+
+| Agent | Role |
+|-------|------|
+| `nexus-implementer` | Works the active plan's next step — never re-derives the plan |
+| `nexus-test-writer` | The verification keystone. Writes tests matching `06_test_strategy.md`, **asks before scaffolding test infra**, records waivers visibly |
+| `nexus-reviewer` | Reviews against your recorded conventions, citing knowledge entries. Read-only by design |
+| `nexus-doc-keeper` | Progress log, knowledge hygiene, doctor triage |
+
+```bash
+nexus agent list      # what's installed, and from where
+nexus agent new       # scaffold a custom agent
+nexus agent status    # validate frontmatter and context recipes
+nexus agent sync      # regenerate .claude/agents/ + Agent Roles blocks
+```
+
+Each definition carries a **context recipe** (which docs, knowledge categories,
+skills, and plan scope it loads), a **least-privilege MCP tool allowlist**, and
+a **handoff contract**. Claude Code gets real subagents in `.claude/agents/`;
+other clients get fenced "Agent Roles" blocks in `AGENTS.md` / `CLAUDE.md` —
+degrades gracefully, never breaks.
+
+**The verification gate:** doctor `D11` flags any plan marked `done` whose
+Evidence section has neither test results nor an explicit waiver, and
+`nexus plan done` warns when completing with empty evidence. Completion without
+verification becomes visible, not impossible.
 
 ### `nexus sync`
 
@@ -237,7 +282,7 @@ Lifecycle: `draft → approved → in_progress → done`.
 
 ### `nexus doctor`
 
-Ten modular drift checks. CI-friendly exit codes:
+Eleven modular drift checks. CI-friendly exit codes:
 
 ```
 $ nexus doctor
@@ -252,6 +297,7 @@ $ nexus doctor
   D08  ✓  Vital Signs current (synced 40m ago)
   D09  ✓  Handshakes tracked
   D10  ✓  Skills up-to-date
+  D11  ✓  No unverified "done" plans
 
   1 error found. Run "nexus doctor --fix" to auto-resolve D05.
 ```

@@ -32,6 +32,13 @@ import {
   generateReadme,
 } from './structure.js';
 import { generateTests } from './tests.js';
+import {
+  filterChameleonOwned,
+  finishUiDelegation,
+  prepareUiDelegation,
+  preserveChameleonBlocks,
+  runPreWriteDelegation,
+} from './ui-delegation.js';
 
 /**
  * Run all generators and write the project to disk.
@@ -39,13 +46,20 @@ import { generateTests } from './tests.js';
 export async function generateProject(config: NexusConfig): Promise<void> {
   const projectRoot = path.resolve(process.cwd(), config.projectName);
 
+  // ─── UI delegation, phase 1: decide before anything is written ───
+  // `chameleon new` refuses a non-empty directory, so the generator has to run
+  // first and NEXUS overlays afterwards. A `none` provider, a missing
+  // Chameleon, or an unsupported target all resolve to "NEXUS generates it".
+  let delegation = await prepareUiDelegation(config, projectRoot);
+  delegation = await runPreWriteDelegation(delegation, config, projectRoot);
+
   const spinner = ora('Generating project structure...').start();
 
   try {
     // Collect all directories and files
     const directories: GeneratedDirectory[] = generateDirectories(config);
 
-    const files: GeneratedFile[] = [
+    let files: GeneratedFile[] = [
       generatePackageJson(config),
       generateGitignore(),
       generateReadme(config),
@@ -64,9 +78,15 @@ export async function generateProject(config: NexusConfig): Promise<void> {
       files.push(...generateSpringBootFiles(config));
     }
 
+    // Stand back from the files Chameleon owns (app shell, bundler config,
+    // its package.json) — NEXUS overlays around them rather than over them.
+    const filtered = filterChameleonOwned(files, delegation);
+    files = filtered.files;
+    delegation = filtered.state;
+
     // Write everything to disk
     await writeGeneratorResult(projectRoot, files, directories);
-    
+
     // If local-only mode, add .nexus/ to .gitignore
     if (config.localOnly) {
       await appendToGitignore(projectRoot);
@@ -74,6 +94,12 @@ export async function generateProject(config: NexusConfig): Promise<void> {
     }
     
     spinner.succeed('Project structure generated.');
+
+    // ─── UI delegation, phase 3: post-write work ───
+    // Path B's `chameleon init`, the package.json merge that gives the
+    // generated app a linter and test runner, Chameleon's agent block, and the
+    // evidence record.
+    delegation = await finishUiDelegation(delegation, config, projectRoot);
 
     // Install dependencies
     if (config.installDeps) {
@@ -283,6 +309,18 @@ export function isCorrupted(filePath: string, content: string): boolean {
  * @returns Summary of what was replaced, preserved, created, and repaired
  */
 export async function reconcileNexusFiles(
+  targetDir: string,
+  config: NexusConfig,
+  mode: ReconcileMode,
+): Promise<ReconcileResult> {
+  // `CLAUDE.md` and `AGENTS.md` are in ALWAYS_REPLACE, so regeneration would
+  // silently delete the block `chameleon agents init` splices into them.
+  // Capture it first, put it back after — NEXUS owns the file, Chameleon owns
+  // its section.
+  return preserveChameleonBlocks(targetDir, () => reconcileFiles(targetDir, config, mode));
+}
+
+async function reconcileFiles(
   targetDir: string,
   config: NexusConfig,
   mode: ReconcileMode,

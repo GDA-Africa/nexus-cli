@@ -14,4 +14,13 @@ export { detectPackageManager, getInstallCommand, getRunCommand } from './packag
 export { gitInit, isGitInstalled } from './git.js';
 export { ensureDirectory, writeFile, readFile, fileExists, dirExists, writeGeneratorResult, renderTemplate } from './file-system.js';
 export { isExistingProject, detectProject } from './project-detector.js';
+export {
+	DEFAULT_UI_PROVIDER,
+	describeUiPreference,
+	globalConfigPath,
+	isUiProvider,
+	projectConfigPath,
+	resolveUiPreference,
+	setUiPreference,
+} from './ui-preference.js';
 export type { ProjectInfo, ProjectSignals } from './project-detector.js';
