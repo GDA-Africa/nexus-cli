@@ -58,25 +58,55 @@ const pkg = JSON.parse(read(path.join(ROOT, 'package.json')));
 facts.version = pkg.version;
 facts.name = pkg.name;
 
-/** Tests actually passing. Measured, not remembered. */
+/**
+ * Tests actually passing. Measured, not remembered.
+ *
+ * "The suite failed" and "I could not measure the suite" are different claims,
+ * and only the first is an error. Conflating them made this script assert a
+ * failure it had not observed — the exact habit it exists to prevent. Missing
+ * dependencies, a truncated pipe, or no vitest on PATH all mean *unknown*.
+ */
 function measureTests() {
   if (FAST) return null;
+
+  if (!fs.existsSync(path.join(ROOT, 'node_modules'))) {
+    warn('SUITE', 'Dependencies are not installed, so the test count cannot be measured.', 'npm ci');
+    return null;
+  }
+
+  let out = '';
+  let ran = false;
   try {
-    const out = execFileSync('npx', ['vitest', 'run', '--reporter=basic'], {
+    out = execFileSync('npx', ['vitest', 'run', '--reporter=basic'], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: 300_000,
+      timeout: 600_000,
+      // The suite prints a lot of logger output; the 1 MB default truncates it
+      // and turns a passing run into an unparseable one.
+      maxBuffer: 256 * 1024 * 1024,
     });
-    const match = out.match(/Tests\s+(\d+)\s+passed/);
-    return match ? Number(match[1]) : null;
+    ran = true;
   } catch (err) {
-    const out = `${err.stdout ?? ''}${err.stderr ?? ''}`;
-    const match = out.match(/Tests\s+(\d+)\s+passed/);
-    if (match && !/failed/.test(out)) return Number(match[1]);
-    fail('SUITE', 'The test suite did not pass, so no count can be advertised.');
+    out = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+  }
+
+  const passed = out.match(/Tests\s+(\d+)\s+passed/);
+  const failed = out.match(/Tests\s+.*?(\d+)\s+failed/);
+
+  if (failed) {
+    fail('SUITE', `${failed[1]} test(s) are failing, so no count can be advertised.`,
+      'Fix the suite before releasing.');
     return null;
   }
+
+  if (passed) return Number(passed[1]);
+
+  warn('SUITE', ran
+    ? 'The suite ran but its summary could not be parsed, so the test count is unverified.'
+    : 'The test suite could not be run here, so the test count is unverified.',
+    'Run `npm test` directly to see why.');
+  return null;
 }
 
 /**
@@ -109,18 +139,36 @@ function measureCommands() {
   }
 }
 
-/** Doctor checks wired into DEFAULT_CHECKS. */
+/**
+ * Doctor checks wired into DEFAULT_CHECKS.
+ *
+ * Returns null — not zero — when the source cannot be read. A count of zero is
+ * a measurement; an unreadable file is an absence, and reporting it as zero
+ * makes the checker assert drift it never observed.
+ */
 function measureDoctorChecks() {
-  const index = read(path.join(ROOT, 'src', 'utils', 'doctor', 'index.ts')) ?? '';
+  const index = read(path.join(ROOT, 'src', 'utils', 'doctor', 'index.ts'));
+  if (index === null) return unmeasurable('doctor checks', 'src/utils/doctor/index.ts');
+
   const block = index.match(/DEFAULT_CHECKS[^=]*=\s*\[([\s\S]*?)\]/);
-  if (!block) return null;
+  if (!block) return unmeasurable('doctor checks', 'the DEFAULT_CHECKS array');
   return (block[1].match(/D\d+_/g) ?? []).length;
 }
 
-/** MCP tools registered on the server. */
+/** MCP tools registered on the server. Null when unreadable, never zero. */
 function measureMcpTools() {
-  const server = read(path.join(ROOT, 'src', 'mcp', 'server.ts')) ?? '';
-  return (server.match(/server\.registerTool\(/g) ?? []).length;
+  const server = read(path.join(ROOT, 'src', 'mcp', 'server.ts'));
+  if (server === null) return unmeasurable('MCP tools', 'src/mcp/server.ts');
+
+  const count = (server.match(/server\.registerTool\(/g) ?? []).length;
+  return count > 0 ? count : unmeasurable('MCP tools', 'any server.registerTool calls');
+}
+
+/** Record that something could not be measured, and measure nothing. */
+function unmeasurable(what, where) {
+  warn('R4', `Could not measure ${what} (${where} not found), so those claims are unverified.`,
+    'Run this from a complete checkout of the package.');
+  return null;
 }
 
 facts.tests = measureTests();
@@ -259,7 +307,13 @@ if (mirror && fs.existsSync(mirror)) {
  * R6 — SEO / AI-crawler surface
  * ────────────────────────────────────────────────────────────── */
 
-if (fs.existsSync(SITE)) {
+if (!fs.existsSync(SITE)) {
+  // Expected in the nexus-cli repo, which does not contain the site. Worth
+  // saying out loud so "skipped" is never mistaken for "passed" — the site is
+  // where the counts drifted in the first place.
+  warn('R6', `No site found at ${SITE}, so README-mirror and SEO checks did not run.`,
+    'Run this from the monorepo before deploying the site.');
+} else {
   const sitemap = read(path.join(SITE, 'sitemap.xml')) ?? '';
 
   // Every page an agent or crawler should find must be listed.
@@ -309,7 +363,7 @@ if (JSON_MODE) {
     `${facts.mcpTools} MCP tools · ${facts.doctorChecks} doctor checks`));
   console.log(dim(`  npm latest: ${facts.published ?? '—'} · tagged: ${facts.tagged ? 'yes' : 'no'}` +
     (facts.unpushedCommits ? ` · unpushed: ${facts.unpushedCommits}` : '')));
-  console.log(dim(`  site checks: ${fs.existsSync(SITE) ? 'on' : 'skipped (homepage not present)'}\n`));
+  console.log(dim(`  site checks: ${fs.existsSync(SITE) ? 'on' : `skipped — no site at ${SITE}`}\n`));
 
   for (const f of [...errors, ...warns]) {
     console.log(`  ${f.severity === 'error' ? '\x1b[31m✖\x1b[0m' : '\x1b[33m⚠\x1b[0m'} [${f.id}] ${f.message}`);
