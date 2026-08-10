@@ -188,8 +188,13 @@ export async function adoptProject(
       spinner.text = 'NEXUS configured as local-only (not tracked by git)';
     }
 
-    // Write to disk
-    await writeGeneratorResult(targetDir, files, directories);
+    // Write to disk. `generateAiConfig` produces CLAUDE.md / AGENTS.md /
+    // .cursorrules, so adopting into a project that already runs Chameleon
+    // would otherwise delete the block `chameleon agents init` put there —
+    // the same hazard `reconcileNexusFiles` guards for upgrade and repair.
+    await preserveChameleonBlocks(targetDir, async () => {
+      await writeGeneratorResult(targetDir, files, directories);
+    });
     spinner.succeed('NEXUS documentation & AI config generated.');
   } catch (err) {
     spinner.fail('Adopt failed.');

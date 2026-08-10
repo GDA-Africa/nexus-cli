@@ -39,17 +39,56 @@ describe('D12 — Chameleon agent block', () => {
     await fs.writeFile(path.join(tmpDir, '.nexus', 'config.json'), JSON.stringify({ ui: 'chameleon' }), 'utf8');
   };
 
-  it('says nothing for a project that does not use Chameleon', async () => {
+  it('flags partial loss even with no NEXUS-side preference set', async () => {
+    // The block is written by Chameleon, so a project can be using Chameleon
+    // without NEXUS holding a `ui` preference. Partial loss is self-evident.
     await fs.writeFile(path.join(tmpDir, 'CLAUDE.md'), '# NEXUS\n', 'utf8');
     await fs.writeFile(path.join(tmpDir, 'AGENTS.md'), `# NEXUS\n\n${block}\n`, 'utf8');
+
+    const findings = await D12_chameleon_block_lost.run(ctx);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.description).toContain('CLAUDE.md');
+  });
+
+  it('says nothing for a project with no Chameleon involvement at all', async () => {
+    await fs.writeFile(path.join(tmpDir, 'CLAUDE.md'), '# NEXUS\n', 'utf8');
+    await fs.writeFile(path.join(tmpDir, 'AGENTS.md'), '# NEXUS\n', 'utf8');
 
     expect(await D12_chameleon_block_lost.run(ctx)).toEqual([]);
   });
 
-  it('says nothing when no agent file has the block', async () => {
+  it('flags total loss when the preference says Chameleon', async () => {
     await useChameleon();
     await fs.writeFile(path.join(tmpDir, 'CLAUDE.md'), '# NEXUS\n', 'utf8');
     await fs.writeFile(path.join(tmpDir, 'AGENTS.md'), '# NEXUS\n', 'utf8');
+
+    const findings = await D12_chameleon_block_lost.run(ctx);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.description).toContain('no Chameleon guidance');
+  });
+
+  it('flags total loss on generation evidence alone, whatever the config now says', async () => {
+    await fs.mkdir(path.join(tmpDir, '.nexus', 'state'), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, '.nexus', 'state', 'chameleon.json'),
+      JSON.stringify({ status: 'generated' }),
+      'utf8',
+    );
+    await fs.writeFile(path.join(tmpDir, 'CLAUDE.md'), '# NEXUS\n', 'utf8');
+
+    expect(await D12_chameleon_block_lost.run(ctx)).toHaveLength(1);
+  });
+
+  it('does not fire on a skipped generation record', async () => {
+    await fs.mkdir(path.join(tmpDir, '.nexus', 'state'), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, '.nexus', 'state', 'chameleon.json'),
+      JSON.stringify({ status: 'skipped' }),
+      'utf8',
+    );
+    await fs.writeFile(path.join(tmpDir, 'CLAUDE.md'), '# NEXUS\n', 'utf8');
 
     expect(await D12_chameleon_block_lost.run(ctx)).toEqual([]);
   });
