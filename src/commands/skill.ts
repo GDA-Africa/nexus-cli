@@ -23,6 +23,11 @@ import { input, select } from '@inquirer/prompts';
 
 import { fileExists, dirExists } from '../utils/file-system.js';
 import { logger } from '../utils/logger.js';
+import {
+  parseSkillFrontmatter,
+  validateSkillFrontmatter,
+} from '../utils/skills/frontmatter.js';
+import type { SkillInvocation } from '../utils/skills/types.js';
 import { version } from '../version.js';
 
 /* ──────────────────────────────────────────────────────────────
@@ -63,13 +68,35 @@ export async function skillNewCommand(name?: string): Promise<void> {
       { value: 'api', name: '🔌 api — API endpoints, handlers, clients' },
       { value: 'config', name: '⚙️  config — Configuration, environment, setup' },
       { value: 'workflow', name: '🔄 workflow — Git, commits, PR, deployment' },
+      { value: 'procedure', name: '🎯 procedure — A discipline the agent runs: interview, diagnosis, review' },
+      { value: 'integration', name: '🔗 integration — Wiring a third-party service into this project' },
     ],
     default: 'ui',
   });
 
+  // SKILL_SPEC v2 §3 — who may invoke this skill. `model` is the default and
+  // covers almost everything; `user` is for a skill that drives a whole session
+  // and should never fire on its own.
+  const invocation = (await select({
+    message: 'Invocation:',
+    choices: [
+      { value: 'model', name: '🤖 model — the agent may reach for it, or you can (default)' },
+      { value: 'user', name: '🙋 user — only you can invoke it; it orchestrates' },
+    ],
+    default: 'model',
+  })) as SkillInvocation;
+
   const rawTriggers = await input({
-    message: 'Trigger phrases (comma-separated, e.g. "creating a service, new service file"):',
-    validate: (v: string) => v.trim().length > 0 ? true : 'At least one trigger is required',
+    message: 'Trigger phrases, 2-4 words each (comma-separated, e.g. "new service, service file"):',
+    validate: (v: string) => {
+      const parsed = v.split(',').map((t) => t.trim()).filter(Boolean);
+      if (parsed.length < 2) return 'At least 2 triggers are required (SKILL_SPEC v2 §3)';
+      const tooLong = parsed.find((t) => t.split(/\s+/).length > 4);
+      if (tooLong) {
+        return `"${tooLong}" is longer than 4 words — long triggers rarely match a real task. Shorten it.`;
+      }
+      return true;
+    },
   });
 
   const triggers = rawTriggers
@@ -87,11 +114,25 @@ export async function skillNewCommand(name?: string): Promise<void> {
 
   const triggersYaml = triggers.map((t) => `  - "${t}"`).join('\n');
 
+  // A `procedure` skill takes `## Completion Criteria` in place of `## Example`:
+  // its output is a changed state of understanding, not a file (SKILL_SPEC v2 §4).
+  const closingSection = category === 'procedure'
+    ? `## Completion Criteria
+[The checkable condition that ends this procedure. State the not-done cases too —
+they are cheaper to recognise than the done case.]
+
+Not done when: [the cases where the agent might declare itself finished early]`
+    : `## Example
+\`\`\`
+[A minimal, concrete example of the correct output]
+\`\`\``;
+
   const content = `---
 skill: ${slug}
 version: 1.0.0
 framework: shared
 category: ${category}
+invocation: ${invocation}
 triggers:
 ${triggersYaml}
 author: custom
@@ -119,10 +160,7 @@ status: draft
 - [Something that looks reasonable but is wrong for this project]
 - [Another anti-pattern]
 
-## Example
-\`\`\`
-[A minimal, concrete example of the correct output]
-\`\`\`
+${closingSection}
 
 ## Notes
 [Optional: edge cases, exceptions, or links to relevant docs]
@@ -180,7 +218,11 @@ export async function skillListCommand(): Promise<void> {
       const meta = parseSkillFrontmatter(raw);
       const statusIcon = meta.status === 'active' ? '✅' : meta.status === 'deprecated' ? '⚠️ ' : '📝';
       const triggers = meta.triggers.length > 0 ? ` — ${meta.triggers.slice(0, 2).join(', ')}${meta.triggers.length > 2 ? '...' : ''}` : '';
-      console.log(`  ${statusIcon} ${file.replace('.md', '')}${triggers}`);
+      // v2: procedure skills and gates are worth seeing at a glance.
+      const kind = meta.category === 'procedure' ? ' [procedure]' : '';
+      const invocation = meta.invocation === 'user' ? ' [user-invoked]' : '';
+      const gate = meta.gate ? ` [gates ${meta.gate.planTypes.join('/')}]` : '';
+      console.log(`  ${statusIcon} ${file.replace('.md', '')}${kind}${invocation}${gate}${triggers}`);
     }
 
     logger.newline();
@@ -540,9 +582,15 @@ export async function skillStatusCommand(): Promise<void> {
         issues++;
       }
 
-      if (!meta.slug || !meta.triggers.length) {
-        logger.warn(`⚠️  Invalid frontmatter: .nexus/skills/${dir}/${file} — missing slug or triggers`);
-        issues++;
+      // Validate against SKILL_SPEC v2. Before v1.3 the only frontmatter that
+      // was ever checked was slug + triggers, and only at creation time via the
+      // `skill new` prompt — so any hand-authored or hand-edited skill could
+      // carry an unknown category or framework indefinitely and nothing said so.
+      const problems = validateSkillFrontmatter(meta, raw);
+      for (const problem of problems) {
+        const icon = problem.severity === 'error' ? '❌' : '⚠️ ';
+        logger.warn(`${icon} .nexus/skills/${dir}/${file} — ${problem.field}: ${problem.message}`);
+        if (problem.severity === 'error') issues++;
       }
     }
   }
@@ -562,35 +610,12 @@ export async function skillStatusCommand(): Promise<void> {
  * Helpers
  * ────────────────────────────────────────────────────────────── */
 
-interface SkillFrontmatter {
-  slug: string;
-  status: string;
-  triggers: string[];
-}
-
 /**
- * Parse minimal YAML frontmatter from a skill file.
- * Uses simple regex — no full YAML parser dependency needed.
+ * Skill frontmatter parsing and validation now live in
+ * `utils/skills/frontmatter.ts` — one parser, shared with the MCP server.
+ * The copy that used to live here read only slug/status/triggers, so category,
+ * framework, version and author were never checked anywhere.
  */
-function parseSkillFrontmatter(content: string): SkillFrontmatter {
-  const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!fmMatch) return { slug: '', status: 'draft', triggers: [] };
-
-  const fm = fmMatch[1];
-
-  const slug = (fm.match(/^skill:\s*(.+)$/m) ?? [])[1]?.trim() ?? '';
-  const status = (fm.match(/^status:\s*(.+)$/m) ?? [])[1]?.trim() ?? 'draft';
-
-  const triggersMatch = fm.match(/^triggers:\n((?:[ ]{2}- .+\n?)*)/m);
-  const triggers: string[] = triggersMatch
-    ? triggersMatch[1]
-        .split('\n')
-        .filter((l) => l.trim().startsWith('- '))
-        .map((l) => l.replace(/^[ ]{2}- /, '').replace(/^"|"$/g, '').trim())
-    : [];
-
-  return { slug, status, triggers };
-}
 
 function toTitleCase(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());

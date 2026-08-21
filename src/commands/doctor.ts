@@ -17,6 +17,7 @@ export function doctorCommand() {
     .option('--severity <level>', 'Minimum severity level to report (info, warn, error)', 'info')
     .option('--fix', 'Automatically run safe fixes (like nexus sync)', false)
     .option('--json', 'Output findings as JSON', false)
+    .option('--strict', 'Escalate advisory findings to errors (for CI gating)', false)
     .action(async (options) => {
       const cwd = process.cwd();
       const nexusDir = getNexusDir(cwd);
@@ -27,7 +28,7 @@ export function doctorCommand() {
       }
 
       // 1. Gather context
-      const ctx = await buildDoctorContext(cwd, nexusDir);
+      const ctx = await buildDoctorContext(cwd, nexusDir, { strict: options.strict === true });
 
       // 2. Run checks
       const doctorConfig = await readDoctorConfig(nexusDir);

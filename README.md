@@ -9,7 +9,7 @@ Give every project a structured brain. AI agents read it, call it as MCP tools �
 [![npm](https://img.shields.io/npm/v/@nexus-framework/cli?style=flat-square&logo=npm&logoColor=white&label=npm&color=CB3837)](https://www.npmjs.com/package/@nexus-framework/cli)
 [![MCP](https://img.shields.io/badge/MCP-17_brain_tools-8A2BE2?style=flat-square)](https://modelcontextprotocol.io)
 [![Agents](https://img.shields.io/badge/agents-core_four-34d399?style=flat-square)](https://nexus.glenhalton.com/docs)
-[![Tests](https://img.shields.io/badge/tests-546_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/tests-659_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
 [![Website](https://img.shields.io/badge/nexus.glenhalton.com-8A2BE2?style=flat-square&logo=googlechrome&logoColor=white)](https://nexus.glenhalton.com)
@@ -27,6 +27,8 @@ Run `nexus init` and your project gets a structured documentation system AI agen
 **v1.0 made the brain callable.** Every generated project ships a `.mcp.json` that registers the `nexus-brain` MCP server — Claude Code, Claude Cowork, OpenAI Codex, Cursor, and any MCP client get the brain as 17 schema-validated tools instead of a pile of files they're told to read. One `nexus_wake` call returns the session handshake, the active plan, its next step, and drift counts. Writes go through validated tools, so malformed brain state becomes impossible rather than merely detectable.
 
 **v1.1 staffs it.** The brain defines specialized, brain-grounded agents in `.nexus/agents/` — implementer, test-writer, reviewer, doc-keeper — each with its own context recipe and least-privilege tool allowlist, plus a verification gate (doctor `D11`) so plans can't be marked done without evidence.
+
+**v1.3 aligns it.** Skills gain a second kind — *procedure* the agent runs, not just *reference* it reads — and an alignment gate makes a recorded interview a precondition for feature work. `nexus doctor` reports a skipped gate (`D13`) and measures the instruction bytes every agent carries on every turn (`D14`).
 
 **v1.2 delegates the UI.** `nexus init` is the interview; [Chameleon](https://chameleon.glenhalton.com) (`@chameleon-ui-lib/react`) is the generator. Opt in once with `nexus use chameleon --global` and NEXUS resolves what you want into an AppSpec, hands it over, and overlays the brain, tooling, and tests around what Chameleon produces. It is never a hard dependency: Chameleon is resolved from your environment at generation time, and absent or unsupported, generation falls back to NEXUS with a printed reason. `--ui none` is always one keystroke away.
 
@@ -97,7 +99,7 @@ Interactive setup:
 | `nexus plan tick <id>` | Toggle a step checkbox |
 | `nexus plan note <id>` | Add a timestamped note |
 | `nexus plan done <id>` | Complete a plan — appends to progress log |
-| `nexus doctor` | Run twelve drift checks against your project structure (incl. `D11` verification gate, `D12` Chameleon block) |
+| `nexus doctor` | Run fourteen drift checks against your project structure (incl. `D11` verification gate, `D12` Chameleon block, `D13` alignment gate, `D14` context load). `--strict` escalates advisory findings to errors for CI |
 | `nexus brief` | Human-readable status digest |
 | `nexus consolidate` | Roll knowledge.md up into a generated summary (`--check`, `--archive`) |
 | `nexus brain status` | Live brain health dashboard |
@@ -284,7 +286,7 @@ Lifecycle: `draft → approved → in_progress → done`.
 
 ### `nexus doctor`
 
-Eleven modular drift checks. CI-friendly exit codes:
+Fourteen modular drift checks. CI-friendly exit codes:
 
 ```
 $ nexus doctor
@@ -300,9 +302,15 @@ $ nexus doctor
   D09  ✓  Handshakes tracked
   D10  ✓  Skills up-to-date
   D11  ✓  No unverified "done" plans
+  D12  ✓  Chameleon agent block intact
+  D13  ⚠  Plan "add-auth" has no ## Grilling record
+  D14  ✓  Instruction files within context budget
 
   1 error found. Run "nexus doctor --fix" to auto-resolve D05.
 ```
+
+`--strict` promotes advisory findings (`D13`, `D14`) to errors so brain-aware
+CI can gate on them.
 
 Configure which checks apply per project in `.nexus/doctor.config.json`.
 

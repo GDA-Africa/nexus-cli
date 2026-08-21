@@ -248,27 +248,64 @@ const ALWAYS_PRESERVE: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The leading YAML frontmatter block, and nothing else.
+ *
+ * Anchored to the start of the string with NO `m` flag — that combination is
+ * the whole point. With `m`, `^---` matches at the start of any line, so a
+ * markdown horizontal rule opens what the regex treats as frontmatter and the
+ * scan runs over the entire document body.
+ */
+const LEADING_FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
+
+/**
+ * The `status` value declared in a file's leading frontmatter, or `null` when
+ * the file has no frontmatter, no `status` field, or an unterminated block.
+ *
+ * The inner `m` flag is safe and necessary: it scans only the captured
+ * frontmatter block, never the document body. `^status:` anchors to a line
+ * start so `doc_status:` cannot match, and the value is captured whole so
+ * `templated` cannot pass as `template`.
+ */
+function frontmatterStatus(content: string): string | null {
+  const block = content.match(LEADING_FRONTMATTER)?.[1];
+  if (block === undefined) return null;
+
+  return block.match(/^status:[ \t]*["']?([A-Za-z][\w-]*)["']?[ \t]*$/m)?.[1] ?? null;
+}
+
+/**
  * Determine whether an existing file has been populated by a user or agent.
- * Checks YAML frontmatter for `status: populated`.
+ * Reads `status` from the leading frontmatter block only.
  */
 export function isPopulated(content: string): boolean {
-  return /^---[\s\S]*?status:\s*"?populated"?[\s\S]*?---/m.test(content);
+  return frontmatterStatus(content) === 'populated';
 }
 
 /**
  * Determine whether a file is still in its scaffolded template state.
- * ONLY an explicit `status: template` in frontmatter qualifies.
+ * ONLY an explicit `status: template` in the leading frontmatter qualifies.
  *
  * This is the replace gate for the smart file strategy. Everything else —
  * `status: populated`, frontmatter without a status, or NO frontmatter at
  * all (hand-written brains) — is treated as user content and preserved.
  *
- * History: before v1.0.0 the gate was inverted (`!isPopulated`), which
- * destroyed hand-written, frontmatter-less brain docs on upgrade
- * (2026-06-11 dogfooding incident). Preserve-by-default is the contract.
+ * History, two incidents:
+ *
+ *   - Before v1.0.0 the gate was inverted (`!isPopulated`), which destroyed
+ *     hand-written, frontmatter-less brain docs on upgrade (2026-06-11).
+ *   - Through v1.2.0 both predicates used
+ *     `/^---[\s\S]*?status:\s*"?template"?[\s\S]*?---/m`. The `m` flag let
+ *     `^---` match any horizontal rule, so ANY document containing a `---`
+ *     rule plus the words `status: template` somewhere in its prose was
+ *     classified as a template and overwritten — including documents whose
+ *     own frontmatter said `populated`, which could report `true` from both
+ *     predicates at once. This destroyed `nexus-cli/.nexus/docs/index.md` on
+ *     2026-08-10.
+ *
+ * Preserve-by-default is the contract. When in doubt, do not overwrite.
  */
 export function isTemplate(content: string): boolean {
-  return /^---[\s\S]*?status:\s*"?template"?[\s\S]*?---/m.test(content);
+  return frontmatterStatus(content) === 'template';
 }
 
 /**

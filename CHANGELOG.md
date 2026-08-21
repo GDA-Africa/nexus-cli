@@ -5,6 +5,159 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-08-21
+
+**Skills II.** Skills stop being only *reference the agent reads* and gain a
+second kind — *procedure the agent runs*. On top of that: a gate that makes
+alignment a precondition for feature work, a budget for the instructions every
+agent carries on every turn, and the fix for a shipped data-loss bug.
+
+### 🎯 The alignment gate
+
+The most expensive failure in a project is not bad code. It is well-built code
+that answered the wrong question, because the agent inferred an ask instead of
+resolving it. The gate makes alignment a **precondition**, not a suggestion in a
+rules file.
+
+```bash
+nexus plan new "Add user authentication" --type=feature
+#   ⚠ This is a feature plan — it needs a "## Grilling" record before implementation.
+
+nexus wake
+#   ⚠ ALIGNMENT GATE — plan is type=feature with no ## Grilling record
+
+nexus doctor
+#   ⚠ [D13] Plan "add-user-authentication" has no ## Grilling record
+```
+
+- **`grilling` skill** (`@nexus-framework/skills`) — the interview discipline:
+  one question at a time, depth-first, until every branch of the design is
+  decided or explicitly recorded out of scope.
+- **The record lives in the plan**, as a `## Grilling` section. It diffs in git
+  beside the work it aligned, and a gated plan is scaffolded with the section
+  pre-seeded and marked pending — so an untouched template never satisfies the
+  gate.
+- **`feature`, `refactor` and `spike` gate on type.** A `bug` plan opts in with
+  `nexus plan new --major`, because plan type alone cannot tell a data-loss
+  regression from a typo, and the person creating the plan already knows which.
+  `chore` is never gated.
+- **The gate keys off structural facts, never your prose** — the plan's `type`
+  field and whether the record is filled. A classifier reading agent-written
+  text is gameable by exactly the agent it is meant to catch; `D11` v1 already
+  shipped that mistake once.
+- **Nothing hard-blocks.** `nexus_get_context` returns the gate, `nexus wake`
+  prints it, `D13` records a miss, and `nexus doctor --strict` turns it into a
+  CI error. Refusing to start a plan would push the work outside the plan, where
+  nothing can see it at all.
+
+### 📏 Context load (`D14`)
+
+Every generated instruction file is **context load**: bytes in the agent's
+window on every turn, spent whether or not they turn out to be relevant.
+
+`D14` measures it **per file, not per project** — six harnesses load six
+different files (Cursor reads `.cursorrules`, Claude reads `CLAUDE.md`), so a
+session pays for one of them, not their sum. Warns above 10 KB, errors above
+16 KB or under `--strict`, and reports near-identical files as info.
+
+**Applied to ourselves first:** the generated `CLAUDE.md` was 13.4 KB — the docs
+table stated twice, "orient first" stated in three places, and a Workflow
+section telling the agent to read four files by hand immediately after telling
+it to prefer one `nexus_get_context` call. It is now **7.9 KB (−41%)**.
+Reference material moved behind a pointer into `.nexus/ai/instructions.md`;
+the onboarding protocol, the `STOP` gate on `status: template` docs, and the
+workflow rules stay inline, because agents ignore cross-file pointers.
+
+### 🚨 Fixed — `nexus upgrade` no longer destroys hand-written docs
+
+`isTemplate()` / `isPopulated()` used
+`/^---[\s\S]*?status:\s*"?template"?[\s\S]*?---/m`. The `m` flag makes `^---`
+match the start of **any** line, so a markdown horizontal rule opened what the
+regex treated as frontmatter and the scan then ran over the entire document
+body. **Any document containing a `---` rule plus the words `status: template`
+somewhere in its prose was classified as a template and overwritten.**
+
+Worse than first diagnosed: a document whose *own frontmatter said
+`status: populated`* was also affected, since the real frontmatter fence
+supplies the opening `---`. Both predicates could return `true` for one file,
+and the replace gate only asks `isTemplate`.
+
+Both predicates now read a single `status` value from the leading frontmatter
+block only — anchored to the start of the string, no `m` flag. Verified by
+running old and new predicates over every brain doc in the NEXUS monorepo: two
+files flip from *replace* to *preserve*, and zero genuine templates are
+misclassified. **Preserve-by-default is the contract; when in doubt, do not
+overwrite.**
+
+### 🔴 Fixed — `nexus_get_context` never returned a skill
+
+The MCP server's frontmatter parser read only the inline form
+`triggers: [a, b]`. Every skill in the registry uses a YAML block list, so
+**all 22 shared skills parsed to zero triggers** — the skills section of the
+context pack had returned an empty array for every task since it shipped, and
+`nexus_list_skills` only ever exposed names (`title` and `description` were
+`null` for every skill, because the parser looked for `title:`/`name:` and NEXUS
+skills carry neither).
+
+Two frontmatter parsers existed with different bugs. There is now one,
+`utils/skills/frontmatter.ts`, shared by the CLI and the MCP server.
+
+### 🔍 Trigger matching
+
+Substring containment is replaced by token-overlap scoring with **ranked**
+admission, so budget pressure drops the least relevant skill rather than an
+arbitrary one. The verbatim path is preserved as the strongest signal but now
+requires word boundaries — plain `includes` fired `"api"` on *rapid* and
+`"test"` on *latest*.
+
+`SKILL_SPEC` v1 §6 claimed matching was semantic; it was not. §7 now documents
+what the code actually does.
+
+### 📐 SKILL_SPEC v2.0.0
+
+Additive — `invocation` defaults to `model`, so **every existing skill stays
+valid** and no coordinated CLI + registry release is needed.
+
+- **`invocation: model | user`** — who may invoke a skill. The invariant: a
+  `user` skill may invoke `model` skills, a `model` skill may invoke `model`
+  skills, and **nothing may invoke a `user` skill except the human**. The call
+  graph is a DAG rooted at you.
+- **`category: procedure`** — a discipline the agent runs to completion. Takes
+  `## Completion Criteria` in place of `## Example`, because its output is a
+  changed state of understanding, not a file.
+- **`category: integration`** — wiring a named third-party service.
+- **`gate`** — declares a skill a precondition for a class of work.
+
+### Added
+
+- `nexus doctor --strict` — escalate advisory findings to errors, for CI
+- `nexus plan new --major` — mark a bug plan a major fix
+- Explicit `type:` field in plan frontmatter (pre-1.3 plans are classified from
+  `source:`, so the gate applies to them too)
+- `nexus skill status` validates every skill against `SKILL_SPEC` v2 — category,
+  framework, version, author, invocation, gate, and required body sections. It
+  previously checked only slug and triggers, and only at creation time via the
+  `nexus skill new` prompt, so hand-authored skills went unvalidated
+- `nexus skill list` shows `[procedure]`, `[user-invoked]` and `[gates …]`
+
+### Fixed
+
+- Generated instructions documented the knowledge entry format as
+  `## [YYYY-MM-DD] category — title`, which `parseKnowledge` cannot parse. Any
+  entry written by hand to the documented format was invisible to
+  `nexus_query_knowledge`, to the knowledge section of `nexus_get_context`, and
+  to `nexus consolidate`. Now documents the real format, `### [category] Title`
+- `mapbox-integration` shipped `category: maps`, never a valid value
+
+### Upgrading
+
+Nothing activates on its own. Run `nexus upgrade` to regenerate the instruction
+files at the new size — your `custom/` skills, populated docs, and knowledge
+base are untouched, and a backup is written to
+`.nexus/state/upgrade-backup/<stamp>/` before anything is replaced.
+
+**659 tests** (was 546).
+
 ## [1.2.0] — 2026-08-10
 
 > **Note on 1.1.3.** Everything below was already inside the published 1.1.3

@@ -16,6 +16,11 @@ export interface DoctorContext {
   vitalSigns: VitalSigns | null;      // It can be null if not computed or missing
   plans: PlanSummary[];               // All plans loaded 
   activePlans: ActivePlansState | null; // active plans metadata
+  /**
+   * Escalate advisory findings to errors. Set by `nexus doctor --strict` so CI
+   * can gate on checks that are visible-but-not-blocking by default.
+   */
+  strict?: boolean;
 }
 
 export interface DoctorCheck {

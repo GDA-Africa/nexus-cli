@@ -13,6 +13,8 @@ const KNOWN_FRONTMATTER_ORDER = [
   'updated',
   'owner',
   'source',
+  'type',
+  'major',
   'parent',
   'estimate',
   'phase',

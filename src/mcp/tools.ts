@@ -36,6 +36,15 @@ import {
 } from '../utils/plans/parser.js';
 import type { PlanDocument, PlanSummary } from '../utils/plans/types.js';
 import { captureVitalSigns, type VitalSigns } from '../utils/sensors/index.js';
+import { parseSkillFrontmatter } from '../utils/skills/frontmatter.js';
+import {
+  collectGates,
+  evaluateGate,
+  taskLooksLikeBuild,
+  type GateStatus,
+} from '../utils/skills/gate.js';
+import { rankByTriggers } from '../utils/skills/matching.js';
+import type { SkillGate, SkillInvocation } from '../utils/skills/types.js';
 
 import { McpToolError, type BrainContext } from './context.js';
 
@@ -232,6 +241,13 @@ export interface SkillSummary {
   title: string | null;
   description: string | null;
   triggers: string[];
+  /** SKILL_SPEC v2 — 'procedure' marks a discipline the agent runs. */
+  category: string | null;
+  /** SKILL_SPEC v2 — defaults to 'model' when the field is absent. */
+  invocation: SkillInvocation;
+  /** SKILL_SPEC v2 — set when this skill is a precondition for a class of work. */
+  gate: SkillGate | null;
+  status: string;
 }
 
 /** List every installed skill across custom/, core/, community/. */
@@ -252,8 +268,18 @@ export async function listSkillsTool(ctx: BrainContext): Promise<{ skills: Skill
       if (seen.has(name)) continue; // higher-precedence dir already provided it
       seen.add(name);
 
-      const meta = parseSkillFrontmatter(await fs.readFile(path.join(dir, fileName), 'utf-8'));
-      skills.push({ name, source, ...meta });
+      const fm = parseSkillFrontmatter(await fs.readFile(path.join(dir, fileName), 'utf-8'));
+      skills.push({
+        name,
+        source,
+        title: fm.title,
+        description: fm.description,
+        triggers: fm.triggers,
+        category: fm.category,
+        invocation: fm.invocation,
+        gate: fm.gate,
+        status: fm.status,
+      });
     }
   }
 
@@ -368,9 +394,23 @@ export interface GetContextInput {
 export interface ComposedContext {
   task: string;
   agent: string | null;
+  /**
+   * v1.3 alignment gate. Bounded by construction (four short fields), composed
+   * before every budget-consuming section, and never dropped — a gate that can
+   * be crowded out of the pack is not a gate.
+   */
+  gate: GateStatus | null;
   plan: { id: string; status: string; nextStep: string | null } | null;
   knowledge: KnowledgeMatch[];
-  skills: Array<{ name: string; source: string; matchedTrigger: string }>;
+  skills: Array<{
+    name: string;
+    source: string;
+    matchedTrigger: string;
+    /** 0–1 relevance. 1 = the task contains the trigger verbatim. */
+    score: number;
+    /** True when this skill was injected by the gate rather than matched. */
+    required?: boolean;
+  }>;
   vitals: { branch: string | null; dirty: boolean | null; testsSummary: string };
   docs: Array<{ file: string; excerpt: string }>;
   truncated: boolean;
@@ -417,17 +457,28 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
   // 1. Plan slice — the most task-relevant thing in the pack, and bounded by
   //    construction (three short fields), so it is charged but never rejected.
   let plan: ComposedContext['plan'] = null;
+  let activePlanDoc: PlanDocument | null = null;
   if (recipe?.plan_scope !== 'none') {
     const state = await readActivePlans(ctx.plansDir);
     const activeId = state.active[0] ?? null;
     if (activeId) {
       const planDoc = await readPlanIfExists(ctx, activeId);
       if (planDoc) {
+        activePlanDoc = planDoc;
         plan = { id: activeId, status: planDoc.frontmatter.status, nextStep: firstUncheckedStep(planDoc) };
       }
     }
   }
   if (plan) budget -= JSON.stringify(plan).length;
+
+  // 1b. Alignment gate. Composed here — after the plan it reads, before every
+  //     section that competes for budget. Charged, never rejected.
+  const { skills: allSkills } = await listSkillsTool(ctx);
+  const gateDeclarations = collectGates(allSkills);
+  const gate = evaluateGate(activePlanDoc, gateDeclarations, {
+    taskLooksLikeBuild: taskLooksLikeBuild(input.task),
+  });
+  budget -= JSON.stringify(gate).length;
 
   // 2. Vitals digest (cheap snapshot, no test run). Also bounded — the tests
   //    summary is capped at 200 chars — so it is charged, never rejected.
@@ -441,13 +492,40 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
 
   // 3. Skills — trigger matching against the task. Small per entry, but the
   //    count is unbounded, so each one is admitted against the budget.
-  const { skills: allSkills } = await listSkillsTool(ctx);
   const skills: ComposedContext['skills'] = [];
-  for (const skill of allSkills) {
-    const matched = skill.triggers.find((trigger) => input.task.toLowerCase().includes(trigger.toLowerCase()));
-    if (!matched) continue;
 
-    const entry = { name: skill.name, source: skill.source, matchedTrigger: matched };
+  // The gated skill is admitted first and unconditionally — it is required, not
+  // offered, so it must not depend on a trigger happening to match.
+  if (gate.required && gate.skill) {
+    const gated = allSkills.find((skill) => skill.name === gate.skill);
+    if (gated) {
+      const entry = {
+        name: gated.name,
+        source: gated.source,
+        matchedTrigger: '<gate>',
+        score: 1,
+        required: true,
+      };
+      budget -= JSON.stringify(entry).length;
+      skills.push(entry);
+    }
+  }
+
+  // Everything else is ranked by relevance, so budget pressure drops the least
+  // relevant skill rather than whichever one happened to sort last.
+  const ranked = rankByTriggers(
+    input.task,
+    allSkills.filter((skill) => skill.name !== gate.skill || !gate.required),
+    (skill) => skill.triggers,
+  );
+
+  for (const match of ranked) {
+    const entry = {
+      name: match.item.name,
+      source: match.item.source,
+      matchedTrigger: match.trigger,
+      score: Number(match.score.toFixed(3)),
+    };
     if (!admit(entry)) {
       truncated = true;
       break;
@@ -507,7 +585,7 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
     }
   }
 
-  return { task: input.task, agent: input.agent ?? null, plan, knowledge, skills, vitals, docs, truncated };
+  return { task: input.task, agent: input.agent ?? null, gate, plan, knowledge, skills, vitals, docs, truncated };
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -672,24 +750,13 @@ function insertBeforePostamble(content: string, postamble: string[], entry: stri
   return `${content.trimEnd()}\n\n${entry}\n`;
 }
 
-function parseSkillFrontmatter(content: string): {
-  title: string | null;
-  description: string | null;
-  triggers: string[];
-} {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return { title: null, description: null, triggers: [] };
-
-  const block = match[1] ?? '';
-  const grab = (key: string): string | null => {
-    const line = block.match(new RegExp(`^${key}:\\s*"?(.+?)"?\\s*$`, 'm'));
-    return line?.[1] ?? null;
-  };
-
-  const triggersInline = block.match(/^triggers:\s*\[(.*)\]\s*$/m)?.[1];
-  const triggers = triggersInline
-    ? triggersInline.split(',').map((t) => t.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
-    : [];
-
-  return { title: grab('title') ?? grab('name'), description: grab('description'), triggers };
-}
+/**
+ * Skill frontmatter now comes from the single shared parser in
+ * `utils/skills/frontmatter.ts`.
+ *
+ * The parser that used to live here read only inline `triggers: [a, b]`, a form
+ * no registry skill uses — so every skill parsed to zero triggers and the
+ * skills section of the context pack never returned anything. It also looked
+ * for `title:`/`name:`, which NEXUS skills do not carry (they use `skill:`),
+ * so titles and descriptions were always null.
+ */

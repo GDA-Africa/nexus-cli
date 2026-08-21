@@ -192,11 +192,13 @@ planCmd
   .option('--owner <owner>', 'Plan owner (default: unassigned)')
   .option('--phase <phase>', 'Phase label (default inferred from type)')
   .option('--estimate <estimate>', 'Effort estimate, e.g. 2d')
+  .option('--major', 'Mark a bug plan as a major fix — opts it into the alignment gate', false)
   .action(async (title: string, options: {
     type?: 'feature' | 'bug' | 'refactor' | 'spike' | 'chore';
     owner?: string;
     phase?: string;
     estimate?: string;
+    major?: boolean;
   }) => {
     await planNewCommand(title, options);
   });

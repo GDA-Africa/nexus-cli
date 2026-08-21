@@ -18,6 +18,10 @@ export interface PlanFrontmatter {
   updated?: string;
   owner?: string;
   source?: string;
+  /** Plan type: feature | bug | refactor | spike | chore. Explicit since v1.3. */
+  type?: string;
+  /** Marks a `bug` plan as a major fix, opting it into the alignment gate. */
+  major?: boolean;
   parent?: string | null;
   estimate?: string;
   phase?: string;
@@ -44,6 +48,12 @@ export interface PlanSummary {
   updated: string;
   phase: string;
   fileName: string;
+  /** Derived plan type — used by the v1.3 alignment gate (D13). */
+  type?: string | null;
+  /** True when a `bug` plan is explicitly marked a major fix. */
+  major?: boolean;
+  /** True when the plan's gate record section is filled in. */
+  gateRecordSatisfied?: boolean;
 }
 
 export interface ActivePlansState {

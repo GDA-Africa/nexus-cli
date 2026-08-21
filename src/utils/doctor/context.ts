@@ -5,10 +5,15 @@ import { readActivePlans } from '../plans/active.js';
 import { parsePlanContent } from '../plans/parser.js';
 import type { PlanSummary } from '../plans/types.js';
 import type { VitalSigns } from '../sensors/index.js';
+import { DEFAULT_GATE_RECORD, planTypeOf, recordIsSatisfied } from '../skills/gate.js';
 
 import type { DoctorContext } from './types.js';
 
-export async function buildDoctorContext(cwd: string, nexusDir: string): Promise<DoctorContext> {
+export async function buildDoctorContext(
+  cwd: string,
+  nexusDir: string,
+  options: { strict?: boolean } = {},
+): Promise<DoctorContext> {
   const plansDir = path.join(nexusDir, 'plans');
   const stateDir = path.join(nexusDir, 'state');
 
@@ -37,6 +42,12 @@ export async function buildDoctorContext(cwd: string, nexusDir: string): Promise
           updated: String(doc.frontmatter.updated ?? ''),
           phase: String(doc.frontmatter.phase ?? ''),
           fileName,
+          type: planTypeOf(doc.frontmatter),
+          major: doc.frontmatter.major === true,
+          gateRecordSatisfied: recordIsSatisfied(doc, {
+            planTypes: [],
+            record: DEFAULT_GATE_RECORD,
+          }),
         });
       } catch {
         // Skip malformed plan files
@@ -53,5 +64,6 @@ export async function buildDoctorContext(cwd: string, nexusDir: string): Promise
     vitalSigns,
     plans,
     activePlans,
+    strict: options.strict === true,
   };
 }

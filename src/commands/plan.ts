@@ -16,6 +16,12 @@ import {
   writePlanFile,
 } from '../utils/plans/parser.js';
 import type { PlanStatus } from '../utils/plans/types.js';
+import {
+  DEFAULT_GATED_PLAN_TYPES,
+  GRILLING_PENDING_MARKER,
+  planTypeOf,
+  recordIsSatisfied,
+} from '../utils/skills/gate.js';
 import { toSlug } from '../utils/validator.js';
 
 export interface PlanNewOptions {
@@ -23,6 +29,14 @@ export interface PlanNewOptions {
   owner?: string;
   phase?: string;
   estimate?: string;
+  /**
+   * Marks a `bug` plan as a major fix, opting it into the alignment gate.
+   *
+   * Plan type alone cannot tell a data-loss regression from a typo, and the
+   * person creating the plan already knows which it is. Ignored for other
+   * types, which are gated (or not) by type.
+   */
+  major?: boolean;
 }
 
 export interface PlanListOptions {
@@ -41,6 +55,7 @@ export async function planNewCommand(title: string, options: PlanNewOptions = {}
 
   const today = new Date().toISOString().split('T')[0] ?? '';
   const planType = options.type ?? 'feature';
+  const major = planType === 'bug' && options.major === true;
   const content = renderPlanTemplate({
     id,
     title,
@@ -49,12 +64,21 @@ export async function planNewCommand(title: string, options: PlanNewOptions = {}
     phase: options.phase ?? inferPhaseFromType(planType),
     estimate: options.estimate ?? inferEstimateFromType(planType),
     today,
+    major,
   });
 
   await fs.writeFile(filePath, content, 'utf-8');
   await rebuildPlansIndex(plansDir);
 
   logger.success(`Plan created: .nexus/plans/${id}.md`);
+
+  if (isGatedType(planType) || major) {
+    logger.warn(
+      `This is a ${major ? 'major ' : ''}${planType} plan — it needs a "## Grilling" record before implementation.`,
+    );
+    logger.info('Run the `grilling` skill, then fill the section. `nexus doctor` (D13) checks it.');
+  }
+
   logger.info('Next: run `nexus plan start <id>` when you begin implementation.');
 }
 
@@ -101,6 +125,21 @@ export async function planStartCommand(id: string): Promise<void> {
   await rebuildPlansIndex(plansDir);
 
   logger.success(`Plan started: ${id}`);
+
+  // The alignment gate is advisory here by design. It reports and moves on; it
+  // never refuses. A wall would just push work outside the plan, where nothing
+  // can see it — and taking that control is precisely what NEXUS argues against
+  // in `docs/v1_3_skills_ii.md` §3. D13 is what makes a miss visible afterwards.
+  const type = planTypeOf(plan.frontmatter);
+  const gated =
+    type !== null &&
+    ((DEFAULT_GATED_PLAN_TYPES as readonly string[]).includes(type) ||
+      (type === 'bug' && plan.frontmatter.major === true));
+
+  if (gated && !recordIsSatisfied(plan, { planTypes: [], record: '## Grilling' })) {
+    logger.warn(`Gated: this is a ${type} plan with no "## Grilling" record.`);
+    logger.info('Run the `grilling` skill and fill the section before implementing. Proceeding anyway.');
+  }
 }
 
 export async function planTickCommand(id: string, stepIndex: number, checked = true): Promise<void> {
@@ -230,8 +269,11 @@ function renderPlanTemplate(input: {
   phase: string;
   estimate: string;
   today: string;
+  major?: boolean;
 }): string {
-  return [
+  const gated = isGatedType(input.type) || input.major === true;
+
+  const lines = [
     '---',
     'nexus_plan: true',
     `id: "${input.id}"`,
@@ -241,6 +283,12 @@ function renderPlanTemplate(input: {
     `updated: "${input.today}"`,
     `owner: "${input.owner}"`,
     `source: "manual:${input.type}"`,
+    `type: "${input.type}"`,
+  ];
+
+  if (input.major) lines.push('major: true');
+
+  lines.push(
     'parent: null',
     `estimate: "${input.estimate}"`,
     `phase: "${input.phase}"`,
@@ -253,6 +301,28 @@ function renderPlanTemplate(input: {
     '## Why',
     'Explain why this work matters now.',
     '',
+  );
+
+  // The gate record. Seeded with a pending marker so an untouched template can
+  // never satisfy the gate — an empty section that counted as done would defeat
+  // the whole mechanism.
+  if (gated) {
+    lines.push(
+      '## Grilling',
+      `<!-- ${GRILLING_PENDING_MARKER} — run the \`grilling\` skill, then replace this block. -->`,
+      '',
+      '**Ask:** (one-sentence restatement of what is being built, confirmed by the human)',
+      '',
+      '**Resolved**',
+      '- (branch — decision, and why the alternative was rejected)',
+      '',
+      '**Out of scope**',
+      '- (what was explicitly ruled out, so it is not re-litigated later)',
+      '',
+    );
+  }
+
+  lines.push(
     '## Acceptance Criteria',
     '- [ ] Criterion 1',
     '- [ ] Criterion 2',
@@ -268,7 +338,14 @@ function renderPlanTemplate(input: {
     '## Evidence',
     '- (to be filled)',
     '',
-  ].join('\n');
+  );
+
+  return lines.join('\n');
+}
+
+/** Types gated by the alignment gate on type alone. `bug` opts in via --major. */
+function isGatedType(type: string): boolean {
+  return (DEFAULT_GATED_PLAN_TYPES as readonly string[]).includes(type);
 }
 
 function inferPhaseFromType(type: string): string {

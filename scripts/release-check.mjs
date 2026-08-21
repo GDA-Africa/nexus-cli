@@ -248,12 +248,20 @@ const claims = [
   { file: siteFile('llms.txt'), label: 'llms.txt MCP tools', re: /(\d+) schema-validated tools/, truth: () => facts.mcpTools },
   // The homepage stat row has three counters that differ only by their label,
   // so each pattern has to reach through to the label it belongs to.
+  //
+  // These counters moved from `data-count="N">0<` to
+  // `data-live="key" data-live-animate>N<` when npm-live.js landed (2026-08-11)
+  // and the static value became the no-JS fallback rather than the animation
+  // target. The patterns below were not updated at the time, so all three
+  // silently degraded to "expected claim not found" warnings — a check that
+  // cannot find its claim reports nothing, which is indistinguishable from a
+  // check that passed.
   { file: siteFile('index.html'), label: 'homepage stat: tests', truth: () => facts.tests,
-    re: /data-count="(\d+)">0<\/div><div class="l">tests<\/div>/ },
+    re: /data-live="tests" data-live-animate>(\d+)<\/div><div class="l">tests<\/div>/ },
   { file: siteFile('index.html'), label: 'homepage stat: MCP tools', truth: () => facts.mcpTools,
-    re: /data-count="(\d+)">0<\/div><div class="l">MCP tools<\/div>/ },
+    re: /data-live="tools" data-live-animate>(\d+)<\/div><div class="l">MCP tools<\/div>/ },
   { file: siteFile('index.html'), label: 'homepage stat: commands', truth: () => facts.commands,
-    re: /data-count="(\d+)">0<\/div><div class="l">commands<\/div>/ },
+    re: /data-live="commands" data-live-animate>(\d+)<\/div><div class="l">commands<\/div>/ },
   { file: siteFile('index.html'), label: 'homepage vital-signs demo (tests)', truth: () => facts.tests,
     re: /Vital signs: (\d+) tests/ },
 ];
