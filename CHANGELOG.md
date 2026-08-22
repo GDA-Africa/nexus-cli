@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] — 2026-08-22
+
+**A public MCP surface.** The 17 brain tools behind `nexus mcp` were only
+reachable over stdio. They're now importable directly: `src/mcp/index.ts`
+re-exports `resolveBrainContext`, `BrainContext`, `McpToolError`, every tool
+handler, and `buildMcpServer` as native TypeScript, and `package.json` gains
+an `exports` map with a `./mcp` subpath. Any embedding host can call
+`wakeTool(ctx, input)` directly and get a real object back instead of the
+MCP text-content envelope — the first seam toward running the brain as a
+Cordis-registered tool set inside DeepSeek Harness.
+
+No behavior changed; this is additive surface only.
+
 ## [1.3.0] — 2026-08-21
 
 **Skills II.** Skills stop being only *reference the agent reads* and gain a
