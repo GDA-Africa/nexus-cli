@@ -4,7 +4,7 @@ id: "08_deployment"
 title: "Deployment"
 status: template
 confidence: low
-last_updated: "2026-08-10"
+last_updated: "2026-08-22"
 ---
 
 # Deployment
