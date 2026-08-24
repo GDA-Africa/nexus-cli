@@ -77,3 +77,20 @@ function formatIssues(error: z.ZodError): string {
 function isNotFound(err: unknown): boolean {
   return typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === 'ENOENT';
 }
+
+/**
+ * Write `<nexusDir>/harnesses.yml`, re-validating first so a caller cannot
+ * accidentally persist a config the schema would reject.
+ *
+ * The sole writer today is `nexus harness verify` (`commands/harness.ts`),
+ * updating one profile's measured fields after a live probe — see
+ * `utils/harnesses/verify.ts`. `js-yaml`'s `dump` does not preserve comments
+ * or key order from a hand-edited file; that is an accepted trade-off for an
+ * explicit, opt-in write the user asked for, not a background rewrite.
+ */
+export async function saveHarnessesConfig(nexusDir: string, config: HarnessesConfig): Promise<void> {
+  const filePath = path.join(nexusDir, HARNESSES_FILE_NAME);
+  const validated = HarnessesConfigSchema.parse(config);
+  const body = yaml.dump(validated, { lineWidth: 100, noRefs: true, sortKeys: false });
+  await fs.writeFile(filePath, body, 'utf-8');
+}

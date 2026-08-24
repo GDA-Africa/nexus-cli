@@ -12,6 +12,7 @@ export {
 export {
   loadHarnessesConfig,
   parseHarnessesConfig,
+  saveHarnessesConfig,
   HarnessesConfigError,
   HARNESSES_FILE_NAME,
 } from './loader.js';
@@ -25,3 +26,23 @@ export {
   withReadsMarker,
   assumedOrientationReads,
 } from './markers.js';
+export {
+  defaultOllamaClient,
+  type OllamaClient,
+  type OllamaGenerateCall,
+  type OllamaGenerateReply,
+} from './ollama-client.js';
+export {
+  verifyHarness,
+  applyMeasuredValues,
+  classifyToolCalling,
+  buildNeedlePrompt,
+  DEFAULT_BASE_URL,
+  DEFAULT_NEEDLE_DEPTHS_TOKENS,
+  DEFAULT_TOOL_CALL_ATTEMPTS,
+  DEFAULT_VERIFY_TASK,
+  TOOL_CALLING_NATIVE_THRESHOLD,
+  TRUNCATION_THRESHOLD_RATIO,
+  type VerifyHarnessOptions,
+  type HarnessVerifyReport,
+} from './verify.js';

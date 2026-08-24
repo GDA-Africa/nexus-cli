@@ -24,6 +24,7 @@ import { briefCommand } from './commands/brief.js';
 import { consolidateCommand } from './commands/consolidate.js';
 import { contextCommand } from './commands/context.js';
 import { doctorCommand } from './commands/doctor.js';
+import { harnessCommand } from './commands/harness.js';
 import { initCommand } from './commands/init.js';
 import { mcpCommand } from './commands/mcp.js';
 import { packCommand, unpackCommand } from './commands/pack.js';
@@ -290,6 +291,11 @@ program.addCommand(brainCommand());
 
 // ── nexus mcp ─────────────────────────────────────────────────
 program.addCommand(mcpCommand());
+
+// ── nexus harness ─────────────────────────────────────────────
+// `nexus harness verify` is opt-in and explicit only — see commands/harness.ts.
+// It must never be reachable from an automatic path (doctor, brain check, ...).
+program.addCommand(harnessCommand());
 
 // ── nexus update ──────────────────────────────────────────────
 
