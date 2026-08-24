@@ -5,7 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.0] — 2026-08-22
+## [1.5.0] - 2026-08-24
+
+**Reliability and local-model support.** This release is mostly the project
+checking its own work: three new doctor checks catch the brain's docs
+drifting out of sync with what the code actually does, and NEXUS can now
+size and verify what it hands to a small, locally-run AI model instead of
+assuming a one-size packet works for every model.
+
+### 🩺 Doctor gets three new checks
+
+- **D14** flags a project whose total context load (docs, knowledge, skills,
+  agent instructions) is unaccounted for, not just any single file.
+- **D15** flags a manifest that declares something (a framework, a package
+  manager) the project no longer actually uses.
+- **D16** flags docs and code that have drifted apart, such as a status page
+  still saying "in progress" on something the code shows as finished.
+
+Sixteen checks total now. Two smaller doctor fixes shipped alongside them:
+D04's knowledge-health check now measures actual file size instead of entry
+count, and D07/D11 no longer double-report the same finding.
+
+### 🖥 Local AI models get a real seat at the table
+
+Before this release, every AI assistant got the same context packet from
+NEXUS, sized for a capable, well-resourced model. A small model running for
+free on someone's own machine could get cut off partway through and never
+notice.
+
+- `.nexus/harnesses.yml` lets a project describe the AI setup it's actually
+  running against.
+- Instruction files are now generated at the size that setup can handle,
+  instead of being truncated after the fact.
+- **`nexus harness verify`** is new: it checks, for real, whether a given
+  local setup is receiving what NEXUS sent it, rather than assuming it works.
+- `nexus context` is a new command that prints the same composed context pack
+  the MCP server would return, without needing an MCP server running at all.
+- The MCP context pack itself is now token-budgeted, with clear reporting
+  when something had to be trimmed to fit.
+
+### 📚 Docs
+
+- `contract_version` on the composed context pack existed in code but was
+  never written down anywhere a consumer would find it. It's now documented
+  in `NEXUS.md` and `04_api_contracts.md`, with a test that fails if the two
+  ever drift apart again.
+- The project's own brain (`index.md`, `knowledge.md`) is caught up with
+  everything that shipped since 1.4.0.
+
+## [1.4.0] - 2026-08-22
 
 **A public MCP surface.** The 17 brain tools behind `nexus mcp` were only
 reachable over stdio. They're now importable directly: `src/mcp/index.ts`
@@ -18,7 +66,7 @@ Cordis-registered tool set inside DeepSeek Harness.
 
 No behavior changed; this is additive surface only.
 
-## [1.3.0] — 2026-08-21
+## [1.3.0] - 2026-08-21
 
 **Skills II.** Skills stop being only *reference the agent reads* and gain a
 second kind — *procedure the agent runs*. On top of that: a gate that makes
@@ -171,7 +219,7 @@ base are untouched, and a backup is written to
 
 **659 tests** (was 546).
 
-## [1.2.0] — 2026-08-10
+## [1.2.0] - 2026-08-10
 
 > **Note on 1.1.3.** Everything below was already inside the published 1.1.3
 > tarball — it was cut while this work sat under an `[Unreleased]` heading, so
@@ -227,7 +275,7 @@ block `chameleon agents init` splices between `<!-- chameleon:start -->`
 markers. NEXUS now captures that block before regenerating and restores it
 after. New `D12` doctor check flags a project where it went missing.
 
-## [1.1.3] — 2026-08-10
+## [1.1.3] - 2026-08-10
 
 > Published from a branch that also carried the v1.2 Chameleon work, so this
 > release contains more than the fix described below. See [1.2.0] for what was
@@ -257,7 +305,7 @@ Found while dogfooding v1.0 (2026-06-11 incident). 456/456 tests pass.
 
 ---
 
-## [1.1.2] — 2026-06-11
+## [1.1.2] - 2026-06-11
 
 ### 🎭 Contextualized Agents (HEADLINE)
 
@@ -314,7 +362,7 @@ smart check replaced anything not explicitly `status: populated`. Now:
 `.claude/agents/`, and the Agent Roles sections. Additive — nothing existing
 changes behavior. Agents are skippable via `enableAgents: false` in the manifest.
 
-## [1.0.0] — 2026-06-10
+## [1.0.0] - 2026-06-10
 
 > The 2026-06-09 publish run failed in CI (expired npm token) before reaching
 > the registry, so v1.0.0 was re-cut on 2026-06-10 with the MCP server included.
@@ -407,7 +455,7 @@ instruction files (now with the handshake protocol), and preserves all populated
 docs, knowledge, plans, and session state. Nothing is removed. New commands are
 no-ops until you use them.
 
-## [0.4.0] — 2026-05-02
+## [0.4.0] - 2026-05-02
 
 ### Alive Brain
 
@@ -455,32 +503,32 @@ capture repo state, track work, audit for drift, and surface their own needs.
 
 ---
 
-## [0.3.2] — 2026-03-07
+## [0.3.2] - 2026-03-07
 
 `nexus skill registry` now fetches the `@nexus-framework/skills` tarball directly from npm at
 runtime. New skills are visible immediately without republishing the CLI.
 
-## [0.3.1] — 2026-03-07
+## [0.3.1] - 2026-03-07
 
 Production fix: `dirExists` for skill directory checks. Comprehensive test coverage for all
 v0.3.x modules (295 tests). Homepage set to nexus.glenhalton.com.
 
-## [0.3.0] — 2026-03-06
+## [0.3.0] - 2026-03-06
 
 Skills System: `nexus skill` with six subcommands including a live registry, skills generator
 sourced from `@nexus-framework/skills`, `nexus pack` / `nexus unpack`, `nexus update`, and
 startup update notifications. 225 unit tests.
 
-## [0.2.0] — 2026-02-09
+## [0.2.0] - 2026-02-09
 
 Agent Persona system. Knowledge Base Protocol in all shipped AI instructions. README rewritten.
 NEXUS is now an AI-native development framework, not a scaffolding tool.
 
-## [0.1.3] — 2026-02-08
+## [0.1.3] - 2026-02-08
 
 Knowledge system, `nexus upgrade`, `nexus repair`, token-optimized templates, 179 tests.
 
-## [0.1.0] — 2026-02-07
+## [0.1.0] - 2026-02-07
 
 Initial release: `nexus init`, `nexus adopt`, five frameworks, AI config generation, 73 tests.
 

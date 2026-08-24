@@ -283,10 +283,16 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | 1.1.1 | Jun 17, 2026 | Orchestration bug fixes: non-interactive-safe CLI, subagents given real execution tools, runnable agent handoff chain (`nexus_get_handoff` — 17 tools) |
 | 1.1.2 | Jun 17, 2026 | Follow-up orchestration fixes |
 | **1.1.3** | **Aug 4, 2026** | **Manifest normalization — `upgrade`/`repair` normalize partial manifests before generation, so older/backend-only manifests no longer render literal `undefined` into generated docs and AI config. Docs + homepage accuracy pass (17 tools, 11 doctor checks, 456 tests). 456 unit tests.** |
+| **1.2.0** | **Aug 10, 2026** | **Chameleon UI delegation (opt-in) — `nexus use chameleon` resolves what you want into an AppSpec, hands it to Chameleon, and overlays the brain, tooling, and tests around what it produces. Capability-gated, never a hard dependency. Fixed: `upgrade` was silently deleting Chameleon's agent block; new D12 check catches it.** |
+| **1.3.0** | **Aug 21, 2026** | **Skills II — skills gain a second kind, procedure the agent runs, not just reference it reads. New alignment gate (D13) makes a recorded `## Grilling` interview a precondition for feature work. D14 measures the instruction bytes every agent carries per turn. Fixed a shipped data-loss bug in the upgrade path.** |
+| **1.4.0** | **Aug 22, 2026** | **A public MCP surface — the 17 brain tools behind `nexus mcp` are now importable directly from `@nexus-framework/cli`'s new `./mcp` subpath as native TypeScript, no server process required. Additive only, no behavior changed.** |
+| **1.5.0** | **Aug 24, 2026** | **Reliability and local-model support — three new doctor checks (D14 context load, D15 manifest invariants, D16 artifact drift), harness profiles so instruction files are sized to what a local AI model can actually handle, and the new `nexus harness verify` command. `contract_version` finally documented. 807 unit tests.** |
 
 ---
 
 ## ✅ Progress Log
+
+- 2026-08-24 — ✅ **Released v1.5.0** (the 13 commits from today's brain sync, packaged and versioned). Bumped `package.json` + `src/version.ts`, added the CHANGELOG entry, backfilled the Release History table gap flagged twice today (v1.2.0, v1.3.0, v1.4.0 never had rows here — added all three plus v1.5.0). Fixed the stale `target_version: "1.1.2"` in `.nexus/plans/_active.json` (`nexus plan done` set it in June and nothing updated it since). Fixed a real gap in `RELEASE_HEADLINES` (`src/utils/update-check.ts`): it had no entries between 0.4.0 and 0.4.0's neighbors, meaning anyone updating through 1.0.0–1.4.0 saw a stale "what's new" banner; backfilled all of them. README badge/doctor-count text brought in line with measured reality (807 tests, sixteen doctor checks) via `npm run release:check`, plus new blurb lines for what v1.4 and v1.5 actually shipped. Also fixed the CHANGELOG's header dashes to match the Keep a Changelog format it claims to follow, and removed the em dashes from `RELEASE_HEADLINES` (new project-wide rule: no em dashes in anything user-facing).
 
 - 2026-08-24 — ✅ Brain sync for 13 commits landed on `main` today (`053988e..2908abe`):
   **Context economics** — `nexus_get_context` reworked to a token budget with

@@ -29,16 +29,25 @@ export interface UpdateInfo {
 // The check walks from the target version downward to find the best match.
 
 const RELEASE_HEADLINES: Record<string, string> = {
-  '0.4.0': '🤖 Plans, Auto-invoke layer — Brain detection & self-update',
-  '0.3.2': '🔴 Live skill registry — nexus skill registry now fetches directly from npm, always up-to-date',
+  '1.5.0': '🩺 Doctor checks D14 to D16 catch stale docs, plus nexus harness verify for local AI models',
+  '1.4.0': '🔓 Public MCP surface, the ./mcp subpath for embedding the brain directly in a host',
+  '1.3.0': '🎯 Skills II, the alignment gate, and an instruction-byte budget for every agent turn',
+  '1.2.0': '🦎 Chameleon UI delegation (opt-in), nexus use chameleon',
+  '1.1.3': '🩹 Manifest normalization fix, plus a docs and homepage accuracy pass',
+  '1.1.2': '🔧 Follow-up orchestration fixes',
+  '1.1.1': '🔧 Orchestration bug fixes, non-interactive-safe CLI, runnable agent handoff chain',
+  '1.1.0': '🤖 Contextualized Agents, the core four in .nexus/agents/, verification gate D11',
+  '1.0.0': '🔌 nexus mcp, the brain as an MCP server with 13 schema-validated tools',
+  '0.4.0': '🤖 Plans, auto-invoke layer, brain detection & self-update',
+  '0.3.2': '🔴 Live skill registry, nexus skill registry now fetches directly from npm, always up-to-date',
   '0.3.0': '🧠 Skills System, nexus skill registry, nexus pack/unpack, nexus update + auto-notifications',
-  '0.2.1': '🐛 Bug fixes — backend scaffolding improvements & Spring Boot support',
-  '0.2.0': '🎭 Agent Persona — configure your AI\'s tone, verbosity, and identity',
+  '0.2.1': '🐛 Bug fixes, backend scaffolding improvements & Spring Boot support',
+  '0.2.0': '🎭 Agent Persona, configure your AI\'s tone, verbosity, and identity',
   '0.1.4': '📖 Full AI instructions embedded in every tool file (Cursor, Windsurf, Copilot)',
-  '0.1.3': '🧠 Knowledge Base & upgrade/repair commands — progressive project memory',
+  '0.1.3': '🧠 Knowledge Base & upgrade/repair commands for progressive project memory',
   '0.1.2': '📦 Sample project generation & README improvements',
   '0.1.1': '🐛 Bug fixes and test improvements',
-  '0.1.0': '🚀 Initial release — nexus init, adopt, 5 frameworks, AI config',
+  '0.1.0': '🚀 Initial release, nexus init, adopt, 5 frameworks, AI config',
 };
 
 // ─── Package Manager Detection ────────────────────────────────
