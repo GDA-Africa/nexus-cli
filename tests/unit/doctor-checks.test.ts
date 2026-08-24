@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { D01_frontmatter_status_drift } from '../../src/utils/doctor/checks/D01.js';
 import { D02_stale_phase } from '../../src/utils/doctor/checks/D02.js';
 import { D03_progress_log_gap } from '../../src/utils/doctor/checks/D03.js';
+import { D04_knowledge_bloat } from '../../src/utils/doctor/checks/D04.js';
 import { D05_stale_knowledge_references } from '../../src/utils/doctor/checks/D05.js';
 import { D06_plan_stale } from '../../src/utils/doctor/checks/D06.js';
 import { D07_plan_orphan } from '../../src/utils/doctor/checks/D07.js';
@@ -134,6 +135,39 @@ describe('Doctor Checks', () => {
 
     expect(findings).toHaveLength(1);
     expect(findings[0]?.id).toBe('D03');
+  });
+
+  describe('D04 - Knowledge Bloat', () => {
+    it('does not fire on a small file below every threshold', async () => {
+      const knowledgePath = path.join(tmpDir, '.nexus', 'docs', 'knowledge.md');
+      await fs.writeFile(knowledgePath, '# Knowledge\n\n### [gotcha] Small\n**2026-06-01** — one entry.\n');
+
+      const findings = await D04_knowledge_bloat.run({ ...dummyCtx, cwd: tmpDir });
+      expect(findings).toHaveLength(0);
+    });
+
+    it('fires on byte size alone, well under the 200-entry / 800-line thresholds (P2)', async () => {
+      // Mirrors this repo's own knowledge.md: 61 entries, 27,913 bytes — far
+      // below 200 entries or 800 lines, but already ~3.5x the local-harness
+      // orientation budget. The old entry-count-only check would not have
+      // fired until entry 201 (≈90KB).
+      const knowledgePath = path.join(tmpDir, '.nexus', 'docs', 'knowledge.md');
+      const entries = Array.from(
+        { length: 60 },
+        (_, i) => `### [gotcha] Entry ${i}\n**2026-06-01** — ${'padding text '.repeat(30)}\n`,
+      ).join('\n');
+      await fs.writeFile(knowledgePath, `# Knowledge\n\n${entries}\n`);
+
+      const content = await fs.readFile(knowledgePath, 'utf8');
+      expect(content.split('\n').filter((l) => l.trim().startsWith('### [')).length).toBeLessThan(200);
+      expect(content.split('\n').length).toBeLessThan(800);
+      expect(Buffer.byteLength(content, 'utf8')).toBeGreaterThan(24_000);
+
+      const findings = await D04_knowledge_bloat.run({ ...dummyCtx, cwd: tmpDir });
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.id).toBe('D04');
+      expect(findings[0]?.fixHint).toContain('nexus consolidate');
+    });
   });
 
   it('D05 reports missing file references in knowledge base', async () => {
