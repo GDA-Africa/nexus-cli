@@ -419,6 +419,14 @@ export interface ContextEviction {
 }
 
 export interface ComposedContext {
+  /**
+   * Versions the *shape* of this pack, independent of the CLI's own
+   * `package.json` version — bump {@link CONTRACT_VERSION} only on a
+   * breaking change to this interface. A host binding against
+   * `nexus_get_context` / `nexus context --json` should assert on this
+   * field rather than assume the shape. Documented in
+   * `.nexus/docs/04_api_contracts.md` and `NEXUS.md` §6.
+   */
   contract_version: string;
   task: string;
   agent: string | null;

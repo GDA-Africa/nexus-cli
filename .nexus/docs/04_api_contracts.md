@@ -29,7 +29,8 @@ NEXUS has no HTTP API. Its two external contracts are the **CLI command surface*
 | `nexus update` | Check npm registry, install latest CLI version |
 | `nexus sync` | Run sensors, rewrite the Vital Signs block in `index.md` |
 | `nexus plan {new,list,show,start,tick,note,done}` | Plan lifecycle CLI (mirrors the plan MCP tools) |
-| `nexus doctor [--strict]` | Run all D01–D14 drift checks, print findings |
+| `nexus doctor [--strict]` | Run all D01–D16 drift checks, print findings |
+| `nexus context <task> [--json] [--max-tokens] [--agent]` | CLI entry point over the same composer `nexus_get_context` uses — bounded context with no MCP server required |
 | `nexus brief [--md]` | Human-readable status digest |
 | `nexus consolidate` | Rebuild `knowledge-summary.md` from `knowledge.md` |
 | `nexus wake` | Session handshake — issues an `NX-WAKE-*` token |
@@ -63,6 +64,8 @@ All tools are read/compose except the four explicitly marked **write**. Every to
 | `nexus_add_knowledge_entry` **(write)** | Append a validated entry to `knowledge.md` |
 
 Server identity: `name: 'nexus-brain'` (see `src/mcp/server.ts`). Registered for clients via the generated `.mcp.json` (`npx -y @nexus-framework/cli mcp`).
+
+**Contract versioning.** `nexus_get_context`'s output (`ComposedContext`, same shape returned by `nexus context --json`) carries a top-level `contract_version` field (currently `"1.0.0"` — see `CONTRACT_VERSION` in `src/mcp/tools.ts`). This versions the *shape of the pack*, independent of the CLI's own `package.json` version, and only moves on a breaking change. Any host binding against the pack should assert on this field rather than assume the shape.
 
 ## 📋 Status / Exit Codes
 

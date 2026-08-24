@@ -278,6 +278,13 @@ This is the most important function in the codebase. It is **deterministic —
 keyword and token matching, no LLM** — and `maxChars` is a hard cap, not a
 suggestion.
 
+**`contract_version`.** Every `ComposedContext` carries a `contract_version`
+field (currently `"1.0.0"`, `tools.ts` near `CONTRACT_VERSION`) — the shape of
+the composed pack, not the CLI's own `package.json` version. Any host binding
+against `nexus_get_context` / `nexus context --json` output should read this
+field rather than assume the shape; it moves only on a breaking change to
+`ComposedContext`, never on a routine release.
+
 Sections are composed in priority order and charged against the budget as they
 are admitted:
 
