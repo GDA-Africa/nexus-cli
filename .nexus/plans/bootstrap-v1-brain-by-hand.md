@@ -71,3 +71,4 @@ v1.0 needs a reference artifact — the canonical "what should `nexus init` v1.0
 - Design doc: [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md)
 - Prior commit history: branch `fix-backend-scaffolding`, last commit `092d7e7` (2026-03-07)
 - This bootstrap surgery is uncommitted at the time of writing — user controls the commit.
+- WAIVER (added 2026-08-24): tests skipped because this plan hand-authors brain scaffolding (`.nexus/plans/`, `.nexus/state/`, doc/knowledge shape) as a reference artifact, not source code — there is no behavior for a test suite to exercise. D11 postdates this plan (v1.1); retroactively waived rather than backfilled with fabricated evidence.

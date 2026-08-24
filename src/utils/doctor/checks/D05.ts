@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
+import { builtinModules } from 'node:module';
 import path from 'node:path';
 
-import { fileExists } from '../../file-system.js';
+import { dirExists, fileExists } from '../../file-system.js';
 import type { DoctorCheck, DoctorContext, DoctorFinding } from '../types.js';
 
 const CODE_TOKEN_PATTERN = /`([^`]+)`/g;
@@ -22,7 +23,8 @@ export const D05_stale_knowledge_references: DoctorCheck = {
     const missing: string[] = [];
     for (const ref of candidates) {
       const resolved = path.resolve(ctx.cwd, ref);
-      if (!(await fileExists(resolved))) {
+      const exists = (await fileExists(resolved)) || (await dirExists(resolved));
+      if (!exists) {
         missing.push(ref);
       }
     }
@@ -58,13 +60,32 @@ function extractPathCandidates(content: string): string[] {
   return refs;
 }
 
+/** Known top-level project directories worth existence-checking even without a file extension. */
+const KNOWN_PATH_PREFIXES = ['src/', './src/', 'tests/', './tests/', 'dist/', './dist/', 'bin/', './bin/', 'scripts/', './scripts/', '.nexus/', './.nexus/', '.github/', './.github/'];
+
 function looksLikeProjectPath(value: string): boolean {
-  return (
-    value.includes('/')
-    && !value.startsWith('http://')
-    && !value.startsWith('https://')
-    && !value.startsWith('@')
-  );
+  if (!value.includes('/')) return false;
+  if (value.includes(' ')) return false; // prose / commit messages, not a single path token
+  if (value.startsWith('http://') || value.startsWith('https://')) return false;
+  if (value.startsWith('@')) return false;
+
+  // Regex literals, glob patterns, and `<placeholder>` tokens aren't real paths.
+  if (/[\\[\]()<>|*{}]/.test(value)) return false;
+
+  // Bare module specifiers like `fs/promises` or `node:fs/promises` are not
+  // project paths — exclude anything whose first segment is a Node builtin.
+  const firstSegment = value.replace(/^node:/, '').split('/')[0] ?? '';
+  if (builtinModules.includes(firstSegment)) return false;
+
+  // Otherwise only treat it as a checkable path if it looks like one: a file
+  // with an extension, an explicit directory (trailing slash), or rooted at
+  // a known top-level project directory. This keeps prose shorthand like
+  // `new/start/tick/note/done` from being treated as a path.
+  const looksLikeFile = /\.[a-zA-Z0-9]+$/.test(value);
+  const looksLikeDir = value.endsWith('/');
+  const hasKnownPrefix = KNOWN_PATH_PREFIXES.some((prefix) => value.startsWith(prefix));
+
+  return looksLikeFile || looksLikeDir || hasKnownPrefix;
 }
 
 function stripPrefix(value: string): string {

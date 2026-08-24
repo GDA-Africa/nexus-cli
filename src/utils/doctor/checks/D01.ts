@@ -86,7 +86,7 @@ function readStatus(content: string): 'template' | 'populated' | 'auto' | null {
 
 function countPlaceholders(body: string): number {
   const patterns = [
-    /\[[^\]]+\]/g, // [fill this]
+    /<!--[\s\S]*?-->/g, // unfilled scaffold comment, e.g. <!-- High-level system diagram -->
     /to be filled/gi,
     /\(none yet\)/gi,
     /\(to be filled\)/gi,

@@ -61,10 +61,10 @@
 
 **How to apply:** When adding new sensor fields, update snapshots after verifying the output is correct.
 
-### [convention] Test Fixtures in tests/__fixtures__/
-**2026-05-02** — Sensor tests need fixture git repos to read from. All test fixtures live in `tests/__fixtures__/`. Each fixture is a minimal .git directory with known commits, branches, dirty state. Fixtures are generated once; tests don't modify them. Rationale: reproducible, fast, CI-friendly.
+### [convention] Test Fixtures — plan superseded by real temp dirs
+**2026-05-02** — Original plan: sensor tests would read from fixture git repos checked into a *tests/__fixtures__/* directory (minimal `.git` dirs with known commits/branches/dirty state), generated once and never modified. Rationale at the time: reproducible, fast, CI-friendly.
 
-**How to apply:** Before writing sensor tests, create fixture (e.g., `__fixtures__/repo-basic/` with 5 commits, `repo-monorepo/` with nested package.jsons). Use `vol` (memfs) for in-memory testing or real fixture dirs for integration tests.
+**Correction (2026-08-24):** that directory was never built. Sensor tests instead create a real temporary git repo per test via `os.tmpdir()` (see e.g. `tests/unit/git-sensor.test.ts`), populated and torn down in `beforeEach`/`afterEach`. This entry is kept for history — do not look for a fixtures directory; it does not exist.
 
 ### [gotcha] npm test / npm run test Varies by Framework
 **2026-05-02** — The `tests` sensor shells out to detect and run test framework. Generated projects have vitest configured, but users might have jest, mocha, etc. The sensor tries multiple commands: `npm test`, `npx vitest run`, `npx jest --json`, with 2s timeout each. Returns null if none work.
@@ -72,9 +72,9 @@
 **How to apply:** When implementing the tests sensor, start with the most common (npm test), fall back gracefully. Test against both vitest and jest configs.
 
 ### [architecture] Commands Are Thin Wrappers Around Utils
-**2026-05-02** — v1.0 commands (sync, doctor, brief, wake, plan) are thin CLI wrappers around utilities in `src/utils/`. The pattern: `src/commands/sync.ts` is ~30 lines (parse args, call `utils/sync.ts`, handle errors). Business logic lives in utils. Commands are easy to test (mock utils), easy to reuse (call from other commands), easy to adapt (pipe output to other CLIs).
+**2026-05-02** — v1.0 commands (sync, doctor, brief, wake, plan) are thin CLI wrappers around utilities in `src/utils/`. The pattern: `src/commands/sync.ts` parses args, calls the sensor utilities, handles errors. Business logic lives in utils. Commands are easy to test (mock utils), easy to reuse (call from other commands), easy to adapt (pipe output to other CLIs).
 
-**How to apply:** M1 implementation: write `captureVitalSigns()` in utils, write a simple `src/commands/sync.ts` that calls it and writes to index.md. Tests live in `tests/unit/sensors.test.ts` and `tests/unit/sync.test.ts` (command integration).
+**How to apply:** M1 implementation: write `captureVitalSigns()` in `src/utils/sensors/index.ts`, write a simple `src/commands/sync.ts` that calls it and writes to index.md. **Correction (2026-08-24):** there is no standalone `utils/sync.ts` — sync logic lives in `src/commands/sync.ts` plus `src/utils/sensors/*.ts`. Tests live in `tests/unit/sensors-index.test.ts`, `tests/unit/sync-command.test.ts`, and `tests/unit/sync-render.test.ts` (the planned `sensors.test.ts`/`sync.test.ts` names were never used).
 
 ### [convention] 306 Tests is the Floor
 **2026-05-02** — nexus-cli has 306 passing unit tests (100% pass rate). v1.0 should not drop confidence. M1 estimates include test coverage: ~4 sensor unit tests + 1 snapshot test + 1 integration test per new command. Rough target: +15 tests for M1, +25 for M2, +20 for M3, +15 for M4. Total: v1.0.0 ships with ~380 tests.
@@ -104,7 +104,7 @@
 ### [pattern] Rebuild plans index after every plan mutation
 **2026-05-02** — Recomputing `.nexus/plans/index.md` after each command (`new/start/tick/note/done`) keeps dashboard drift at zero and removes a whole class of stale-state bugs. The rebuild is fast because it only scans `.nexus/plans/*.md` and parses frontmatter.
 
-**How to apply:** Treat `plans/index.md` as a derived artifact, never as user-edited source-of-truth.
+**How to apply:** Treat `.nexus/plans/index.md` as a derived artifact, never as user-edited source-of-truth.
 
 ### [gotcha] MCP stdio purity — anything on stdout corrupts the protocol
 **2026-06-10** — `nexus mcp` speaks JSON-RPC over stdout, so the auto-invoke hooks (interactive Brain Check prompt, post-command "→ Brain:" line) and the update banner must be bypassed for the `mcp` command, and all server diagnostics must go to stderr.

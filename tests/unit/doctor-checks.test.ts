@@ -59,6 +59,48 @@ describe('Doctor Checks', () => {
     expect(findings[0]?.id).toBe('D01');
   });
 
+  it('D01 does not flag populated docs for legitimate bracket syntax', async () => {
+    const docPath = path.join(tmpDir, '.nexus', 'docs', '04_api_contracts.md');
+    await fs.writeFile(docPath, [
+      '---',
+      'status: "populated"',
+      '---',
+      '',
+      '# API Contracts',
+      '',
+      '| Command | Description |',
+      '|---------|-------------|',
+      '| `nexus init [name]` | Scaffold a new project |',
+      '| `nexus doctor [--strict]` | Run drift checks |',
+      '',
+      'Plan types: `[\'feature\', \'refactor\', \'spike\']` are gated by default.',
+    ].join('\n'));
+
+    const findings = await D01_frontmatter_status_drift.run({ ...dummyCtx, cwd: tmpDir });
+    expect(findings).toHaveLength(0);
+  });
+
+  it('D01 flags populated docs that still contain unfilled scaffold comments', async () => {
+    const docPath = path.join(tmpDir, '.nexus', 'docs', '05_business_logic.md');
+    await fs.writeFile(docPath, [
+      '---',
+      'status: "populated"',
+      '---',
+      '',
+      '# Business Logic',
+      '',
+      '## Business Rules',
+      '<!-- Core rules of the application: what can/can\'t happen, constraints, permissions -->',
+      '',
+      '## State Machines',
+      '<!-- Complex state flows: e.g. task lifecycle, auth flow, checkout process -->',
+    ].join('\n'));
+
+    const findings = await D01_frontmatter_status_drift.run({ ...dummyCtx, cwd: tmpDir });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.description).toContain('unresolved placeholders');
+  });
+
   it('D02 flags stale active phase when stale folders exist', async () => {
     const findings = await D02_stale_phase.run({
       ...dummyCtx,
@@ -101,6 +143,18 @@ describe('Doctor Checks', () => {
     const findings = await D05_stale_knowledge_references.run({ ...dummyCtx, cwd: tmpDir });
     expect(findings).toHaveLength(1);
     expect(findings[0]?.id).toBe('D05');
+  });
+
+  it('D05 does not flag existing directories or Node builtin module specifiers', async () => {
+    const knowledgePath = path.join(tmpDir, '.nexus', 'docs', 'knowledge.md');
+    await fs.mkdir(path.join(tmpDir, 'src', 'utils', 'sensors'), { recursive: true });
+    await fs.writeFile(
+      knowledgePath,
+      'Sensors live in `src/utils/sensors/`. File I/O uses `fs/promises`, not `node:fs/promises` sync APIs.',
+    );
+
+    const findings = await D05_stale_knowledge_references.run({ ...dummyCtx, cwd: tmpDir });
+    expect(findings).toHaveLength(0);
   });
 
   it('D09 reports missing wake token in recent commit messages', async () => {

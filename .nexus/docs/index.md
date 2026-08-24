@@ -12,14 +12,14 @@
 <!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` -->
 ## 🩺 Vital Signs (auto)
 
-_Last sync: 2026-08-24T09:23:17.020Z · branch `main` · 0 commits ahead of main · working tree dirty_
+_Last sync: 2026-08-24T09:48:27.937Z · branch `main` · 0 commits ahead of main · working tree dirty_
 
 | Sensor | Reading |
 |--------|---------|
-| Last commit | 660f84f — chore(nexus): updated nexus to version 1.4.0 · Glenhalton · 2 days ago |
+| Last commit | 24abc92 — chore(nexus): populated nexus cli docs · Glenhalton · 20 minutes ago |
 | Tests | not yet measured |
 | Coverage | not collected · M1 sensor adds `vitest --coverage` parsing |
-| Stale folders | src/commands 2 days · src/utils 2 days · src/generators 2 days · tests/e2e 75 days · tests/unit 1 days · tests/integration 113 days |
+| Stale folders | src/commands 2 days · src/utils 0 days · src/generators 2 days · tests/e2e 75 days · tests/unit 0 days · tests/integration 113 days |
 | Packages | not yet measured |
 <!-- NEXUS:VITAL_SIGNS:END -->
 
@@ -265,6 +265,10 @@ Result: a project brain that not only records state but detects drift, tracks wo
 - 2026-06-10 — ✅ Completed plan `release-v1-mcp-headline`: v1.0.0 reboot — **`nexus mcp` server (13 read/write brain tools, @modelcontextprotocol/sdk + zod)**, brain-aware CI (PR brief comment job in generated workflows), `.mcp.json` + MCP sections in all generated AI instruction files, registry-based publish gate in own ci.yml (fixes 2026-06-09 failed-publish retry), publish runbook (`docs/publish-runbook.md`), nexus-skills v0.2.0 prepped (3 new shared skills). 419/419 tests. **Remaining human step: renew NPM_TOKEN + re-run publish.**
 - 2026-06-09 — ✅ Completed plan `implement-v1-m4-consolidate-wake-polish`: Implement v1.0 M4 — Consolidate, Wake, Polish → v1.0.0
 - 2026-06-09 — ❌ v1.0.0 npm publish FAILED in CI: expired NPM_TOKEN. Never reached the registry → window used to fold the MCP server into v1.0.0.
+- 2026-05-03 — ✅ Completed plan `implement-auto-invoke-layer`: auto-invoke middleware in `cli.ts` (silent + interactive + disabled modes), command-aware pre-sync triggers (`plan new/start/done`, `skill install`), status badge output, persisted config at `.nexus/auto-invoke.config.json`. 23 tests passing.
+- 2026-05-02 — ✅ Completed plan `implement-v1-m3-doctor-brief`: shipped `nexus doctor` (checks D01–D10) and `nexus brief` (`--md`, `--since`, `--write`), doctor config support (`.nexus/doctor.config.json`), severity-based exit codes, D08 auto-fix via `nexus sync`. 18 tests + 2 snapshots passing.
+- 2026-05-02 — ✅ Completed plan `implement-v1-m2-plans-mvp`: shipped the persisted-plans subsystem — `.nexus/plans/<id>.md` files, lifecycle state machine, plan templates, `nexus plan` MVP subcommands. Full suite 341 tests passing.
+- 2026-05-02 — ✅ Completed plan `implement-v1-m1-sensors-sync`: shipped `nexus sync` — git/files/tests/packages sensors aggregated into a typed `VitalSigns` object, rendered into the fenced Vital Signs block in `index.md`. Full suite 334 tests passing.
 
 ## ✅ Progress Log
 
@@ -277,6 +281,7 @@ Result: a project brain that not only records state but detects drift, tracks wo
 ## ✅ Progress Log
 
 - 2026-06-17 — ✅ Completed plan `fix-agent-handoff-orchestration`: Fix: agent handoff chain is prose, not a runnable orchestration
+- 2026-05-02 — ✅ Completed plan `bootstrap-v1-brain-by-hand`: hand-crafted `.nexus/plans/`, `.nexus/state/`, the Vital Signs block, and the knowledge summary shape for this repo before the v1.0 generator existed — the reference artifact M1–M4 built toward. No test suite applies (see the plan's Evidence section for the waiver).
 
 ## ⏭️ What's Next
 
