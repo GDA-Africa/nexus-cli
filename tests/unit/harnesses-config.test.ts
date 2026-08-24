@@ -12,6 +12,7 @@ import {
   resolveFileForHarness,
   resolveHarnessProfile,
   resolveProfileForFile,
+  saveHarnessesConfig,
   READS_MARKER_SUMMARY,
   READS_MARKER_NONE,
   withReadsMarker,
@@ -195,6 +196,69 @@ harnesses:
   it('resolveFileForHarness resolves a canonical id to its conventional file', () => {
     expect(resolveFileForHarness(config, 'cursor')).toBe('.cursorrules');
     expect(resolveFileForHarness(config, 'claude-code')).toBe('CLAUDE.md');
+  });
+});
+
+describe('saveHarnessesConfig — the sole write path, used by `nexus harness verify`', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = path.join(os.tmpdir(), `nexus-harnesses-save-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await fs.mkdir(tmpDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('writes a file loadHarnessesConfig can read back with the same values', async () => {
+    const config = parseHarnessesConfig(SPEC_EXAMPLE);
+
+    await saveHarnessesConfig(tmpDir, config);
+    const reloaded = await loadHarnessesConfig(tmpDir);
+
+    expect(reloaded).toEqual(config);
+  });
+
+  it('persists measured fields added to one profile, leaving others untouched', async () => {
+    const config = parseHarnessesConfig(SPEC_EXAMPLE);
+    const updated = {
+      ...config,
+      harnesses: {
+        ...config.harnesses,
+        'ollama-local': {
+          ...config.harnesses['ollama-local'],
+          measured_at: '2026-08-24',
+          measured_window: 4096,
+          tool_call_success_rate: 0.65,
+          truncation_detected: true,
+        },
+      },
+    };
+
+    await saveHarnessesConfig(tmpDir, updated);
+    const reloaded = await loadHarnessesConfig(tmpDir);
+
+    expect(reloaded?.harnesses['ollama-local']).toEqual({
+      window: 4096,
+      orientation_budget: 1500,
+      tool_calling: 'unreliable',
+      measured_at: '2026-08-24',
+      measured_window: 4096,
+      tool_call_success_rate: 0.65,
+      truncation_detected: true,
+    });
+    expect(reloaded?.harnesses['claude-code']).toEqual(config.harnesses['claude-code']);
+  });
+
+  it('rejects a config the schema would reject, rather than writing a broken file', async () => {
+    const invalid = {
+      default: 'x',
+      harnesses: { x: { window: -1, orientation_budget: 1500, tool_calling: 'native' as const } },
+    };
+
+    await expect(saveHarnessesConfig(tmpDir, invalid)).rejects.toThrow();
+    await expect(fs.readFile(path.join(tmpDir, 'harnesses.yml'), 'utf-8')).rejects.toThrow();
   });
 });
 
