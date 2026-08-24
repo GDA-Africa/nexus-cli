@@ -302,11 +302,18 @@ describe('skills tools', () => {
 /* ──────────────────────────────────────────────────────────────
  * getContextTool — budget discipline
  *
- * Regression cover for the v1.2 Track A defect: the budget used to be
- * subtracted only AFTER plan/knowledge/skills/vitals were fully composed, and
- * `truncated` was only ever set inside the docs loop. So a pack could blow
- * past `maxChars` and still report `truncated: false` — which is worse than
- * being over budget, because callers trust that flag.
+ * v1.4 (P0): the budget is a token budget, not a char budget — chars cannot
+ * express a model's context window, and dense/repetitive content tokenizes
+ * far better than the ~4-chars-per-token heuristic used only to map the
+ * deprecated `maxChars` onto tokens. So these assert against `result.budget`
+ * (the authoritative token accounting the pack itself reports) rather than
+ * the raw JSON char length the old char-budget tests used.
+ *
+ * Regression cover for the v1.2 Track A defect underneath all of this: the
+ * budget used to be subtracted only AFTER plan/knowledge/skills/vitals were
+ * fully composed, and `truncated` was only ever set inside the docs loop. So
+ * a pack could blow past budget and still report `truncated: false` — which
+ * is worse than being over budget, because callers trust that flag.
  * ────────────────────────────────────────────────────────────── */
 
 /** Knowledge file with `count` entries whose bodies are `bodyChars` long. */
@@ -318,57 +325,63 @@ function bigKnowledge(count: number, bodyChars: number): string {
   return `# Test Knowledge Base\n\n## Entries\n\n${entries}\n---\n\n*footer*\n`;
 }
 
-/** The sections the budget actually governs. */
-function chargedSize(result: Awaited<ReturnType<typeof getContextTool>>): number {
-  const { plan, knowledge, skills, vitals, docs } = result;
-  return JSON.stringify({ plan, knowledge, skills, vitals, docs }).length;
-}
-
 describe('getContextTool budget', () => {
-  it('keeps the composed pack within maxChars even when knowledge is huge', async () => {
+  it('keeps the composed pack within its token budget even when knowledge is huge', async () => {
     await fs.writeFile(path.join(ctx.docsDir, 'knowledge.md'), bigKnowledge(5, 8000));
 
-    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 4000 });
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxTokens: 1000 });
 
-    expect(chargedSize(result)).toBeLessThanOrEqual(4000);
+    expect(result.budget.maxTokens).toBe(1000);
+    expect(result.budget.used).toBeLessThanOrEqual(1000);
+    expect(result.budget.remaining).toBeGreaterThanOrEqual(0);
   });
 
-  it('reports truncated:true when knowledge was dropped and no docs were requested', async () => {
-    // The exact defect: with no agent recipe there are no docs, so the old
-    // implementation never reached the only line that set `truncated`.
+  it('maps the deprecated maxChars onto maxTokens (÷4) when maxTokens is not given', async () => {
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 4000 });
+    expect(result.budget.maxTokens).toBe(1000);
+  });
+
+  it('reports truncated:true and lists an eviction when knowledge was dropped and no docs were requested', async () => {
+    // The exact v1.2 defect: with no agent recipe there are no docs, so the
+    // old implementation never reached the only line that set `truncated`.
     await fs.writeFile(path.join(ctx.docsDir, 'knowledge.md'), bigKnowledge(5, 8000));
 
-    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 2000 });
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxTokens: 500 });
 
     expect(result.docs).toHaveLength(0);
     expect(result.truncated).toBe(true);
+    expect(result.evicted.length).toBeGreaterThan(0);
+    expect(result.evicted.every((e) => e.reason === 'budget' || e.reason === 'floor')).toBe(true);
   });
 
   it('caps an individual knowledge body instead of letting one entry eat the pack', async () => {
     await fs.writeFile(path.join(ctx.docsDir, 'knowledge.md'), bigKnowledge(1, 9000));
 
-    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 60000 });
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxTokens: 15000 });
 
     expect(result.knowledge).toHaveLength(1);
     // 1200-char cap plus the ellipsis marker.
     expect(result.knowledge[0].body.length).toBeLessThanOrEqual(1201);
     expect(result.truncated).toBe(true);
+    expect(result.evicted.some((e) => e.section.startsWith('knowledge:'))).toBe(true);
   });
 
   it('does not claim truncation when everything fits', async () => {
-    const result = await getContextTool(ctx, { task: 'markdown source of truth', maxChars: 60000 });
+    const result = await getContextTool(ctx, { task: 'markdown source of truth', maxTokens: 15000 });
 
     expect(result.truncated).toBe(false);
-    expect(chargedSize(result)).toBeLessThanOrEqual(60000);
+    expect(result.evicted).toHaveLength(0);
+    expect(result.budget.used).toBeLessThanOrEqual(15000);
   });
 
-  it('still composes the high-priority plan slice under a tight budget', async () => {
+  it('still composes the plan slice under a tight budget (skills do not crowd it out here)', async () => {
     await fs.writeFile(path.join(ctx.docsDir, 'knowledge.md'), bigKnowledge(5, 8000));
 
-    const result = await getContextTool(ctx, { task: 'budget overflow', maxChars: 2000 });
+    const result = await getContextTool(ctx, { task: 'budget overflow', maxTokens: 500 });
 
-    // Plan is charged but never rejected — it is the most task-relevant slice
-    // and is bounded by construction.
+    // Plan is charged through admit() like every other section now — it
+    // survives here because nothing ahead of it in priority order (task,
+    // gate, skills) consumes enough of a 500-token budget to crowd it out.
     expect(result.plan).not.toBeNull();
     expect(result.plan?.id).toBe('test-plan');
   });

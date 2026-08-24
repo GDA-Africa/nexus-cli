@@ -1,7 +1,7 @@
 {
   "name": "@nexus-framework/cli",
   "version": "1.4.0",
-  "description": "The AI-Native Development Framework \u2014 turns every project into an AI-powered workspace with structured docs, progressive memory, and configurable agent personas",
+  "description": "The AI-Native Development Framework — turns every project into an AI-powered workspace with structured docs, progressive memory, and configurable agent personas",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -79,6 +79,7 @@
     "execa": "^9.5.2",
     "figlet": "^1.8.0",
     "fs-extra": "^11.2.0",
+    "gpt-tokenizer": "^4.0.0",
     "gradient-string": "^3.0.0",
     "inquirer": "^12.3.2",
     "mustache": "^4.2.0",

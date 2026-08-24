@@ -27,6 +27,7 @@ import { McpToolError, resolveBrainContext, type BrainContext } from './context.
 import {
   addKnowledgeEntryTool,
   briefTool,
+  ContextFloorOverflow,
   doctorTool,
   getActivePlanTool,
   getAgentTool,
@@ -70,7 +71,7 @@ export function buildMcpServer(options: BuildMcpServerOptions = {}): McpServer {
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         const message =
-          error instanceof McpToolError
+          error instanceof McpToolError || error instanceof ContextFloorOverflow
             ? error.message
             : `Unexpected error: ${error instanceof Error ? error.message : String(error)}`;
         return { content: [{ type: 'text', text: message }], isError: true };
@@ -271,7 +272,14 @@ export function buildMcpServer(options: BuildMcpServerOptions = {}): McpServer {
       inputSchema: {
         task: z.string().min(3).describe('Task description used for matching'),
         agent: z.string().optional().describe('Agent whose context recipe scopes the composition'),
-        maxChars: z.number().int().min(2000).max(60000).optional().describe('Payload budget (default 12000)'),
+        maxTokens: z.number().int().min(500).max(20000).optional().describe('Payload budget in tokens (default 3000)'),
+        maxChars: z
+          .number()
+          .int()
+          .min(2000)
+          .max(60000)
+          .optional()
+          .describe('Deprecated — mapped onto maxTokens. Prefer maxTokens.'),
       },
     },
     wrap(getContextTool),

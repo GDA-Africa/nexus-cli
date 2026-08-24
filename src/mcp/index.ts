@@ -18,6 +18,7 @@ export { McpToolError, resolveBrainContext, type BrainContext } from './context.
 export {
   addKnowledgeEntryTool,
   briefTool,
+  ContextFloorOverflow,
   doctorTool,
   getActivePlanTool,
   getAgentTool,
@@ -36,7 +37,9 @@ export {
   wakeTool,
   type ActivePlanResult,
   type AddKnowledgeInput,
+  type ComposeContextInput,
   type ComposedContext,
+  type ContextEviction,
   type GetContextInput,
   type HandoffResult,
   type KnowledgeMatch,

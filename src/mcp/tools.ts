@@ -45,6 +45,7 @@ import {
 } from '../utils/skills/gate.js';
 import { rankByTriggers } from '../utils/skills/matching.js';
 import type { SkillGate, SkillInvocation } from '../utils/skills/types.js';
+import { CHARS_PER_TOKEN, countTokens } from '../utils/tokens.js';
 
 import { McpToolError, type BrainContext } from './context.js';
 
@@ -382,26 +383,51 @@ export async function getHandoffTool(
   return { chain, current, next, orchestration: 'main-thread', guidance };
 }
 
-export interface GetContextInput {
+export interface ComposeContextInput {
   /** Task description — used to match knowledge entries and skill triggers */
   task: string;
   /** Optional agent whose context recipe scopes the composition */
   agent?: string;
-  /** Soft cap on composed payload size (default 12000 chars) */
+  /** Hard cap on composed payload size, in tokens (default 3000) */
+  maxTokens?: number;
+  /**
+   * @deprecated Chars cannot express a model's context window — mapped onto
+   * `maxTokens` (÷{@link CHARS_PER_TOKEN}) when `maxTokens` is not given.
+   * Accepted through v1.2 for compatibility; prefer `maxTokens`.
+   */
   maxChars?: number;
 }
 
+/** @deprecated renamed to {@link ComposeContextInput}. */
+export type GetContextInput = ComposeContextInput;
+
+/** One section (or one item within a section) that did not make it into the pack. */
+export interface ContextEviction {
+  section: string;
+  /** Tokens the evicted content would have cost. */
+  cost: number;
+  /**
+   * `'budget'` — ordinary priority-ranked content lost out to budget pressure.
+   * `'floor'` — content that is supposed to always be present (the required
+   * gated skill, the vitals digest) had to be dropped or degraded because
+   * even the minimum form did not fit. Distinct from `ContextFloorOverflow`,
+   * which is thrown — never evicted — when `task` or `gate` themselves do
+   * not fit; those two are load-bearing enough that a degraded pack is worse
+   * than an error.
+   */
+  reason: 'budget' | 'floor';
+}
+
 export interface ComposedContext {
+  contract_version: string;
   task: string;
   agent: string | null;
   /**
-   * v1.3 alignment gate. Bounded by construction (four short fields), composed
-   * before every budget-consuming section, and never dropped — a gate that can
+   * v1.3 alignment gate. A floor section (see {@link ContextFloorOverflow}):
+   * composed before every other section and never dropped — a gate that can
    * be crowded out of the pack is not a gate.
    */
   gate: GateStatus | null;
-  plan: { id: string; status: string; nextStep: string | null } | null;
-  knowledge: KnowledgeMatch[];
   skills: Array<{
     name: string;
     source: string;
@@ -411,9 +437,43 @@ export interface ComposedContext {
     /** True when this skill was injected by the gate rather than matched. */
     required?: boolean;
   }>;
-  vitals: { branch: string | null; dirty: boolean | null; testsSummary: string };
+  plan: { id: string; status: string; nextStep: string | null } | null;
+  knowledge: KnowledgeMatch[];
   docs: Array<{ file: string; excerpt: string }>;
+  vitals: { branch: string | null; dirty: boolean | null; testsSummary: string };
   truncated: boolean;
+  /** What did not make it into the pack, and why. Empty when nothing was cut. */
+  evicted: ContextEviction[];
+  budget: { maxTokens: number; used: number; remaining: number };
+}
+
+/** `nexus_get_context`'s current output shape. Bump on a breaking change. */
+const CONTRACT_VERSION = '1.0.0';
+
+/**
+ * Thrown when a floor section — `task` or `gate` — does not fit even the
+ * declared budget on its own. These are the minimum an agent needs to not be
+ * working blind; a caller that received a pack with either silently gutted
+ * would have no way to know. Callers should retry with a larger `maxTokens`
+ * or, for `task`, a shorter task description.
+ */
+export class ContextFloorOverflow extends Error {
+  readonly section: string;
+  readonly cost: number;
+  readonly budget: number;
+  readonly maxTokens: number;
+
+  constructor(info: { section: string; cost: number; budget: number; maxTokens: number }) {
+    super(
+      `Context floor overflow: "${info.section}" costs ${info.cost} tokens but only ${info.budget} of ${info.maxTokens} remain. ` +
+        'Raise maxTokens, or shorten the task description.',
+    );
+    this.name = 'ContextFloorOverflow';
+    this.section = info.section;
+    this.cost = info.cost;
+    this.budget = info.budget;
+    this.maxTokens = info.maxTokens;
+  }
 }
 
 /**
@@ -422,41 +482,107 @@ export interface ComposedContext {
  */
 const KNOWLEDGE_BODY_CAP = 1200;
 
+const DEFAULT_MAX_TOKENS = 3000;
+const MIN_MAX_TOKENS = 500;
+const MAX_MAX_TOKENS = 20000;
+
+/** Resolve the token budget from `maxTokens`, or the deprecated `maxChars`. */
+function resolveMaxTokens(input: ComposeContextInput): number {
+  const requested =
+    input.maxTokens ??
+    (input.maxChars !== undefined ? Math.ceil(input.maxChars / CHARS_PER_TOKEN) : DEFAULT_MAX_TOKENS);
+  return Math.max(MIN_MAX_TOKENS, Math.min(requested, MAX_MAX_TOKENS));
+}
+
+/**
+ * Cut markdown at the last paragraph or heading boundary at or before
+ * `maxChars`, falling back to a sentence end and then, only if the content
+ * has neither, a raw prefix. Never a half sentence — a boundary cut is worse
+ * than an absence only when the reader cannot tell it happened, and a
+ * dangling clause is exactly that.
+ */
+function cutAtBoundary(content: string, maxChars: number): string {
+  if (maxChars <= 0) return '';
+  if (content.length <= maxChars) return content;
+
+  const slice = content.slice(0, maxChars);
+  const boundary = Math.max(slice.lastIndexOf('\n\n'), slice.lastIndexOf('\n#'));
+  if (boundary > 0) return slice.slice(0, boundary).trimEnd();
+
+  const sentenceBoundary = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('.\n'));
+  if (sentenceBoundary > 0) return slice.slice(0, sentenceBoundary + 1).trimEnd();
+
+  return slice.trimEnd();
+}
+
+/** Cut `content` at a boundary until it fits `budgetTokens`. */
+function truncateDocToBudget(content: string, budgetTokens: number): string {
+  if (budgetTokens <= 0) return '';
+  if (countTokens(content) <= budgetTokens) return content;
+
+  let maxChars = Math.min(content.length, budgetTokens * CHARS_PER_TOKEN);
+  let text = cutAtBoundary(content, maxChars);
+
+  // The chars-per-token heuristic is only a starting point — verify against
+  // the real tokenizer and walk the cut point back if it still overshoots.
+  while (text.length > 0 && countTokens(text) > budgetTokens) {
+    maxChars = Math.floor(maxChars * 0.9);
+    text = cutAtBoundary(content, maxChars);
+  }
+
+  return text;
+}
+
+function summarizeTests(tests: VitalSigns['tests'] | undefined): string {
+  if (!tests) return 'not yet synced';
+  // durationMs deliberately omitted — a wall-clock value has no business in a
+  // pack two identical calls are supposed to reproduce byte-for-byte (P0.4).
+  const { passed, failed, skipped, source } = tests;
+  return JSON.stringify({ passed, failed, skipped, source }).slice(0, 200);
+}
+
 /**
  * The v1.1 keystone: compose ONE scoped context pack for a task instead of
  * N piecemeal reads. Deterministic — keyword/trigger matching, no LLM.
  *
- * `maxChars` is a hard cap on every unbounded section, not a suggestion:
- * sections are composed in priority order (plan → vitals → skills →
- * knowledge → docs) and charged as they are admitted. `truncated` is true
- * whenever anything was cut or dropped, including when no docs were
- * requested — callers rely on it to know the pack is partial.
+ * `maxTokens` is a hard cap on every section, not a suggestion: sections are
+ * composed in priority order (gate → skills → plan → knowledge → docs →
+ * vitals — least stable last, so its churn never shifts where anything else
+ * gets cut) and every one of them is charged through `admit()` as it is
+ * composed. `task` and `gate` are the floor — see {@link ContextFloorOverflow}
+ * — and everything else is evictable and reported in `evicted`. `truncated`
+ * is true whenever anything was cut, dropped, or degraded.
  */
-export async function getContextTool(ctx: BrainContext, input: GetContextInput): Promise<ComposedContext> {
-  const maxChars = Math.max(2000, Math.min(input.maxChars ?? 12000, 60000));
-  let budget = maxChars;
-  let truncated = false;
+export async function getContextTool(ctx: BrainContext, input: ComposeContextInput): Promise<ComposedContext> {
+  const maxTokens = resolveMaxTokens(input);
+  let budget = maxTokens;
+  const evicted: ContextEviction[] = [];
 
-  /**
-   * Charge the budget for one item. Returns false when it does not fit, so
-   * the caller can stop admitting rather than overrun. Every unbounded
-   * section goes through this — that is what makes `maxChars` a real cap
-   * instead of an advisory one.
-   */
-  const admit = (value: unknown): boolean => {
-    const cost = JSON.stringify(value)?.length ?? 0;
-    if (cost > budget) return false;
+  /** Charge the budget for one item. Returns whether it fit, and its cost. */
+  const admit = (value: unknown): { ok: boolean; cost: number } => {
+    const cost = countTokens(JSON.stringify(value) ?? '');
+    if (cost > budget) return { ok: false, cost };
     budget -= cost;
-    return true;
+    return { ok: true, cost };
+  };
+
+  /** Like `admit`, but a miss throws instead of returning — the floor. */
+  const admitFloor = (section: string, value: unknown): void => {
+    const cost = countTokens(JSON.stringify(value) ?? '');
+    if (cost > budget) {
+      throw new ContextFloorOverflow({ section, cost, budget, maxTokens });
+    }
+    budget -= cost;
   };
 
   // Agent recipe (optional)
   const resolved = input.agent ? await resolveAgent(agentsDir(ctx), input.agent) : null;
   const recipe = resolved?.definition.frontmatter.context ?? null;
 
-  // 1. Plan slice — the most task-relevant thing in the pack, and bounded by
-  //    construction (three short fields), so it is charged but never rejected.
-  let plan: ComposedContext['plan'] = null;
+  // Read the active plan up front — the gate needs it — without charging the
+  // plan slice against the budget yet. The plan *section* of the pack is
+  // composed later, after skills, per the priority order above.
+  let planCandidate: ComposedContext['plan'] = null;
   let activePlanDoc: PlanDocument | null = null;
   if (recipe?.plan_scope !== 'none') {
     const state = await readActivePlans(ctx.plansDir);
@@ -465,37 +591,32 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
       const planDoc = await readPlanIfExists(ctx, activeId);
       if (planDoc) {
         activePlanDoc = planDoc;
-        plan = { id: activeId, status: planDoc.frontmatter.status, nextStep: firstUncheckedStep(planDoc) };
+        planCandidate = { id: activeId, status: planDoc.frontmatter.status, nextStep: firstUncheckedStep(planDoc) };
       }
     }
   }
-  if (plan) budget -= JSON.stringify(plan).length;
 
-  // 1b. Alignment gate. Composed here — after the plan it reads, before every
-  //     section that competes for budget. Charged, never rejected.
+  // Floor 1/2: the task itself. If the task description alone does not fit
+  // the declared budget, nothing downstream is meaningful either.
+  admitFloor('task', input.task);
+
+  // Floor 2/2: the alignment gate. Depends on the plan read above, computed
+  // before every section that competes for budget.
   const { skills: allSkills } = await listSkillsTool(ctx);
   const gateDeclarations = collectGates(allSkills);
   const gate = evaluateGate(activePlanDoc, gateDeclarations, {
     taskLooksLikeBuild: taskLooksLikeBuild(input.task),
   });
-  budget -= JSON.stringify(gate).length;
+  admitFloor('gate', gate);
 
-  // 2. Vitals digest (cheap snapshot, no test run). Also bounded — the tests
-  //    summary is capped at 200 chars — so it is charged, never rejected.
-  const vs = await captureVitalSigns({ cwd: ctx.projectRoot, timeoutMs: 1500 });
-  const vitals = {
-    branch: (vs.git as { branch?: string | null }).branch ?? null,
-    dirty: (vs.git as { dirty?: boolean | null }).dirty ?? null,
-    testsSummary: JSON.stringify(vs.tests).slice(0, 200),
-  };
-  budget -= JSON.stringify(vitals).length;
-
-  // 3. Skills — trigger matching against the task. Small per entry, but the
+  // 1. Skills — trigger matching against the task. Small per entry, but the
   //    count is unbounded, so each one is admitted against the budget.
   const skills: ComposedContext['skills'] = [];
 
-  // The gated skill is admitted first and unconditionally — it is required, not
-  // offered, so it must not depend on a trigger happening to match.
+  // The gated skill is composed first — it is required, not offered, so it
+  // must not depend on a trigger happening to match — but it still goes
+  // through `admit()` like everything else. A miss here is `reason: 'floor'`
+  // (not thrown: only task/gate are load-bearing enough to abort the call).
   if (gate.required && gate.skill) {
     const gated = allSkills.find((skill) => skill.name === gate.skill);
     if (gated) {
@@ -506,8 +627,12 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
         score: 1,
         required: true,
       };
-      budget -= JSON.stringify(entry).length;
-      skills.push(entry);
+      const result = admit(entry);
+      if (result.ok) {
+        skills.push(entry);
+      } else {
+        evicted.push({ section: `skills:${gated.name}`, cost: result.cost, reason: 'floor' });
+      }
     }
   }
 
@@ -526,14 +651,27 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
       matchedTrigger: match.trigger,
       score: Number(match.score.toFixed(3)),
     };
-    if (!admit(entry)) {
-      truncated = true;
+    const result = admit(entry);
+    if (!result.ok) {
+      evicted.push({ section: `skills:${match.item.name}`, cost: result.cost, reason: 'budget' });
       break;
     }
     skills.push(entry);
   }
 
-  // 4. Knowledge — task keywords, optionally restricted to recipe categories.
+  // 2. Plan slice — the most task-relevant thing in the pack, but no longer
+  //    unconditional: it goes through `admit()` like every other section.
+  let plan: ComposedContext['plan'] = null;
+  if (planCandidate) {
+    const result = admit(planCandidate);
+    if (result.ok) {
+      plan = planCandidate;
+    } else {
+      evicted.push({ section: 'plan', cost: result.cost, reason: 'budget' });
+    }
+  }
+
+  // 3. Knowledge — task keywords, optionally restricted to recipe categories.
   //    Entry bodies are arbitrarily long prose, so each is capped individually
   //    AND admitted against the remaining budget. Before this, five long
   //    entries could consume the whole pack and leave nothing for docs.
@@ -554,38 +692,114 @@ export async function getContextTool(ctx: BrainContext, input: GetContextInput):
 
     for (const match of candidates) {
       if (match.body.length > KNOWLEDGE_BODY_CAP) {
+        const before = countTokens(match.body);
         match.body = `${match.body.slice(0, KNOWLEDGE_BODY_CAP).trimEnd()}…`;
-        truncated = true;
+        evicted.push({ section: `knowledge:${match.title}`, cost: before - countTokens(match.body), reason: 'budget' });
       }
-      if (!admit(match)) {
-        truncated = true;
+      const result = admit(match);
+      if (!result.ok) {
+        evicted.push({ section: `knowledge:${match.title}`, cost: result.cost, reason: 'budget' });
         break;
       }
       knowledge.push(match);
     }
   }
 
-  // 5. Recipe-named docs — whatever budget survives the sections above.
+  // 4. Recipe-named docs — whatever budget survives the sections above. Cut
+  //    at a paragraph/heading boundary rather than a raw byte prefix landing
+  //    mid-sentence (P0.5): a half sentence is worse than an absence, because
+  //    the agent cannot tell it happened.
   const docs: ComposedContext['docs'] = [];
   for (const docFile of recipe?.docs ?? []) {
     const docPath = path.join(ctx.docsDir, docFile);
     if (!(await fs.pathExists(docPath))) continue;
 
+    const content = await fs.readFile(docPath, 'utf-8');
+    const section = `docs:${docFile}`;
+
     if (budget <= 0) {
-      truncated = true;
-      break;
+      evicted.push({ section, cost: countTokens(content), reason: 'budget' });
+      continue;
     }
 
-    const content = await fs.readFile(docPath, 'utf-8');
-    const excerpt = content.length > budget ? content.slice(0, budget) : content;
-    if (excerpt.length < content.length) truncated = true;
-    if (excerpt.length > 0) {
-      docs.push({ file: docFile, excerpt });
-      budget -= excerpt.length;
+    const full = admit({ file: docFile, excerpt: content });
+    if (full.ok) {
+      docs.push({ file: docFile, excerpt: content });
+      continue;
     }
+
+    // Reserve room for the wrapping `{file, excerpt}` shape, then cut the
+    // excerpt at a boundary and re-verify — the char heuristic inside
+    // `truncateDocToBudget` is a starting point, not a guarantee.
+    const overhead = countTokens(JSON.stringify({ file: docFile, excerpt: '' }));
+    let target = budget - overhead;
+    let excerpt = truncateDocToBudget(content, target);
+    let entry = { file: docFile, excerpt };
+    let attempt = admit(entry);
+    while (!attempt.ok && excerpt.length > 0) {
+      target = Math.floor(target * 0.9);
+      excerpt = truncateDocToBudget(content, target);
+      entry = { file: docFile, excerpt };
+      attempt = admit(entry);
+    }
+
+    if (excerpt.length === 0) {
+      evicted.push({ section, cost: full.cost, reason: 'budget' });
+      continue;
+    }
+
+    docs.push(entry);
+    evicted.push({ section, cost: countTokens(content) - countTokens(excerpt), reason: 'budget' });
   }
 
-  return { task: input.task, agent: input.agent ?? null, gate, plan, knowledge, skills, vitals, docs, truncated };
+  // 5. Vitals digest — last, deliberately (P0.4). It is the least stable
+  //    section (branch/dirty/test counts change with every commit) and among
+  //    the least useful, so it sits where its churn cannot shift the cut
+  //    point for anything else or defeat prefix caching upstream. Read from
+  //    the cached snapshot `nexus sync` writes (B1) — context assembly makes
+  //    no execa call and no live test run (B4). durationMs never appears
+  //    (P0.4): a wall-clock value would make two identical calls diverge.
+  const cachedVitals = await readCachedVitalSigns(ctx);
+  let vitals: ComposedContext['vitals'] = {
+    branch: cachedVitals?.git.branch ?? null,
+    dirty: cachedVitals?.git.isDirty ?? null,
+    testsSummary: summarizeTests(cachedVitals?.tests),
+  };
+  const vitalsResult = admit(vitals);
+  if (!vitalsResult.ok) {
+    evicted.push({ section: 'vitals', cost: vitalsResult.cost, reason: 'floor' });
+    // Degrade to a placeholder rather than drop the field — `vitals` is
+    // always present in the pack's shape — without charging it further; at
+    // this point the budget is exhausted by construction.
+    vitals = { branch: null, dirty: null, testsSummary: 'omitted — over budget' };
+  }
+
+  const used = maxTokens - budget;
+
+  return {
+    contract_version: CONTRACT_VERSION,
+    task: input.task,
+    agent: input.agent ?? null,
+    gate,
+    skills,
+    plan,
+    knowledge,
+    docs,
+    vitals,
+    truncated: evicted.length > 0,
+    evicted,
+    budget: { maxTokens, used, remaining: budget },
+  };
+}
+
+/** Read the cached vital signs `nexus sync` wrote (B1). Never runs sensors. */
+async function readCachedVitalSigns(ctx: BrainContext): Promise<VitalSigns | null> {
+  try {
+    const raw = await fs.readFile(path.join(ctx.nexusDir, 'state', 'last-sync.json'), 'utf-8');
+    return JSON.parse(raw) as VitalSigns;
+  } catch {
+    return null;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────
