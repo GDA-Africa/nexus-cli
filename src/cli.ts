@@ -22,6 +22,7 @@ import {
 import { brainCommand } from './commands/brain.js';
 import { briefCommand } from './commands/brief.js';
 import { consolidateCommand } from './commands/consolidate.js';
+import { contextCommand } from './commands/context.js';
 import { doctorCommand } from './commands/doctor.js';
 import { initCommand } from './commands/init.js';
 import { mcpCommand } from './commands/mcp.js';
@@ -275,6 +276,9 @@ program.addCommand(doctorCommand());
 // ── nexus brief ───────────────────────────────────────────────
 program.addCommand(briefCommand());
 
+// ── nexus context ─────────────────────────────────────────────
+program.addCommand(contextCommand());
+
 // ── nexus consolidate ─────────────────────────────────────────
 program.addCommand(consolidateCommand());
 
@@ -330,10 +334,27 @@ function isMcpInvocation(): boolean {
   return process.argv[2] === 'mcp';
 }
 
+/**
+ * `nexus context --json` exists so a harness with no MCP server — a shell
+ * script, a CI job, a local-model wrapper — can pipe stdout straight into
+ * JSON parsing (`nexus-harness-work.md` §2.3: "the wrapper script fetches
+ * the pack and prepends it"). The auto-invoke banner and update notice both
+ * write plain text to that same stdout, which breaks exactly that use case
+ * the same way it would for `nexus mcp` — so it gets the same carve-out.
+ */
+function isJsonContextInvocation(): boolean {
+  return process.argv[2] === 'context' && process.argv.includes('--json');
+}
+
+/** Stdout must stay clean of anything but the command's own output. */
+function needsCleanStdout(): boolean {
+  return isMcpInvocation() || isJsonContextInvocation();
+}
+
 async function runWithUpdateCheck(): Promise<void> {
   // Fire update check in background — does not block CLI startup.
-  // Skipped entirely for `nexus mcp` (stdout must stay protocol-clean).
-  const updatePromise = isMcpInvocation() ? Promise.resolve(null) : checkForUpdate(4000);
+  // Skipped entirely when stdout must stay protocol-clean.
+  const updatePromise = needsCleanStdout() ? Promise.resolve(null) : checkForUpdate(4000);
 
   program.hook('preAction', async (_thisCommand, actionCommand) => {
     await runAutoInvokePre(actionCommand);
@@ -356,7 +377,7 @@ async function runWithUpdateCheck(): Promise<void> {
 void runWithUpdateCheck();
 
 async function runAutoInvokePre(actionCommand: Command): Promise<void> {
-  if (isMcpInvocation()) return;
+  if (needsCleanStdout()) return;
 
   const cwd = process.cwd();
   const nexusDir = getNexusDir(cwd);
@@ -468,7 +489,7 @@ async function runSilentAutoActions(
 }
 
 async function runAutoInvokePost(actionCommand: Command): Promise<void> {
-  if (isMcpInvocation()) return;
+  if (needsCleanStdout()) return;
 
   const cwd = process.cwd();
   const nexusDir = getNexusDir(cwd);
