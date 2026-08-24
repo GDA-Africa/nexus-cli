@@ -1,6 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import {
+  assumedOrientationReads,
+  DEFAULT_ORIENTATION_BUDGET,
+  loadHarnessesConfig,
+  resolveFileForHarness,
+  type HarnessesConfig,
+} from '../../harnesses/index.js';
 import type { DoctorCheck, DoctorContext, DoctorFinding } from '../types.js';
 
 /**
@@ -19,10 +26,23 @@ import type { DoctorCheck, DoctorContext, DoctorFinding } from '../types.js';
  *
  * This check measures rather than asserts, in the v1.2 idiom.
  *
- * **It reports per file, not per project.** The six tool files are loaded by
- * six different harnesses — Cursor reads `.cursorrules`, Claude reads
- * `CLAUDE.md` — so a session pays for one of them, not their sum. Summing them
- * would produce a scary number that no agent ever actually pays.
+ * **The per-file check below reports per file, not per project.** The six
+ * tool files are loaded by six different harnesses — Cursor reads
+ * `.cursorrules`, Claude reads `CLAUDE.md` — so a session pays for one of
+ * them, not their sum. Summing all six would produce a scary number no agent
+ * ever actually pays.
+ *
+ * **But the file a harness loads is not everything it pays for.** Measured
+ * on this repo: `CLAUDE.md` alone is comfortably under the per-file budget,
+ * while `CLAUDE.md` + the two files its own protocol tells the agent to read
+ * (`.nexus/docs/index.md`, `.nexus/docs/knowledge.md`) is ~64 KB — a 4x
+ * overflow of Ollama's 4,096-token default, which truncates silently and
+ * keeps the *tail*, so a small local model never sees `CLAUDE.md` at all
+ * (`nexus-harness-work.md` §1). `checkProjectTotals` below is that second
+ * measurement: per configured harness (or a sensible default absent
+ * `.nexus/harnesses.yml`), the file it loads plus whatever that file's own
+ * content structurally claims to instruct reading, against that harness's
+ * declared `orientation_budget`.
  */
 
 /** Files a harness loads automatically, with no pointer and no choice. */
@@ -111,9 +131,101 @@ export const D14_context_load: DoctorCheck = {
       });
     }
 
+    findings.push(...(await checkProjectTotals(ctx)));
+
     return findings;
   },
 };
+
+/**
+ * Project-total orientation check — see the module doc for why the per-file
+ * check above is not enough on its own.
+ *
+ * For each harness declared in `.nexus/harnesses.yml` (or, absent the file,
+ * for each of `ALWAYS_LOADED` under `DEFAULT_ORIENTATION_BUDGET`), sums that
+ * harness's generated file with whatever it structurally claims to instruct
+ * reading (`assumedOrientationReads`, decoded from the `<!--nexus-reads:…-->`
+ * marker `ai-config.ts` writes) and compares against the declared budget.
+ *
+ * A harness with no file of its own — a bare model target reached only
+ * through `nexus context`, never through an auto-loaded file — is skipped:
+ * there is nothing on disk to measure.
+ */
+async function checkProjectTotals(ctx: DoctorContext): Promise<DoctorFinding[]> {
+  const findings: DoctorFinding[] = [];
+
+  let harnesses: HarnessesConfig | null;
+  try {
+    harnesses = await loadHarnessesConfig(path.join(ctx.cwd, '.nexus'));
+  } catch (err) {
+    // A malformed config is worth surfacing, but should not abort the rest
+    // of doctor — report it as its own finding and stop this sub-check here.
+    findings.push({
+      id: 'D14',
+      severity: 'error',
+      description: `.nexus/harnesses.yml is invalid: ${err instanceof Error ? err.message : String(err)}`,
+      fixHint:
+        'Fix the YAML, or remove .nexus/harnesses.yml — absent, NEXUS falls back to unbounded, ' +
+        'today-identical generation.',
+    });
+    return findings;
+  }
+
+  const targets: Array<{ harnessId: string | null; file: string; budgetBytes: number }> = harnesses
+    ? Object.keys(harnesses.harnesses).flatMap((harnessId) => {
+        const file = resolveFileForHarness(harnesses, harnessId);
+        return file
+          ? [{ harnessId, file, budgetBytes: harnesses.harnesses[harnessId].orientation_budget }]
+          : [];
+      })
+    : ALWAYS_LOADED.map((file) => ({ harnessId: null, file, budgetBytes: DEFAULT_ORIENTATION_BUDGET }));
+
+  for (const target of targets) {
+    let content: string;
+    try {
+      content = await fs.readFile(path.join(ctx.cwd, target.file), 'utf-8');
+    } catch {
+      continue; // This harness's file does not exist in this project.
+    }
+
+    let totalBytes = Buffer.byteLength(content, 'utf-8');
+    const alsoReads: string[] = [];
+
+    for (const docRelPath of assumedOrientationReads(content)) {
+      try {
+        const docStat = await fs.stat(path.join(ctx.cwd, docRelPath));
+        totalBytes += docStat.size;
+        alsoReads.push(docRelPath);
+      } catch {
+        // The file claims to point at this doc, but it does not exist —
+        // nothing to add.
+      }
+    }
+
+    if (totalBytes <= target.budgetBytes) continue;
+
+    const label = target.harnessId ? `harness "${target.harnessId}"` : target.file;
+    const breakdown = alsoReads.length > 0 ? `${target.file} + ${alsoReads.join(' + ')}` : target.file;
+
+    findings.push({
+      id: 'D14',
+      severity: ctx.strict ? 'error' : 'warn',
+      description:
+        `Project-total orientation for ${label} is ${kb(totalBytes)} (${breakdown}), over its ` +
+        `${kb(target.budgetBytes)} orientation budget. Everything the agent's own protocol reads before ` +
+        'doing anything must fit, not just the instruction file by itself.',
+      fixHint: target.harnessId
+        ? `${target.file} still points at ${alsoReads.join(' and ') || 'large brain files'} for this budget. ` +
+          'Either raise .nexus/harnesses.yml\'s orientation_budget for this harness if the window actually ' +
+          'supports it, or set its tool_calling to unreliable/none so `nexus upgrade` generates a ' +
+          'self-contained file instead of one that points at them.'
+        : 'Declare .nexus/harnesses.yml with an orientation_budget for the harnesses this project targets, ' +
+          'then run `nexus upgrade` to regenerate within it.',
+    });
+  }
+
+  return findings;
+}
 
 /**
  * Files within 2% of each other in size are almost certainly the same content.
