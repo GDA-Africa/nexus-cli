@@ -236,3 +236,66 @@ harnesses:
     expect(configError?.severity).toBe('error');
   });
 });
+
+describe('D14 project-total: MCP pack path', () => {
+  let tmpDir: string;
+  let ctx: DoctorContext;
+
+  beforeEach(async () => {
+    tmpDir = path.join(os.tmpdir(), `nexus-d14-mcp-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await fs.mkdir(path.join(tmpDir, '.nexus', 'docs'), { recursive: true });
+    ctx = { cwd: tmpDir, vitalSigns: null, plans: [], activePlans: null };
+    // A brain far too large to orient on by hand.
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'index.md'), 'x'.repeat(300_000));
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'knowledge.md'), 'y'.repeat(300_000));
+    await fs.writeFile(
+      path.join(tmpDir, 'CLAUDE.md'),
+      '# small\n<!--nexus-reads:.nexus/docs/index.md,.nexus/docs/knowledge.md-->\n',
+    );
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const total = (findings: Awaited<ReturnType<typeof D14_context_load.run>>) =>
+    findings.find((f) => f.description.startsWith('Project-total'));
+
+  it('charges a bounded pack, not the brain files, when MCP is configured', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, '.mcp.json'),
+      JSON.stringify({ mcpServers: { 'nexus-brain': { command: 'npx', args: ['-y', '@nexus-framework/cli', 'mcp'] } } }),
+    );
+
+    // 600 KB of brain, but with MCP the agent orients through one capped
+    // pack, so nothing over-budget reaches the window and D14 stays silent.
+    expect(total(await D14_context_load.run(ctx))).toBeUndefined();
+  });
+
+  it('still reports when the instruction file alone plus a pack exceeds budget', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, '.mcp.json'),
+      JSON.stringify({ mcpServers: { 'nexus-brain': { command: 'npx' } } }),
+    );
+    await fs.writeFile(path.join(tmpDir, 'CLAUDE.md'), 'x'.repeat(20 * 1024));
+
+    const found = total(await D14_context_load.run(ctx));
+    expect(found?.description ?? '').toContain('nexus_get_context pack');
+    expect(found?.description ?? '').not.toContain('index.md');
+  });
+
+  it('falls back to charging the brain files when MCP is absent', async () => {
+    const found = total(await D14_context_load.run(ctx));
+    expect(found?.description ?? '').toContain('index.md');
+  });
+
+  it('ignores an .mcp.json that declares no nexus server', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, '.mcp.json'),
+      JSON.stringify({ mcpServers: { 'something-else': { command: 'x' } } }),
+    );
+
+    const found = total(await D14_context_load.run(ctx));
+    expect(found?.description ?? '').toContain('index.md');
+  });
+});

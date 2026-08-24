@@ -160,6 +160,40 @@ export const D14_context_load: DoctorCheck = {
  * through `nexus context`, never through an auto-loaded file — is skipped:
  * there is nothing on disk to measure.
  */
+/**
+ * Default `maxTokens` for a context pack, mirrored from `mcp/tools.ts`, and
+ * the byte estimate D14 charges for it.
+ *
+ * When the MCP server is configured, orientation is the always-loaded
+ * instruction file plus ONE bounded pack — not the brain files. The pack
+ * composes docs only from a named agent's `context.docs` recipe, and every
+ * section passes through `admit()`, so its size is capped by construction
+ * regardless of how large `index.md` or `knowledge.md` grow. Charging the
+ * brain files on this path measures a fallback that never runs.
+ */
+const PACK_DEFAULT_MAX_TOKENS = 3000;
+const PACK_BYTES_ESTIMATE = PACK_DEFAULT_MAX_TOKENS * 4;
+
+/**
+ * Whether this project wires up the NEXUS MCP server. Structural: the
+ * presence of a server entry in `.mcp.json`, not prose in an instruction
+ * file that an agent could phrase around.
+ */
+async function mcpIsConfigured(cwd: string): Promise<boolean> {
+  try {
+    const raw = await fs.readFile(path.join(cwd, '.mcp.json'), 'utf-8');
+    const parsed: unknown = JSON.parse(raw);
+    const servers =
+      parsed && typeof parsed === 'object'
+        ? (parsed as { mcpServers?: Record<string, unknown> }).mcpServers
+        : undefined;
+    if (!servers) return false;
+    return Object.keys(servers).some((name) => name.includes('nexus'));
+  } catch {
+    return false;
+  }
+}
+
 async function checkProjectTotals(ctx: DoctorContext): Promise<DoctorFinding[]> {
   const findings: DoctorFinding[] = [];
 
@@ -189,6 +223,8 @@ async function checkProjectTotals(ctx: DoctorContext): Promise<DoctorFinding[]> 
       })
     : ALWAYS_LOADED.map((file) => ({ harnessId: null, file, budgetBytes: DEFAULT_ORIENTATION_BUDGET }));
 
+  const packPath = await mcpIsConfigured(ctx.cwd);
+
   for (const target of targets) {
     let content: string;
     try {
@@ -200,7 +236,15 @@ async function checkProjectTotals(ctx: DoctorContext): Promise<DoctorFinding[]> 
     let totalBytes = Buffer.byteLength(content, 'utf-8');
     const alsoReads: string[] = [];
 
-    for (const docRelPath of assumedOrientationReads(content)) {
+    // With MCP configured, the agent orients through one bounded pack, so
+    // brain-file size does not reach the context window. Charge the pack's
+    // ceiling instead of files it will never read in full.
+    if (packPath) {
+      totalBytes += PACK_BYTES_ESTIMATE;
+      alsoReads.push(`one nexus_get_context pack (<=${PACK_DEFAULT_MAX_TOKENS} tokens)`);
+    }
+
+    for (const docRelPath of packPath ? [] : assumedOrientationReads(content)) {
       try {
         const docStat = await fs.stat(path.join(ctx.cwd, docRelPath));
         totalBytes += docStat.size;
