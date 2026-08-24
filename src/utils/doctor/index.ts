@@ -42,22 +42,41 @@ export interface RunDoctorOptions {
   minSeverity?: DoctorSeverity;
 }
 
+/**
+ * B6: D07 and D11 both scan Evidence on `done` plans; a plan whose Evidence
+ * section is missing, empty, or a placeholder fires both, double-reporting
+ * one fault. Drop the D11 finding for any plan D07 already flagged in this
+ * same run. Correlates on `planId` — a structural fact each check already
+ * attaches — never on parsing either finding's description text (§18 #5).
+ *
+ * Each check's own `.run()` is untouched by this: it fires exactly as before
+ * in isolation. This only trims the combined report a caller actually sees.
+ */
+function dedupeD11AgainstD07(findings: DoctorFinding[]): DoctorFinding[] {
+  const flaggedByD07 = new Set(
+    findings.filter((f) => f.id === 'D07' && f.planId).map((f) => f.planId as string),
+  );
+  if (flaggedByD07.size === 0) return findings;
+
+  return findings.filter((f) => !(f.id === 'D11' && f.planId && flaggedByD07.has(f.planId)));
+}
+
 export async function runDoctor(
   ctx: DoctorContext,
   options: RunDoctorOptions = {}
 ): Promise<DoctorReport> {
   const checksToRun = options.checks ?? DEFAULT_CHECKS;
   const minWeight = SEVERITY_WEIGHT[options.minSeverity ?? 'info'];
-  const allFindings: DoctorFinding[] = [];
+
+  // B2: collect every finding, unfiltered by severity — filtering here (as
+  // the old code did) meant the summary only ever reflected what survived
+  // the filter, so `--severity error` silently zeroed out warnings and the
+  // exit code with them.
+  let allFindings: DoctorFinding[] = [];
 
   for (const check of checksToRun) {
     try {
-      const findings = await check.run(ctx);
-      for (const finding of findings) {
-        if (SEVERITY_WEIGHT[finding.severity] >= minWeight) {
-          allFindings.push(finding);
-        }
-      }
+      allFindings.push(...(await check.run(ctx)));
     } catch (err) {
       allFindings.push({
         id: 'D-INTERNAL',
@@ -67,6 +86,8 @@ export async function runDoctor(
     }
   }
 
+  allFindings = dedupeD11AgainstD07(allFindings);
+
   allFindings.sort((a, b) => {
     if (SEVERITY_WEIGHT[a.severity] !== SEVERITY_WEIGHT[b.severity]) {
       return SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity];
@@ -74,14 +95,17 @@ export async function runDoctor(
     return a.id.localeCompare(b.id);
   });
 
-  return {
-    findings: allFindings,
-    summary: {
-      info: allFindings.filter((f) => f.severity === 'info').length,
-      warn: allFindings.filter((f) => f.severity === 'warn').length,
-      error: allFindings.filter((f) => f.severity === 'error').length,
-    },
+  // B2: the summary is the true, unfiltered count — `--severity` is a
+  // display filter on `findings` below, never an exit-code override.
+  const summary = {
+    info: allFindings.filter((f) => f.severity === 'info').length,
+    warn: allFindings.filter((f) => f.severity === 'warn').length,
+    error: allFindings.filter((f) => f.severity === 'error').length,
   };
+
+  const findings = allFindings.filter((f) => SEVERITY_WEIGHT[f.severity] >= minWeight);
+
+  return { findings, summary };
 }
 
 export * from './types.js';

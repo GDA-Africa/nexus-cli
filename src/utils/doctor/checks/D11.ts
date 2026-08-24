@@ -6,6 +6,23 @@
  * verification gate behind the test-writer agent: skipping verification
  * is visible, not impossible.
  *
+ * B6: D07 also scans Evidence on `done` plans, and a plan with a missing or
+ * placeholder Evidence section fires both checks — one fault, two findings.
+ * D11's own verdict here is unchanged (each check is independently correct
+ * and independently tested in isolation); the dedupe lives in `runDoctor`
+ * (`doctor/index.ts`), which drops a D11 finding when a D07 finding already
+ * fired for the same `planId` in the same run. That keeps each check's
+ * `.run()` a pure function of its own signal, and the "one fault, one
+ * finding" guarantee scoped to where a caller actually sees the combined
+ * report.
+ *
+ * NOTE (B5, tracked separately, not fixed here): `EVIDENCE_SIGNALS` below is
+ * still a keyword sniff over agent-written prose — exactly the defect
+ * `skills/gate.ts`'s header disavows ("D11 v1 already shipped a keyword
+ * sniff... and it was gameable by exactly the agent it targeted"). Track B
+ * replaces this with machine evidence; until it lands, do not copy this
+ * pattern elsewhere.
+ *
  * Spec: v1_1_contextualized_agents.md §3
  */
 
@@ -52,6 +69,7 @@ export const D11_unverified_done: DoctorCheck = {
         fixHint:
           'Add test evidence via `nexus plan note` (the test-writer agent records pass counts), ' +
           'or record an explicit waiver: `nexus plan note <id> "WAIVER: tests skipped because …"`.',
+        planId: plan.id,
       });
     }
 

@@ -10,7 +10,7 @@ export const D07_plan_orphan: DoctorCheck = {
   description: 'Checks if any done plan lacks Evidence',
   async run(ctx: DoctorContext): Promise<DoctorFinding[]> {
     const findings: DoctorFinding[] = [];
-    
+
     for (const plan of ctx.plans) {
       if (plan.status !== 'done') continue;
 
@@ -21,18 +21,19 @@ export const D07_plan_orphan: DoctorCheck = {
       } catch {
         continue;
       }
-      
+
       try {
         const doc = parsePlanContent(content);
         const evSection = doc.sections.find(s => s.heading.toLowerCase().includes('evidence'));
-        
+
         const evText = evSection?.content.trim() ?? '';
-        if (!evSection || evText === '' || evText.includes('_(to be filled)')) {
+        if (!evSection || evText === '' || evText.includes('_(to be filled)_')) {
           findings.push({
             id: 'D07',
             severity: 'warn',
             description: `Plan "${plan.title}" is done but has no Evidence recorded.`,
             fixHint: 'Edit the plan file and add commit hashes, PR links, or test results to the Evidence section.',
+            planId: plan.id,
           });
         }
       } catch {

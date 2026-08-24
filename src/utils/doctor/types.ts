@@ -9,6 +9,12 @@ export interface DoctorFinding {
   description: string;
   fixHint?: string;
   autoFixable?: boolean;
+  /**
+   * Plan id this finding is about, when it is about one plan. Structural
+   * correlation key (never prose-parsed) — e.g. B6 uses it to dedupe D11
+   * against D07 when both fire for the same plan.
+   */
+  planId?: string;
 }
 
 export interface DoctorContext {

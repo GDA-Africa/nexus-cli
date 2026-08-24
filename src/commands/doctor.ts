@@ -6,10 +6,22 @@ import { Command } from 'commander';
 import { getNexusDir } from '../utils/brain.js';
 import { buildDoctorContext } from '../utils/doctor/context.js';
 import { DEFAULT_CHECKS, runDoctor } from '../utils/doctor/index.js';
-import type { DoctorReport, DoctorSeverity } from '../utils/doctor/types.js';
+import type { DoctorCheck, DoctorReport, DoctorSeverity } from '../utils/doctor/types.js';
 import { logger } from '../utils/logger.js';
 
 import { syncCommand } from './sync.js';
+
+export interface RunDoctorCommandOptions {
+  severity?: DoctorSeverity;
+  fix?: boolean;
+  json?: boolean;
+  strict?: boolean;
+}
+
+export interface DoctorRunResult {
+  report: DoctorReport;
+  exitCode: number;
+}
 
 export function doctorCommand() {
   const doctor = new Command('doctor')
@@ -27,43 +39,73 @@ export function doctorCommand() {
         process.exit(1);
       }
 
-      // 1. Gather context
-      const ctx = await buildDoctorContext(cwd, nexusDir, { strict: options.strict === true });
-
-      // 2. Run checks
-      const doctorConfig = await readDoctorConfig(nexusDir);
-      const checks = DEFAULT_CHECKS.filter((check) => !doctorConfig.disabledChecks.includes(check.id));
-      const report = await runDoctor(ctx, {
-        checks,
-        minSeverity: options.severity as DoctorSeverity,
+      const { exitCode } = await runDoctorCommand(cwd, nexusDir, {
+        severity: options.severity as DoctorSeverity,
+        fix: options.fix === true,
+        json: options.json === true,
+        strict: options.strict === true,
       });
 
-      // 3. Output
-      if (options.json) {
-        console.log(JSON.stringify(report, null, 2));
-      } else {
-        renderReport(report);
-      }
-
-      await persistDoctorReport(nexusDir, report);
-
-      // 4. Handle fix
-      if (options.fix) {
-        const autoFixable = report.findings.filter(f => f.autoFixable);
-        if (autoFixable.length > 0) {
-          logger.info(`Found ${autoFixable.length} auto-fixable issues. Applying...`);
-          if (autoFixable.some((finding) => finding.id === 'D08')) {
-            await syncCommand(cwd, { write: true });
-            logger.success('Auto-fix complete: Vital Signs refreshed via `nexus sync`.');
-          }
-        }
-      }
-
-      // 5. Exit Code
-      process.exit(highestSeverityExitCode(report));
+      process.exit(exitCode);
     });
 
   return doctor;
+}
+
+/**
+ * The doctor command's core: build context, run checks, render, optionally
+ * fix, persist, and compute the exit code. Exported (and taking an
+ * already-resolved `nexusDir` rather than re-deriving it) so it is directly
+ * testable without going through Commander or mocking `process.exit`.
+ */
+export async function runDoctorCommand(
+  cwd: string,
+  nexusDir: string,
+  options: RunDoctorCommandOptions,
+): Promise<DoctorRunResult> {
+  const strict = options.strict === true;
+  const minSeverity = options.severity ?? 'info';
+
+  const doctorConfig = await readDoctorConfig(nexusDir);
+  const checks = DEFAULT_CHECKS.filter((check) => !doctorConfig.disabledChecks.includes(check.id));
+
+  const ctx = await buildDoctorContext(cwd, nexusDir, { strict });
+  let report = await runDoctor(ctx, { checks, minSeverity });
+
+  render(report, options.json === true);
+
+  // B3: `--fix` used to run after the report (and the exit code) were
+  // already finalized, so a successful fix still exited 1 — the report it
+  // fixed was stale by the time the process exited. Recompute afterward so
+  // the exit code (and the persisted report) reflect what actually remains.
+  if (options.fix === true) {
+    report = await applyFixesAndRecompute(cwd, nexusDir, checks, minSeverity, strict, report);
+  }
+
+  await persistDoctorReport(nexusDir, report);
+
+  return { report, exitCode: highestSeverityExitCode(report) };
+}
+
+async function applyFixesAndRecompute(
+  cwd: string,
+  nexusDir: string,
+  checks: DoctorCheck[],
+  minSeverity: DoctorSeverity,
+  strict: boolean,
+  report: DoctorReport,
+): Promise<DoctorReport> {
+  const autoFixable = report.findings.filter((f) => f.autoFixable);
+  if (autoFixable.length === 0) return report;
+
+  logger.info(`Found ${autoFixable.length} auto-fixable issues. Applying...`);
+  if (autoFixable.some((finding) => finding.id === 'D08')) {
+    await syncCommand(cwd, { write: true });
+    logger.success('Auto-fix complete: Vital Signs refreshed via `nexus sync`.');
+  }
+
+  const postFixCtx = await buildDoctorContext(cwd, nexusDir, { strict });
+  return runDoctor(postFixCtx, { checks, minSeverity });
 }
 
 async function persistDoctorReport(nexusDir: string, report: DoctorReport): Promise<void> {
@@ -102,6 +144,14 @@ async function readDoctorConfig(nexusDir: string): Promise<{ disabledChecks: str
   } catch {
     return { disabledChecks: [] };
   }
+}
+
+function render(report: DoctorReport, json: boolean): void {
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  renderReport(report);
 }
 
 function renderReport(report: DoctorReport) {
