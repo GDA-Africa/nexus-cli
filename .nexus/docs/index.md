@@ -5,7 +5,7 @@
 **Working Branch:** `main`  
 **Active Initiative:** 🚀 **v1.0 "Alive Brain"** + **Auto-Invoke Layer** — see [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md)  
 **Brain Layout:** v1.0 (hand-bootstrapped 2026-05-02 — `.nexus/plans/`, `.nexus/state/`, Vital Signs block)  
-**Coverage:** 663/663 tests passing across 51 files (unit + integration + e2e), measured 2026-08-24 via `npm test`
+**Coverage:** 762/762 tests passing across 57 files (unit + integration + e2e), measured 2026-08-24 via `npm test`
 
 ---
 
@@ -27,17 +27,49 @@ _Last sync: 2026-08-24T09:48:27.937Z · branch `main` · 0 commits ahead of main
 
 ## 🎯 Current Objective
 
-**Current phase:** 🟣 v1.2 — Provable Done (design drafted, awaiting Halton approval)
+**Current phase:** 🟢 Context Economics & Harness Profiles ("Track A" of
+`release-v1-2`, plus doctor hardening) — landed on `main` 2026-08-24, **not
+yet released to npm** (still v1.4.0; the version bump is a deliberate,
+separate step this project holds back on purpose).
 
-**State:** v1.1.2 is published on npm. No active plan. The v1.2 design
-(`../../../.nexus/docs/v1_2_provable_done.md`) and draft plan
+**What landed today (13 commits):** `nexus_get_context` moved from an
+unguarded char budget to a token budget with `admit()`-gated sections, a
+`ContextFloorOverflow` throw instead of a silently gutted pack, and
+`evicted[]`/`budget{}`/`contract_version` reporting; the generated protocol
+now tells agents to call `nexus_get_context` first instead of contradicting
+itself and sending them to read `index.md` + `knowledge.md` in full; a new
+optional `.nexus/harnesses.yml` lets a project declare each harness's
+context window and `orientation_budget`, and `toolInstructionContent`
+generates a structurally different (not just shorter) instruction file per
+profile — native-pointer, static-fallback, or the unchanged standard variant;
+`nexus context "<task>" --json --max-tokens=N` exposes the same composer
+with no MCP server required. Alongside that, 7 shipped bugs were fixed
+(`nexus doctor` could never exit 0 on a real project — D08/D02 were
+unreachable because nothing wrote `.nexus/state/last-sync.json`; `--severity
+error` silently zeroed the exit code; `doctor --fix` still exited 1 after a
+successful fix; D07/D11 double-reported one fault; D04 only counted entries,
+missing that `knowledge.md` is unusable by byte size long before it hits the
+entry threshold; D14 charged the brain-file fallback path even when MCP made
+it unreachable), and two new doctor checks shipped: **D15** (manifest
+declarations vs. observable repo facts — test framework, package manager,
+frameworks) and **D16** (artifact drift — plans dashboard / `_active.json`
+vs. plan files on disk). Doctor is now **16 checks, D01–D16**.
+
+**State:** No active plan is running this work — it landed directly.
+`.nexus/plans/` does hold open plans on disk (`release-v1-2`,
+`implement-v1-2-provable-done`, `bootstrap-nexus-cli-roadmap`) that the
+auto-generated `plans/index.md` dashboard does not list; that drift is
+exactly what the new D16 check exists to catch (see `knowledge.md`), and is
+left as-is here rather than hand-patched.
+
+**Next queued initiative — unchanged by today's work:** 🟣 v1.2 "Provable
+Done" (Track B of `release-v1-2`) — verify manifest, D11 v2, `doctor
+--strict` — design drafted, plan
 ([`implement-v1-2-provable-done`](../plans/implement-v1-2-provable-done.md))
-are ready for review — run `nexus plan start implement-v1-2-provable-done`
-after approval.
-
-**Why v1.2:** review session 2026-07-05 found D11 v1 is a gameable keyword
-regex ("tests skipped" passes), D09/D11 severities never gate CI, and
-evidence is unverifiable prose. v1.2 = machine evidence + `doctor --strict`.
+still `status: draft`, awaiting Halton approval. **Why:** review session
+2026-07-05 found D11 v1 is a gameable keyword regex ("tests skipped"
+passes), D09/D11 severities never gate CI, and evidence is unverifiable
+prose. v1.2 Provable Done = machine evidence + `doctor --strict`.
 
 ---
 
@@ -115,7 +147,8 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | `nexus pack [path]` | `src/commands/pack.ts` | Zip `.nexus/` into a portable `nexus-backup-<timestamp>.zip` |
 | `nexus unpack [path]` | `src/commands/pack.ts` | Extract a backup zip and verify the restored `.nexus/` structure |
 | `nexus update` | `src/commands/update.ts` | Check npm registry and auto-install the latest NEXUS CLI version |
-| `nexus mcp [path]` ⬅ **NEW v1.0.0** | `src/commands/mcp.ts` | Stdio MCP server — 13 schema-validated brain tools (`src/mcp/{context,tools,server}.ts`) for Claude Code, Codex, Cursor & any MCP client |
+| `nexus mcp [path]` ⬅ **NEW v1.0.0** | `src/commands/mcp.ts` | Stdio MCP server — 17 schema-validated brain tools (`src/mcp/{context,tools,server}.ts`) for Claude Code, Codex, Cursor & any MCP client |
+| `nexus context "<task>"` ⬅ **NEW 2026-08-24** | `src/commands/context.ts` | Same bounded context-pack composer as `nexus_get_context` (MCP), callable as a plain process — `--json`, `--max-tokens=N`, `--agent=<name>`; no MCP server required |
 
 ### Source Modules (src/)
 
@@ -254,6 +287,40 @@ Result: a project brain that not only records state but detects drift, tracks wo
 ---
 
 ## ✅ Progress Log
+
+- 2026-08-24 — ✅ Brain sync for 13 commits landed on `main` today (`053988e..2908abe`):
+  **Context economics** — `nexus_get_context` reworked to a token budget with
+  `admit()`-gated sections, `ContextFloorOverflow` on the floor, `evicted[]` /
+  `budget{}` / `contract_version` in the response, volatile `durationMs`
+  stripped and vitals moved last for cache-friendly ordering; generated
+  instruction files no longer tell agents to read `index.md` +
+  `knowledge.md` in full, `nexus_get_context(task)` is now the unambiguous
+  first step. **Harness profiles** — new optional `.nexus/harnesses.yml`
+  (window, `orientation_budget`, `tool_calling` per harness); `nexus upgrade`
+  now generates a structurally different instruction file per profile
+  (native-pointer / static-fallback / unchanged standard) instead of a
+  truncated one; new `nexus context "<task>" --json` composes the same pack
+  outside MCP. **7 bugs fixed**: `nexus doctor` could never exit 0 on a real
+  project (`last-sync.json` was never written — D08/D02 unreachable);
+  `--severity error` zeroed the exit code by filtering before the summary;
+  `doctor --fix` still exited 1 after a clean fix; D07/D11 double-reported
+  one Evidence fault; D04 only measured entry/line count, missing byte-size
+  blowup; D14 charged the brain-file fallback path even when MCP made it
+  unreachable; context assembly no longer shells out to run the test suite
+  on every call. **2 new doctor checks**: D15 (manifest declarations vs.
+  observable repo facts) and D16 (artifact drift — dashboards/pointers vs.
+  the files they roll up). Doctor is now 16 checks, D01–D16. 762/762 tests
+  passing across 57 files, `tsc --noEmit` clean. Updated this file's
+  Coverage line, Current Objective, and the `nexus mcp`/`nexus context` CLI
+  rows; appended knowledge.md entries for the non-obvious parts (below).
+  **Left alone, out of scope for this sync**: the `.nexus/plans/index.md`
+  dashboard drift and the manifest `packageManager: yarn` vs. `package-lock.json`
+  mismatch that a live `nexus doctor` run shows D16/D15 now catching —
+  neither was introduced by today's commits, and fixing the underlying data
+  wasn't part of this task. The Release History table's v1.2.0/v1.3.0/v1.4.0
+  gap (flagged by an earlier session today, see the knowledge entry below)
+  is likewise untouched — no version shipped in today's 13 commits, so
+  there was nothing new to log there.
 
 - 2026-08-24 — ✅ Populated the six template spec docs (`02_architecture`, `03_data_contracts`, `04_api_contracts`, `05_business_logic`, `06_test_strategy`, `08_deployment`) from live codebase inspection — all now `status: populated`, `confidence: high`. Measured current reality directly rather than trusting stale index numbers: 663/663 tests across 51 files (index previously said 334, release history said 456), 17 MCP tools (unchanged), 14 doctor checks D01–D14 (index/release-notes text still says "11"). Ran `nexus sync` to refresh the Vital Signs block. Found and logged to `knowledge.md`: (1) generated `CLAUDE.md` claims `yarn` as package manager but the repo actually uses `npm` throughout scripts/CI, (2) D01's placeholder-detection regex false-positives on any `[...]` in prose (markdown links, TS array types), (3) this index's Release History table is 3 versions behind — v1.2.0, v1.3.0, v1.4.0 shipped (per git tags) but were never logged here.
 
