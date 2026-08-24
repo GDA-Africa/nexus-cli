@@ -168,13 +168,18 @@ describe('alive brain lifecycle (v1.0 release gate)', () => {
     expect(summary).toContain('status: auto');
   });
 
-  it('doctor reports no errors on the fresh project', async () => {
+  it('doctor exits clean on the fresh project — no errors, no warnings', async () => {
     const { buildDoctorContext } = await import('../../src/utils/doctor/context.js');
     const { runDoctor } = await import('../../src/utils/doctor/index.js');
 
     const ctx = await buildDoctorContext(projectDir, path.join(projectDir, '.nexus'));
     const report = await runDoctor(ctx, { minSeverity: 'info' });
 
+    // B1: this used to tolerate D08 firing warn on every run — nothing wrote
+    // .nexus/state/last-sync.json, so vitalSigns was always null and doctor
+    // could never actually reach exit 0. `sync fills the Vital Signs block`
+    // above already ran `nexus sync`, which now persists that snapshot.
     expect(report.summary.error).toBe(0);
+    expect(report.summary.warn, JSON.stringify(report.findings, null, 2)).toBe(0);
   });
 });

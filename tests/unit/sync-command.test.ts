@@ -56,6 +56,24 @@ describe('syncCommand()', () => {
     expect(index).toContain('3 outdated · 1 vulnerable');
   });
 
+  it('persists the snapshot to .nexus/state/last-sync.json when write:true (B1)', async () => {
+    // Nothing else in src/ ever wrote this file — doctor/context.ts and
+    // brain-detector.ts both read it, so vitalSigns was always null and
+    // `nexus doctor` (D08) could never actually exit 0.
+    await syncCommand(tmpDir, { write: true });
+
+    const snapshot = await fs.readJson(path.join(tmpDir, '.nexus', 'state', 'last-sync.json'));
+    expect(snapshot.capturedAt).toBe('2026-05-02T16:00:00.000Z');
+    expect(snapshot.git.branch).toBe('main');
+    expect(snapshot.tests.passed).toBe(12);
+  });
+
+  it('does not persist the snapshot in dry-run mode', async () => {
+    await syncCommand(tmpDir, { dryRun: true });
+
+    expect(await fs.pathExists(path.join(tmpDir, '.nexus', 'state', 'last-sync.json'))).toBe(false);
+  });
+
   it('does not write file in dry-run mode', async () => {
     const before = await fs.readFile(path.join(tmpDir, '.nexus', 'docs', 'index.md'), 'utf-8');
 

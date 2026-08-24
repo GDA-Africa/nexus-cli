@@ -44,6 +44,11 @@ export async function syncCommand(
     return;
   }
 
+  // B1: persist the snapshot doctor (D02, D08) and nexus_get_context (B4)
+  // read. Nothing else in src/ ever wrote this file, so vitalSigns was
+  // always null downstream and `nexus doctor` could never exit 0.
+  await writeLastSyncSnapshot(nexusDir, vitalSigns);
+
   const indexPath = path.join(nexusDir, 'docs', 'index.md');
   const indexContent = await fs.readFile(indexPath, 'utf-8');
   const renderedBlock = renderVitalSignsBlock(vitalSigns);
@@ -101,6 +106,13 @@ function scopeVitalSigns(vitalSigns: VitalSigns, scope: NonNullable<SyncCommandO
     capturedAt: vitalSigns.capturedAt,
     [scope]: vitalSigns[scope],
   };
+}
+
+/** B1: write the sensor snapshot `doctor/context.ts` and `nexus_get_context` read. */
+async function writeLastSyncSnapshot(nexusDir: string, vitalSigns: VitalSigns): Promise<void> {
+  const stateDir = path.join(nexusDir, 'state');
+  await fs.ensureDir(stateDir);
+  await atomicWrite(path.join(stateDir, 'last-sync.json'), JSON.stringify(vitalSigns, null, 2));
 }
 
 async function atomicWrite(filePath: string, content: string): Promise<void> {
