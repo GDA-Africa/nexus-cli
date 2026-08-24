@@ -12,14 +12,14 @@
 <!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` -->
 ## 🩺 Vital Signs (auto)
 
-_Last sync: 2026-08-24T14:56:20.124Z · branch `integration` · 9 commits ahead of main · working tree dirty_
+_Last sync: 2026-08-24T09:48:27.937Z · branch `main` · 0 commits ahead of main · working tree dirty_
 
 | Sensor | Reading |
 |--------|---------|
-| Last commit | 5ce1a48 — Merge remote-tracking branch 'w2/feat/harness-profiles' into integration · Claude · 2 hours ago |
+| Last commit | 24abc92 — chore(nexus): populated nexus cli docs · Glenhalton · 20 minutes ago |
 | Tests | not yet measured |
 | Coverage | not collected · M1 sensor adds `vitest --coverage` parsing |
-| Stale folders | src/commands 0 days · src/utils 0 days · src/generators 0 days · tests/e2e 0 days · tests/unit 0 days · tests/integration 0 days |
+| Stale folders | src/commands 2 days · src/utils 0 days · src/generators 2 days · tests/e2e 75 days · tests/unit 0 days · tests/integration 113 days |
 | Packages | not yet measured |
 <!-- NEXUS:VITAL_SIGNS:END -->
 
