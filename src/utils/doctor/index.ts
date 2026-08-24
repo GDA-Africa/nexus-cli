@@ -12,6 +12,8 @@ import { D11_unverified_done } from './checks/D11.js';
 import { D12_chameleon_block_lost } from './checks/D12.js';
 import { D13_gated_plan_unaligned } from './checks/D13.js';
 import { D14_context_load } from './checks/D14.js';
+import { D15_manifest_invariants } from './checks/D15.js';
+import { D16_artifact_drift } from './checks/D16.js';
 import type { DoctorCheck, DoctorContext, DoctorFinding, DoctorReport, DoctorSeverity } from './types.js';
 
 const SEVERITY_WEIGHT: Record<DoctorSeverity, number> = {
@@ -35,6 +37,8 @@ export const DEFAULT_CHECKS: DoctorCheck[] = [
   D12_chameleon_block_lost,
   D13_gated_plan_unaligned,
   D14_context_load,
+  D15_manifest_invariants,
+  D16_artifact_drift,
 ];
 
 export interface RunDoctorOptions {
