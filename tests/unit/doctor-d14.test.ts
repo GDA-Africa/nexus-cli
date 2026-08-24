@@ -109,9 +109,14 @@ describe('D14 — project-total orientation check', () => {
     expect(findings.filter((f) => f.description.startsWith('Project-total'))).toEqual([]);
   });
 
-  it('fires absent harnesses.yml when the instruction file plus brain files exceed the default budget', async () => {
+  it('fires as info (not warn) absent harnesses.yml, even over the default budget', async () => {
     // Reproduces the measured real-world shape from nexus-harness-work.md §1:
     // a small instruction file, but the two brain files it points at are large.
+    // DEFAULT_ORIENTATION_BUDGET is a sensible fallback for *measurement*,
+    // not a budget the user declared — a fresh, unconfigured project must
+    // never fail its exit code over a number it never opted into. A real
+    // scaffold lands here too (~16.1-16.2 KB against the 16 KB default),
+    // which is exactly why this must stay info: zero warns on a fresh project.
     await writeInstruction('CLAUDE.md', 2 * 1024, 'full');
     await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'index.md'), 'x'.repeat(12 * 1024));
     await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'knowledge.md'), 'x'.repeat(12 * 1024));
@@ -119,10 +124,20 @@ describe('D14 — project-total orientation check', () => {
     const findings = await D14_context_load.run(ctx);
     const total = findings.find((f) => f.description.startsWith('Project-total'));
     expect(total).toBeDefined();
-    expect(total?.severity).toBe('warn');
+    expect(total?.severity).toBe('info');
     expect(total?.description).toContain('CLAUDE.md');
     expect(total?.description).toContain('index.md');
     expect(total?.description).toContain('knowledge.md');
+  });
+
+  it('stays info absent harnesses.yml even under --strict — strict only escalates a declared budget', async () => {
+    await writeInstruction('CLAUDE.md', 2 * 1024, 'full');
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'index.md'), 'x'.repeat(12 * 1024));
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'knowledge.md'), 'x'.repeat(12 * 1024));
+
+    const findings = await D14_context_load.run({ ...ctx, strict: true });
+    const total = findings.find((f) => f.description.startsWith('Project-total'));
+    expect(total?.severity).toBe('info');
   });
 
   it('does NOT sum in brain files when the instruction file structurally does not point at them', async () => {
@@ -170,10 +185,30 @@ harnesses:
     expect(findings.filter((f) => f.description.startsWith('Project-total'))).toEqual([]);
   });
 
-  it('escalates to error under --strict', async () => {
+  it('warns (not error) when a declared budget is exceeded, without --strict', async () => {
+    await writeHarnesses(`
+default: claude-code
+harnesses:
+  claude-code: { window: 4096, orientation_budget: 1500, tool_calling: native }
+`);
     await writeInstruction('CLAUDE.md', 2 * 1024, 'full');
-    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'index.md'), 'x'.repeat(12 * 1024));
-    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'knowledge.md'), 'x'.repeat(12 * 1024));
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'index.md'), 'x'.repeat(200));
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'knowledge.md'), 'x'.repeat(200));
+
+    const findings = await D14_context_load.run(ctx);
+    const total = findings.find((f) => f.description.startsWith('Project-total'));
+    expect(total?.severity).toBe('warn');
+  });
+
+  it('escalates to error under --strict when the exceeded budget was declared', async () => {
+    await writeHarnesses(`
+default: claude-code
+harnesses:
+  claude-code: { window: 4096, orientation_budget: 1500, tool_calling: native }
+`);
+    await writeInstruction('CLAUDE.md', 2 * 1024, 'full');
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'index.md'), 'x'.repeat(200));
+    await fs.writeFile(path.join(tmpDir, '.nexus', 'docs', 'knowledge.md'), 'x'.repeat(200));
 
     const findings = await D14_context_load.run({ ...ctx, strict: true });
     const total = findings.find((f) => f.description.startsWith('Project-total'));

@@ -43,6 +43,15 @@ import type { DoctorCheck, DoctorContext, DoctorFinding } from '../types.js';
  * `.nexus/harnesses.yml`), the file it loads plus whatever that file's own
  * content structurally claims to instruct reading, against that harness's
  * declared `orientation_budget`.
+ *
+ * **Severity of the project-total finding tracks whether the budget was
+ * ever declared.** Absent `.nexus/harnesses.yml`, `DEFAULT_ORIENTATION_BUDGET`
+ * is a fallback for measurement only — nobody opted into it — so an overage
+ * against it is `info` and never affects doctor's exit code, `--strict`
+ * included. Once a project declares `harnesses.yml`, an overage against a
+ * stated budget is `warn` (or `error` under `--strict`), same as any other
+ * check. "Visible, not impossible": a fresh, unconfigured `nexus init`
+ * project must produce zero warns for this.
  */
 
 /** Files a harness loads automatically, with no pointer and no choice. */
@@ -207,9 +216,17 @@ async function checkProjectTotals(ctx: DoctorContext): Promise<DoctorFinding[]> 
     const label = target.harnessId ? `harness "${target.harnessId}"` : target.file;
     const breakdown = alsoReads.length > 0 ? `${target.file} + ${alsoReads.join(' + ')}` : target.file;
 
+    // Severity depends on whether the budget was ever declared. Absent
+    // .nexus/harnesses.yml, DEFAULT_ORIENTATION_BUDGET is a sensible
+    // fallback for measurement, not something the user opted into — warning
+    // against a budget nobody declared would fail a fresh, healthy project
+    // (a fresh `nexus init` currently lands ~16.1-16.2 KB, just over the
+    // 16 KB default) for a number that carries no consequence. Once
+    // harnesses.yml exists, the budget is a stated intent and this becomes
+    // a real, actionable finding — visible, not impossible.
     findings.push({
       id: 'D14',
-      severity: ctx.strict ? 'error' : 'warn',
+      severity: !harnesses ? 'info' : ctx.strict ? 'error' : 'warn',
       description:
         `Project-total orientation for ${label} is ${kb(totalBytes)} (${breakdown}), over its ` +
         `${kb(target.budgetBytes)} orientation budget. Everything the agent's own protocol reads before ` +

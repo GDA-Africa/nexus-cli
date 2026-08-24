@@ -18,29 +18,11 @@ import { getContextTool, type ComposedContext } from '../mcp/tools.js';
 import { logger } from '../utils/logger.js';
 
 /**
- * Default token budget when `--max-tokens` is not given. Matches the
- * `composeContext({ task, agent?, maxTokens? })` contract in
- * `nexus-harness-work.md` §7, which defaults to 3000.
+ * Default token budget when `--max-tokens` is not given, for the `--help`
+ * text only — `getContextTool` applies this same default (and clamps to its
+ * own min/max) internally, so it is not resolved here.
  */
 const DEFAULT_MAX_TOKENS = 3000;
-
-/**
- * TODO(integration): workstream 1 owns `src/mcp/**` and is changing
- * `getContextTool`'s input/output contract in parallel — landing
- * `maxTokens` natively (replacing `maxChars`) and adding
- * `contract_version` / `evicted[]` / `budget{}` to `ComposedContext`
- * (nexus-harness-work.md §2.3, §7 step 5). Until that lands, this adapts a
- * token budget to today's `maxChars` contract with a fixed estimate rather
- * than inventing new composition logic here — `getContextTool` itself is
- * untouched. Reconcile this conversion (and the two additional input names,
- * `task`/`agent`, which already match) once `maxTokens` is native.
- *
- * The estimate is 4 bytes/token — consistent with the ~3.8 bytes/token
- * measured across this repo's own orientation files in
- * `nexus-assessment-v1.4.0.md` §2, rounded up so the byte cap this produces
- * is never tighter than the token budget the caller actually asked for.
- */
-const BYTES_PER_TOKEN_ESTIMATE = 4;
 
 export interface ComposeContextInput {
   task: string;
@@ -49,19 +31,20 @@ export interface ComposeContextInput {
 }
 
 /**
- * `composeContext({ task, agent?, maxTokens? })` — the composer NEXUS
- * exposes both to the MCP tool and to this command, coded against the
- * contract this command was specified against. See the TODO above for what
- * is and is not adapted today.
+ * `composeContext({ task, agent?, maxTokens? })` — a straight pass-through
+ * to `getContextTool`, the same composer `nexus_get_context` (MCP) uses.
+ * `maxTokens` is native on both sides of this call now (workstream 1
+ * landed it on `ComposeContextInput`/`ComposedContext`), so there is no
+ * conversion left to do here — kept as a named wrapper only because
+ * `nexus-harness-work.md` §2.3 specifies this command against that exact
+ * shape, not because it does anything `getContextTool` does not already do
+ * on its own.
  */
 export async function composeContext(
   ctx: BrainContext,
   input: ComposeContextInput,
 ): Promise<ComposedContext> {
-  const maxTokens = input.maxTokens ?? DEFAULT_MAX_TOKENS;
-  const maxChars = Math.round(maxTokens * BYTES_PER_TOKEN_ESTIMATE);
-
-  return getContextTool(ctx, { task: input.task, agent: input.agent, maxChars });
+  return getContextTool(ctx, { task: input.task, agent: input.agent, maxTokens: input.maxTokens });
 }
 
 export interface ContextCommandOptions {
@@ -137,8 +120,17 @@ function renderContextPretty(pack: ComposedContext): string {
     `Skills matched: ${pack.skills.length}`,
     `Knowledge entries: ${pack.knowledge.length}`,
     `Docs included: ${pack.docs.map((d) => d.file).join(', ') || 'none'}`,
-    `Truncated: ${pack.truncated ? 'yes — pack did not fully fit the budget' : 'no'}`,
+    `Budget: ${pack.budget.used}/${pack.budget.maxTokens} tokens used, ${pack.budget.remaining} remaining`,
+    `Truncated: ${pack.truncated ? 'yes — see evicted below' : 'no'}`,
   );
+
+  if (pack.evicted.length > 0) {
+    lines.push(
+      '',
+      'Evicted (did not fit the budget):',
+      ...pack.evicted.map((e) => `  - ${e.section} (${e.cost} tokens, ${e.reason})`),
+    );
+  }
 
   return lines.join('\n');
 }
