@@ -14,6 +14,7 @@ import type { AdoptionContext } from '../prompts/adoption.js';
 import type { NexusConfig } from '../types/config.js';
 import { DEFAULT_PERSONA } from '../types/config.js';
 import type { GeneratedFile, GeneratedDirectory } from '../types/templates.js';
+import { loadHarnessesConfig, type HarnessesConfig } from '../utils/harnesses/index.js';
 import { logger, writeGeneratorResult, readFile, fileExists, writeFile, ensureDirectory, getInstallCommand, gitInit, toDisplayName } from '../utils/index.js';
 import type { ProjectInfo } from '../utils/project-detector.js';
 
@@ -41,6 +42,35 @@ import {
 } from './ui-delegation.js';
 
 /**
+ * Read the inputs `generateAiConfig` needs to size its output to whatever
+ * harness profiles a project declares: `.nexus/harnesses.yml` (optional —
+ * `loadHarnessesConfig` already returns `null` when it does not exist) and
+ * `.nexus/docs/knowledge-summary.md` (optional; inlined by the static
+ * fallback variant when a harness cannot be trusted to call MCP tools).
+ *
+ * Generators stay synchronous and never touch disk (`ai-config.ts`'s own
+ * header), so this lives in the orchestrator, which already is async and
+ * already owns every disk read before generation.
+ *
+ * A brand-new `nexus init` target has nothing on disk yet, so this always
+ * resolves to `{ harnesses: null, knowledgeSummary: null }` for it — the
+ * same as calling `generateAiConfig` with no profile at all.
+ */
+async function loadHarnessProfileInputs(
+  projectRoot: string,
+): Promise<{ harnesses: HarnessesConfig | null; knowledgeSummary: string | null }> {
+  const nexusDir = path.join(projectRoot, '.nexus');
+
+  // A malformed harnesses.yml is a configuration bug worth surfacing loudly
+  // rather than silently discarding — it propagates, same as any other
+  // generation failure.
+  const harnesses = await loadHarnessesConfig(nexusDir);
+  const knowledgeSummary = await readFile(path.join(nexusDir, 'docs', 'knowledge-summary.md'));
+
+  return { harnesses, knowledgeSummary };
+}
+
+/**
  * Run all generators and write the project to disk.
  */
 export async function generateProject(config: NexusConfig): Promise<void> {
@@ -58,6 +88,9 @@ export async function generateProject(config: NexusConfig): Promise<void> {
   try {
     // Collect all directories and files
     const directories: GeneratedDirectory[] = generateDirectories(config);
+    // Nothing exists on disk yet for a brand-new project, so this always
+    // resolves to today's unbounded behaviour — see the function's own doc.
+    const { harnesses, knowledgeSummary } = await loadHarnessProfileInputs(projectRoot);
 
     let files: GeneratedFile[] = [
       generatePackageJson(config),
@@ -68,7 +101,7 @@ export async function generateProject(config: NexusConfig): Promise<void> {
       ...generateTests(config),
       ...generateCiCd(config),
       ...generateLandingPage(config),
-      ...generateAiConfig(config),
+      ...generateAiConfig(config, harnesses, knowledgeSummary),
       ...generateSkills(config),
       ...generateAgents(config),
     ];
@@ -175,9 +208,10 @@ export async function adoptProject(
 
     // Files to generate — docs + AI config + skills
     // Pass adoption context to docs generator for pre-filling
+    const { harnesses, knowledgeSummary } = await loadHarnessProfileInputs(targetDir);
     const files: GeneratedFile[] = [
       ...generateDocs(config, adoptionContext.localOnly, adoptionContext),
-      ...generateAiConfig(config),
+      ...generateAiConfig(config, harnesses, knowledgeSummary),
       ...generateSkills(config),
       ...generateAgents(config),
     ];
@@ -391,10 +425,14 @@ async function reconcileFiles(
     await ensureDirectory(path.join(targetDir, dir.path));
   }
 
-  // Generate all files with fresh templates
+  // Generate all files with fresh templates. This is the call site that
+  // matters most for harness profiles: `upgrade`/`repair` run against a
+  // project that may already declare `.nexus/harnesses.yml`, which is how a
+  // profile added or edited after `init` actually takes effect.
+  const { harnesses, knowledgeSummary } = await loadHarnessProfileInputs(targetDir);
   const freshFiles: GeneratedFile[] = [
     ...generateDocs(config),
-    ...generateAiConfig(config),
+    ...generateAiConfig(config, harnesses, knowledgeSummary),
     ...generateSkills(config),
     ...generateAgents(config),
   ];

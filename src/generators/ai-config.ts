@@ -29,6 +29,8 @@
 
 import type { NexusConfig, NexusPersona } from '../types/config.js';
 import type { GeneratedFile } from '../types/templates.js';
+import type { HarnessesConfig, HarnessProfile } from '../utils/harnesses/index.js';
+import { resolveProfileForFile, READS_MARKER_FULL, READS_MARKER_NONE, withReadsMarker } from '../utils/harnesses/index.js';
 import { version } from '../version.js';
 
 /* ──────────────────────────────────────────────────────────────
@@ -73,20 +75,38 @@ database — reading the files directly is always correct when MCP is absent.`;
 
 /**
  * Generate all AI agent configuration files for the project.
+ *
+ * @param harnesses - Parsed `.nexus/harnesses.yml`, or `null`/omitted when
+ *   the project has none. **Absent it, every generated file is produced by
+ *   exactly the code path this function used before harness profiles
+ *   existed** — that is a hard requirement (`nexus-harness-work.md` §8), not
+ *   a default worth optimizing away.
+ * @param knowledgeSummary - Pre-read content of `.nexus/docs/knowledge-summary.md`
+ *   when it exists, or `null`. Generators stay synchronous and never touch
+ *   disk themselves (`src/generators/index.ts` reads this before calling
+ *   in), so the static-fallback variant can inline it without an fs call
+ *   here.
  */
-export function generateAiConfig(config: NexusConfig): GeneratedFile[] {
+export function generateAiConfig(
+  config: NexusConfig,
+  harnesses?: HarnessesConfig | null,
+  knowledgeSummary?: string | null,
+): GeneratedFile[] {
   const files: GeneratedFile[] = [];
 
-  // Core instruction file (the single source of truth)
+  // Core instruction file (the single source of truth) — never budget-limited;
+  // it is reached through a pointer, not auto-loaded, so it carries no
+  // context-load cost of its own.
   files.push(generateInstructions(config));
 
   // Tool-specific files at expected root paths — each embeds full instructions
-  files.push(generateCursorRules(config));
-  files.push(generateWindsurfRules(config));
-  files.push(generateClineRules(config));
-  files.push(generateClaudeMd(config));
-  files.push(generateAgentsMd(config));
-  files.push(generateCopilotInstructions(config));
+  // by default, or a profile-sized variant when a harness profile applies.
+  files.push(generateCursorRules(config, harnesses, knowledgeSummary));
+  files.push(generateWindsurfRules(config, harnesses, knowledgeSummary));
+  files.push(generateClineRules(config, harnesses, knowledgeSummary));
+  files.push(generateClaudeMd(config, harnesses, knowledgeSummary));
+  files.push(generateAgentsMd(config, harnesses, knowledgeSummary));
+  files.push(generateCopilotInstructions(config, harnesses, knowledgeSummary));
 
   // MCP server registration — Claude Code / Codex / Cursor pick this up
   files.push(generateMcpJson());
@@ -457,8 +477,13 @@ ${getPersonaSection(config.persona)}
  * Generate full project-aware instruction content for any AI tool.
  * This is embedded directly in each tool's config file so the AI
  * never has to follow a cross-file pointer.
+ *
+ * This is the **standard** variant — unbounded, and what every tool file
+ * was before harness profiles existed. `toolInstructionContent` below picks
+ * this over the two profile-sized variants whenever there is no profile, or
+ * whenever this content already fits the declared budget.
  */
-function toolInstructionContent(config: NexusConfig, toolName: string): string {
+function buildStandardToolContent(config: NexusConfig, toolName: string): string {
   const frameworkDisplay = getFrameworkDisplay(config.frontendFramework);
   const testDisplay = config.testFramework === 'none' ? 'None configured' : config.testFramework;
   const patternsDisplay =
@@ -622,24 +647,198 @@ ${getPersonaSection(config.persona)}
 `;
 }
 
-function generateCursorRules(config: NexusConfig): GeneratedFile {
-  return { path: '.cursorrules', content: toolInstructionContent(config, 'Cursor') };
+/**
+ * Roughly 600 bytes: one instruction (call the pack), an explicit ban on
+ * reading the two large brain files by hand, and the invariants an agent
+ * cannot get any other way once told not to read `.nexus/docs/`.
+ *
+ * `nexus-harness-work.md` §2.2: this is deliberately a *different* file, not
+ * a truncation of the standard one. The finding that cross-file pointers get
+ * ignored (`NEXUS.md` §13) was about a pointer competing with 8 KB of other
+ * instructions for attention — attention dilution, not an inability to
+ * follow a reference. A pointer that IS the entire file does not have that
+ * problem, so this file states one and stops. Do not add sections here; a
+ * padded version of this variant defeats the reason it exists.
+ */
+function buildNativePointerContent(config: NexusConfig): string {
+  const testDisplay = config.testFramework === 'none' ? 'none configured' : config.testFramework;
+
+  return `# ${config.displayName} project
+
+Before any task, call the MCP tool \`nexus_get_context\` with the task
+description. It returns everything you need: plan, gate, skills,
+knowledge, and docs, already bounded.
+
+Do NOT read .nexus/docs/index.md or .nexus/docs/knowledge.md directly.
+They exceed this context window.
+
+Invariants (always apply):
+- Test framework: ${testDisplay}
+- Package manager: ${config.packageManager}
+`;
 }
 
-function generateWindsurfRules(config: NexusConfig): GeneratedFile {
-  return { path: '.windsurfrules', content: toolInstructionContent(config, 'Windsurf') };
+/** `buildNativePointerContent` with the invariants dropped — the last thing
+ * to cut when even that will not fit an extremely tight budget. */
+function buildNativePointerContentMinimal(config: NexusConfig): string {
+  return `# ${config.displayName} project
+
+Before any task, call the MCP tool \`nexus_get_context\` with the task
+description. It returns everything you need: plan, gate, skills,
+knowledge, and docs, already bounded.
+
+Do NOT read .nexus/docs/index.md or .nexus/docs/knowledge.md directly.
+They exceed this context window.
+`;
 }
 
-function generateClineRules(config: NexusConfig): GeneratedFile {
-  return { path: '.clinerules', content: toolInstructionContent(config, 'Cline') };
+/**
+ * Static, self-contained variant for `tool_calling: unreliable | none` —
+ * harnesses that cannot be trusted to make the `nexus_get_context` call the
+ * native-pointer variant depends on. No MCP dependency, no instruction to
+ * read `.nexus/docs/index.md` or `knowledge.md` by hand either: at a window
+ * small enough to need this variant, opening either file silently truncates
+ * it (`nexus-harness-work.md` §1) and the agent never sees the instruction
+ * that told it to stop.
+ *
+ * Invariants are inlined rather than pointed at. `knowledgeSummary` (the
+ * pre-read content of `.nexus/docs/knowledge-summary.md`, or `null`) is
+ * appended whole when it fits the remaining budget, and omitted — never cut
+ * mid-entry — when it does not.
+ */
+function buildStaticFallbackContent(
+  config: NexusConfig,
+  profile: HarnessProfile,
+  knowledgeSummary: string | null,
+): string {
+  const frameworkDisplay = getFrameworkDisplay(config.frontendFramework);
+  const testDisplay = config.testFramework === 'none' ? 'none configured' : config.testFramework;
+
+  const base = `# ${config.displayName}
+
+No MCP tool calls assumed. Everything needed to start is below — nothing
+else needs to be read first.
+
+Invariants (always apply):
+- Framework: ${frameworkDisplay}
+- Test framework: ${testDisplay}
+- Package manager: ${config.packageManager}
+- Validate with: ${getValidationCommand(config)}
+`;
+
+  if (!knowledgeSummary || knowledgeSummary.trim().length === 0) return base;
+
+  const withSummary = `${base}
+## Knowledge so far
+
+${knowledgeSummary.trim()}
+`;
+
+  // All-or-nothing: a knowledge summary cut mid-entry is worse than none —
+  // it reads as a complete thought and is not. The marker appended by the
+  // caller is accounted for by the caller's own budget check, not here.
+  const marginForMarker = READS_MARKER_NONE.length + 1;
+  return Buffer.byteLength(withSummary, 'utf-8') + marginForMarker <= profile.orientation_budget
+    ? withSummary
+    : base;
 }
 
-function generateClaudeMd(config: NexusConfig): GeneratedFile {
-  return { path: 'CLAUDE.md', content: toolInstructionContent(config, 'Claude Code / Claude Cowork') };
+/**
+ * Dispatch to the variant that fits `profile.orientation_budget`.
+ *
+ * - No profile (no `.nexus/harnesses.yml`, or this file has none declared
+ *   for it) → the standard variant, byte-identical to pre-profile output.
+ * - `tool_calling: native` → the standard variant if it fits the budget,
+ *   otherwise the native-pointer variant (§2.2 — a different file, not a
+ *   truncation).
+ * - `tool_calling: unreliable | none` → always the static fallback; a
+ *   harness that cannot be trusted to call the pull tool gets a
+ *   self-contained file regardless of how much budget it has.
+ */
+function toolInstructionContent(
+  config: NexusConfig,
+  toolName: string,
+  profile: HarnessProfile | null,
+  knowledgeSummary: string | null,
+): string {
+  const standard = buildStandardToolContent(config, toolName);
+
+  if (!profile) {
+    return withReadsMarker(standard, READS_MARKER_FULL);
+  }
+
+  if (profile.tool_calling === 'native') {
+    const standardBytes = Buffer.byteLength(standard, 'utf-8') + READS_MARKER_FULL.length + 1;
+    if (standardBytes <= profile.orientation_budget) {
+      return withReadsMarker(standard, READS_MARKER_FULL);
+    }
+
+    const pointer = buildNativePointerContent(config);
+    const pointerBytes = Buffer.byteLength(pointer, 'utf-8') + READS_MARKER_NONE.length + 1;
+    if (pointerBytes <= profile.orientation_budget) {
+      return withReadsMarker(pointer, READS_MARKER_NONE);
+    }
+
+    // Budget too tight even for the invariants line — drop it. This is the
+    // floor: below roughly 300 bytes there is no meaningful instruction left
+    // to cut, and the result may still exceed an extreme budget. D14's
+    // project-total check is what surfaces that, not a guarantee made here.
+    return withReadsMarker(buildNativePointerContentMinimal(config), READS_MARKER_NONE);
+  }
+
+  // unreliable | none — never rely on the pull, regardless of budget size.
+  return withReadsMarker(buildStaticFallbackContent(config, profile, knowledgeSummary), READS_MARKER_NONE);
 }
 
-function generateAgentsMd(config: NexusConfig): GeneratedFile {
-  return { path: 'AGENTS.md', content: toolInstructionContent(config, 'Claude Code / OpenAI Codex') };
+function generateCursorRules(
+  config: NexusConfig,
+  harnesses: HarnessesConfig | null | undefined,
+  knowledgeSummary: string | null | undefined,
+): GeneratedFile {
+  const profile = resolveProfileForFile(harnesses, '.cursorrules');
+  return { path: '.cursorrules', content: toolInstructionContent(config, 'Cursor', profile, knowledgeSummary ?? null) };
+}
+
+function generateWindsurfRules(
+  config: NexusConfig,
+  harnesses: HarnessesConfig | null | undefined,
+  knowledgeSummary: string | null | undefined,
+): GeneratedFile {
+  const profile = resolveProfileForFile(harnesses, '.windsurfrules');
+  return { path: '.windsurfrules', content: toolInstructionContent(config, 'Windsurf', profile, knowledgeSummary ?? null) };
+}
+
+function generateClineRules(
+  config: NexusConfig,
+  harnesses: HarnessesConfig | null | undefined,
+  knowledgeSummary: string | null | undefined,
+): GeneratedFile {
+  const profile = resolveProfileForFile(harnesses, '.clinerules');
+  return { path: '.clinerules', content: toolInstructionContent(config, 'Cline', profile, knowledgeSummary ?? null) };
+}
+
+function generateClaudeMd(
+  config: NexusConfig,
+  harnesses: HarnessesConfig | null | undefined,
+  knowledgeSummary: string | null | undefined,
+): GeneratedFile {
+  const profile = resolveProfileForFile(harnesses, 'CLAUDE.md');
+  return {
+    path: 'CLAUDE.md',
+    content: toolInstructionContent(config, 'Claude Code / Claude Cowork', profile, knowledgeSummary ?? null),
+  };
+}
+
+function generateAgentsMd(
+  config: NexusConfig,
+  harnesses: HarnessesConfig | null | undefined,
+  knowledgeSummary: string | null | undefined,
+): GeneratedFile {
+  const profile = resolveProfileForFile(harnesses, 'AGENTS.md');
+  return {
+    path: 'AGENTS.md',
+    content: toolInstructionContent(config, 'Claude Code / OpenAI Codex', profile, knowledgeSummary ?? null),
+  };
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -648,8 +847,16 @@ function generateAgentsMd(config: NexusConfig): GeneratedFile {
  * Uses the same shared content as all other tools.
  * ────────────────────────────────────────────────────────────── */
 
-function generateCopilotInstructions(config: NexusConfig): GeneratedFile {
-  return { path: '.github/copilot-instructions.md', content: toolInstructionContent(config, 'GitHub Copilot') };
+function generateCopilotInstructions(
+  config: NexusConfig,
+  harnesses: HarnessesConfig | null | undefined,
+  knowledgeSummary: string | null | undefined,
+): GeneratedFile {
+  const profile = resolveProfileForFile(harnesses, '.github/copilot-instructions.md');
+  return {
+    path: '.github/copilot-instructions.md',
+    content: toolInstructionContent(config, 'GitHub Copilot', profile, knowledgeSummary ?? null),
+  };
 }
 
 /* ──────────────────────────────────────────────────────────────
