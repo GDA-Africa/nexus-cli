@@ -187,3 +187,18 @@
 **Why:** `as`-casting external JSON gives compile-time confidence with zero runtime guarantee — the manifest is written by *other versions* of the CLI, so its shape is an input, not an invariant.
 
 **How to apply:** Any new reader of manifest.json (or other cross-version state files) must go through a normalizer; add a display-level fallback too when interpolating into templates.
+
+### [gotcha] CLAUDE.md package manager label (yarn) doesn't match reality (npm)
+**2026-08-24** — The generated `CLAUDE.md` Project Identity table lists `yarn` as the package manager, but `package.json` scripts and `.github/workflows/ci.yml` both use `npm ci`/`npm run` exclusively. The manifest/config the generator read from is stale relative to the actual repo.
+**Why:** Following CLAUDE.md's literal `yarn test`/`yarn lint` instructions would fail or use the wrong lockfile in this repo.
+**How to apply:** Trust package.json scripts + CI workflow over the CLAUDE.md Project Identity table for tooling commands in this repo; use npm.
+
+### [gotcha] D01 placeholder regex false-positives on bracket syntax in prose
+**2026-08-24** — D01's `countPlaceholders()` (src/utils/doctor/checks/D01.ts) matches any `[...]` via `/\[[^\]]+\]/g`, so a populated doc containing markdown links or TypeScript array types (e.g. `AppPattern[]`, `[nexus.glenhalton.com]`) trips the "populated but has unresolved placeholders" warning even with zero actual placeholders.
+**Why:** Don't chase this warning by stripping legitimate bracket syntax from docs — it degrades content to satisfy a heuristic bug, not a real gap.
+**How to apply:** When D01 flags a populated doc, read the doc before assuming it's actually incomplete — check for real `TODO`/`(to be filled)` markers, not just any square bracket.
+
+### [convention] index.md Release History is 3 versions behind git tags
+**2026-08-24** — `git tag` shows v1.2.0, v1.3.0, v1.4.0 as published, but the Release History table in `.nexus/docs/index.md` stops at v1.1.3 (Aug 4, 2026). Commit subjects worth mining for the missing entries: `cc27d9d chore(release): 1.2.0`, `dc67d6e feat: v1.3.0 — Skills II, the alignment gate, and context load`, `88eedca feat: export MCP tool surface as a public ./mcp subpath`, plus whatever bumped to 1.4.0.
+**Why:** This wasn't in scope for today's doc-population task, but a future session doing brain hygiene should close the gap rather than rediscover it.
+**How to apply:** Before trusting index.md's version/feature history as current, cross-check against `git tag --sort=-v:refname` and `git log --oneline` for the gap.

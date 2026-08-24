@@ -1,25 +1,25 @@
 # NEXUS CLI — Project Index
 
 **Project:** NEXUS CLI (`@nexus-framework/cli`)  
-**Published Version:** v0.4.0 (May 3, 2026)  
-**Working Branch:** `main` · target: **v0.4.0** (M1+M2+M3 shipped together TODAY) · M4 deferred  
+**Published Version:** v1.4.0 (per `package.json` / npm dist-tag — see note below; Release History table below is stale, last logged at v1.1.3)  
+**Working Branch:** `main`  
 **Active Initiative:** 🚀 **v1.0 "Alive Brain"** + **Auto-Invoke Layer** — see [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md)  
 **Brain Layout:** v1.0 (hand-bootstrapped 2026-05-02 — `.nexus/plans/`, `.nexus/state/`, Vital Signs block)  
-**Coverage:** Unit: 334/334 passing | Integration: sync test live | E2E: Next phase
+**Coverage:** 663/663 tests passing across 51 files (unit + integration + e2e), measured 2026-08-24 via `npm test`
 
 ---
 
 <!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` -->
 ## 🩺 Vital Signs (auto)
 
-_Last sync: 2026-06-17T16:25:04.468Z · branch `main` · 0 commits ahead of main · working tree dirty_
+_Last sync: 2026-08-24T09:23:17.020Z · branch `main` · 0 commits ahead of main · working tree dirty_
 
 | Sensor | Reading |
 |--------|---------|
-| Last commit | 745890d — feat: release v1.1.0 — contextualized agents (brain-grounded roles + verification gate) · Glenhalton · 6 days ago |
+| Last commit | 660f84f — chore(nexus): updated nexus to version 1.4.0 · Glenhalton · 2 days ago |
 | Tests | not yet measured |
 | Coverage | not collected · M1 sensor adds `vitest --coverage` parsing |
-| Stale folders | src/commands 0 days · src/utils 0 days · src/generators 0 days · tests/e2e 7 days · tests/unit 0 days · tests/integration 45 days |
+| Stale folders | src/commands 2 days · src/utils 2 days · src/generators 2 days · tests/e2e 75 days · tests/unit 1 days · tests/integration 113 days |
 | Packages | not yet measured |
 <!-- NEXUS:VITAL_SIGNS:END -->
 
@@ -254,6 +254,8 @@ Result: a project brain that not only records state but detects drift, tracks wo
 ---
 
 ## ✅ Progress Log
+
+- 2026-08-24 — ✅ Populated the six template spec docs (`02_architecture`, `03_data_contracts`, `04_api_contracts`, `05_business_logic`, `06_test_strategy`, `08_deployment`) from live codebase inspection — all now `status: populated`, `confidence: high`. Measured current reality directly rather than trusting stale index numbers: 663/663 tests across 51 files (index previously said 334, release history said 456), 17 MCP tools (unchanged), 14 doctor checks D01–D14 (index/release-notes text still says "11"). Ran `nexus sync` to refresh the Vital Signs block. Found and logged to `knowledge.md`: (1) generated `CLAUDE.md` claims `yarn` as package manager but the repo actually uses `npm` throughout scripts/CI, (2) D01's placeholder-detection regex false-positives on any `[...]` in prose (markdown links, TS array types), (3) this index's Release History table is 3 versions behind — v1.2.0, v1.3.0, v1.4.0 shipped (per git tags) but were never logged here.
 
 - 2026-08-04 — ✅ **Released v1.1.3** (patch — manifest normalization fix, the only code change since v1.1.2). Bumped `package.json` + `src/version.ts`, added the CHANGELOG entry. **CLI README accuracy pass:** 16→17 MCP tools (badge, `nexus mcp` row, tool list now includes `get_context`/`list_agents`/`get_agent`/`get_handoff`), 438→456 tests, ten→eleven doctor checks (+D11 in the example), added `.nexus/agents/` + `.mcp.json` + `.claude/agents/` to the generated tree, new **`nexus agent`** section with the core four and the verification gate. **Homepage:** version strings → 1.1.3 (index/agents/mcp JSON-LD, hero tag, docs breadcrumb v1.1.0→v1.1.3), docs.html meta 16→17 tools, v1.1.3 note in the Upgrading section, llms.txt + llms-full.txt version/release-history, sitemap lastmod → 2026-08-04, refreshed the stale `NEXUS_CLI_README.md` mirror (v0.x → current). 456/456 tests, tsc + lint clean.
 
