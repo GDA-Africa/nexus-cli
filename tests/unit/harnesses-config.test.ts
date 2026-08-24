@@ -12,6 +12,10 @@ import {
   resolveFileForHarness,
   resolveHarnessProfile,
   resolveProfileForFile,
+  READS_MARKER_SUMMARY,
+  READS_MARKER_NONE,
+  withReadsMarker,
+  assumedOrientationReads
 } from '../../src/utils/harnesses/index.js';
 
 const SPEC_EXAMPLE = `
@@ -191,5 +195,27 @@ harnesses:
   it('resolveFileForHarness resolves a canonical id to its conventional file', () => {
     expect(resolveFileForHarness(config, 'cursor')).toBe('.cursorrules');
     expect(resolveFileForHarness(config, 'claude-code')).toBe('CLAUDE.md');
+  });
+});
+
+describe('summary-first orientation contract', () => {
+  it('standard variant counts knowledge-summary.md, not the append-only log', () => {
+    const standard = withReadsMarker('# instructions', READS_MARKER_SUMMARY);
+    expect(assumedOrientationReads(standard)).toEqual([
+      '.nexus/docs/index.md',
+      '.nexus/docs/knowledge-summary.md',
+    ]);
+  });
+
+  it('un-markered legacy files still assume the full read', () => {
+    expect(assumedOrientationReads('# hand-written, no marker')).toEqual([
+      '.nexus/docs/index.md',
+      '.nexus/docs/knowledge.md',
+    ]);
+  });
+
+  it('self-contained variants read nothing beyond themselves', () => {
+    const none = withReadsMarker('# pointer', READS_MARKER_NONE);
+    expect(assumedOrientationReads(none)).toEqual([]);
   });
 });

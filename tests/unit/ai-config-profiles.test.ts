@@ -62,7 +62,7 @@ harnesses:
     const files = generateAiConfig(config, harnesses, null);
     const claudeMd = files.find((f) => f.path === 'CLAUDE.md')!;
     expect(bytes(claudeMd.content)).toBeLessThanOrEqual(16000);
-    expect(claudeMd.content).toContain('<!--nexus-reads:.nexus/docs/index.md,.nexus/docs/knowledge.md-->');
+    expect(claudeMd.content).toContain('<!--nexus-reads:.nexus/docs/index.md,.nexus/docs/knowledge-summary.md-->');
   });
 
   it('a small native budget produces the native-pointer variant, under budget', () => {
@@ -192,7 +192,7 @@ describe('generateAiConfig — reads marker matches what each variant actually i
   it('standard variant carries the full-reads marker', () => {
     const files = generateAiConfig(config);
     expect(files.find((f) => f.path === 'CLAUDE.md')!.content).toContain(
-      '<!--nexus-reads:.nexus/docs/index.md,.nexus/docs/knowledge.md-->',
+      '<!--nexus-reads:.nexus/docs/index.md,.nexus/docs/knowledge-summary.md-->',
     );
   });
 

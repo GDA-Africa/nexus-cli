@@ -14,8 +14,23 @@
 /**
  * The standard variant points at both brain files as things to read — by
  * hand or via the pack — before starting work.
+ *
+ * Retained so projects generated before the summary-first protocol still
+ * decode correctly, and as the assumed default for un-markered files.
  */
 export const READS_MARKER_FULL = '<!--nexus-reads:.nexus/docs/index.md,.nexus/docs/knowledge.md-->';
+
+/**
+ * What the standard variant actually instructs since the protocol was
+ * inverted: `nexus_get_context` first, and when MCP is unavailable, the
+ * index's Current Objective / What's Next plus the rolled-up
+ * `knowledge-summary.md`. The append-only `knowledge.md` is explicitly
+ * reserved for entries the summary does not cover, so counting it as
+ * orientation load overstates the default path by the whole history of the
+ * project — which is precisely the number the budget exists to control.
+ */
+export const READS_MARKER_SUMMARY =
+  '<!--nexus-reads:.nexus/docs/index.md,.nexus/docs/knowledge-summary.md-->';
 
 /**
  * The native-pointer and static-fallback variants are self-contained (or
@@ -36,6 +51,12 @@ export function withReadsMarker(content: string, marker: string): string {
  */
 export const FULL_READ_FILES = ['.nexus/docs/index.md', '.nexus/docs/knowledge.md'] as const;
 
+/** Files a `READS_MARKER_SUMMARY` marker names, relative to the project root. */
+export const SUMMARY_READ_FILES = [
+  '.nexus/docs/index.md',
+  '.nexus/docs/knowledge-summary.md',
+] as const;
+
 /**
  * Decode which brain files a generated instruction file's content claims to
  * instruct reading. Files with neither marker (hand-written, or generated
@@ -46,5 +67,6 @@ export const FULL_READ_FILES = ['.nexus/docs/index.md', '.nexus/docs/knowledge.m
  */
 export function assumedOrientationReads(content: string): readonly string[] {
   if (content.includes(READS_MARKER_NONE)) return [];
+  if (content.includes(READS_MARKER_SUMMARY)) return SUMMARY_READ_FILES;
   return FULL_READ_FILES;
 }

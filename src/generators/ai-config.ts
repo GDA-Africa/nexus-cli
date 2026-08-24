@@ -30,7 +30,12 @@
 import type { NexusConfig, NexusPersona } from '../types/config.js';
 import type { GeneratedFile } from '../types/templates.js';
 import type { HarnessesConfig, HarnessProfile } from '../utils/harnesses/index.js';
-import { resolveProfileForFile, READS_MARKER_FULL, READS_MARKER_NONE, withReadsMarker } from '../utils/harnesses/index.js';
+import {
+  resolveProfileForFile,
+  READS_MARKER_SUMMARY,
+  READS_MARKER_NONE,
+  withReadsMarker,
+} from '../utils/harnesses/index.js';
 import { version } from '../version.js';
 
 /* ──────────────────────────────────────────────────────────────
@@ -258,8 +263,9 @@ This is a hard requirement, not a suggestion.
    the first item from "What's Next" in the index.
 
 This onboarding flow only applies when docs have \\\`status: template\\\`.
-Once all docs are \\\`populated\\\`, skip this section and work normally —
-but ALWAYS read \\\`.nexus/docs/index.md\\\` before every task.
+Once all docs are \\\`populated\\\`, skip this section and work normally.
+Orient with \\\`nexus_get_context\\\` (Step 1 above), not by reading the brain
+by hand — that is what keeps orientation bounded as the project grows.
 
 ---
 
@@ -764,13 +770,13 @@ function toolInstructionContent(
   const standard = buildStandardToolContent(config, toolName);
 
   if (!profile) {
-    return withReadsMarker(standard, READS_MARKER_FULL);
+    return withReadsMarker(standard, READS_MARKER_SUMMARY);
   }
 
   if (profile.tool_calling === 'native') {
-    const standardBytes = Buffer.byteLength(standard, 'utf-8') + READS_MARKER_FULL.length + 1;
+    const standardBytes = Buffer.byteLength(standard, 'utf-8') + READS_MARKER_SUMMARY.length + 1;
     if (standardBytes <= profile.orientation_budget) {
-      return withReadsMarker(standard, READS_MARKER_FULL);
+      return withReadsMarker(standard, READS_MARKER_SUMMARY);
     }
 
     const pointer = buildNativePointerContent(config);

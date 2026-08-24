@@ -18,8 +18,10 @@ export {
 export { resolveHarnessProfile, resolveProfileForFile, resolveFileForHarness } from './resolve.js';
 export {
   READS_MARKER_FULL,
+  READS_MARKER_SUMMARY,
   READS_MARKER_NONE,
   FULL_READ_FILES,
+  SUMMARY_READ_FILES,
   withReadsMarker,
   assumedOrientationReads,
 } from './markers.js';
