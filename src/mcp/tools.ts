@@ -22,7 +22,7 @@ import type { AgentSummary } from '../utils/agents/types.js';
 import { buildDoctorContext } from '../utils/doctor/context.js';
 import { runDoctor } from '../utils/doctor/index.js';
 import type { DoctorReport } from '../utils/doctor/types.js';
-import { parseKnowledge, type KnowledgeEntry } from '../utils/knowledge.js';
+import { parseKnowledge, rankKnowledgeEntries, type KnowledgeEntry } from '../utils/knowledge.js';
 import { readActivePlans } from '../utils/plans/active.js';
 import { collectPlanSummaries, rebuildPlansIndex } from '../utils/plans/index-builder.js';
 import {
@@ -679,24 +679,27 @@ export async function getContextTool(ctx: BrainContext, input: ComposeContextInp
     }
   }
 
-  // 3. Knowledge — task keywords, optionally restricted to recipe categories.
-  //    Entry bodies are arbitrarily long prose, so each is capped individually
-  //    AND admitted against the remaining budget. Before this, five long
-  //    entries could consume the whole pack and leave nothing for docs.
-  const terms = input.task.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
+  // 3. Knowledge — ranked by relevance to the task, optionally restricted to
+  //    recipe categories. Entry bodies are arbitrarily long prose, so each is
+  //    capped individually AND admitted against the remaining budget. Before
+  //    this, five long entries could consume the whole pack and leave
+  //    nothing for docs.
+  //
+  //    The candidate set used to be "matches any single word in the task"
+  //    (including "and", "for") followed by "take the newest five" — with a
+  //    task-length sentence, nearly every entry in the file matched on a
+  //    filler word, so recency was the only thing actually selecting
+  //    entries, not relevance. `rankKnowledgeEntries` scores real term
+  //    overlap instead and drops zero-overlap entries outright — see
+  //    `scoreKnowledgeEntry` in `utils/knowledge.ts` for why.
   const knowledge: KnowledgeMatch[] = [];
   const knowledgePath = path.join(ctx.docsDir, 'knowledge.md');
   if (await fs.pathExists(knowledgePath)) {
     const parsed = parseKnowledge(await fs.readFile(knowledgePath, 'utf-8'));
-    const candidates = parsed.entries
-      .filter((e) => !recipe || recipe.knowledge_categories.length === 0 || recipe.knowledge_categories.includes(e.category))
-      .filter((e) => {
-        const hay = `${e.category} ${e.title} ${e.raw.join(' ')}`.toLowerCase();
-        return terms.some((t) => hay.includes(t));
-      })
-      .slice(-5)
-      .reverse()
-      .map(toKnowledgeMatch);
+    const scoped = parsed.entries.filter(
+      (e) => !recipe || recipe.knowledge_categories.length === 0 || recipe.knowledge_categories.includes(e.category),
+    );
+    const candidates = rankKnowledgeEntries(input.task, scoped).slice(0, 5).map(toKnowledgeMatch);
 
     for (const match of candidates) {
       if (match.body.length > KNOWLEDGE_BODY_CAP) {

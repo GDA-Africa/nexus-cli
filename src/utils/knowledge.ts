@@ -8,6 +8,8 @@
  * Spec: v1_alive_brain.md §5.4 (Memory hygiene — `nexus consolidate`)
  */
 
+import { tokenize } from './skills/matching.js';
+
 export interface KnowledgeEntry {
   /** Category tag, e.g. "architecture", "gotcha" */
   category: string;
@@ -273,4 +275,68 @@ export function renderArchiveHeader(): string {
     '---',
     '',
   ].join('\n');
+}
+
+/**
+ * Words carrying no discriminating power in a task description, plus the
+ * knowledge template's own structural labels ("**Why:**", "**How to
+ * apply:**") — every entry that follows the template contains these
+ * verbatim, so left untokenized they would match almost any task and drown
+ * out real overlap. Not a content signal, just formatting.
+ */
+const KNOWLEDGE_BOILERPLATE = /\*\*(why|how to apply):\*\*/gi;
+
+/** Minimum share of a task's meaningful tokens an entry must contain to count as a match. */
+const KNOWLEDGE_OVERLAP_FLOOR = 0.34;
+
+/**
+ * Score one knowledge entry's relevance to a task description.
+ *
+ * Knowledge entries are freeform prose, not authored triggers, so this is a
+ * plain term-overlap score rather than `scoreTrigger`'s verbatim-first logic
+ * (see `skills/matching.ts`): the share of the task's distinct meaningful
+ * tokens (via `tokenize`, which already strips stopwords) that appear in the
+ * entry's category, title, or body — title/category hits count double, since
+ * a task that names what an entry is *about* is a stronger signal than one
+ * that happens to share a word buried in the detail paragraph.
+ *
+ * Deliberately simple: term overlap, no stemming, no IDF weighting. This
+ * replaces a filter that matched on *any* shared word (including "and",
+ * "for") and then just took the most recent five entries regardless of
+ * relevance — recency was doing all the work. This is not a search engine;
+ * it only has to stop irrelevant entries from crowding out relevant ones.
+ */
+export function scoreKnowledgeEntry(task: string, entry: KnowledgeEntry): number {
+  const taskTokens = Array.from(new Set(tokenize(task)));
+  if (taskTokens.length === 0) return 0;
+
+  const titleTokens = new Set(tokenize(`${entry.category} ${entry.title}`));
+  const bodyTokens = new Set(tokenize(entry.raw.join(' ').replace(KNOWLEDGE_BOILERPLATE, ' ')));
+
+  let weightedHits = 0;
+  for (const token of taskTokens) {
+    if (titleTokens.has(token)) weightedHits += 2;
+    else if (bodyTokens.has(token)) weightedHits += 1;
+  }
+
+  const score = weightedHits / (taskTokens.length * 2);
+  return score >= KNOWLEDGE_OVERLAP_FLOOR ? score : 0;
+}
+
+/**
+ * Rank knowledge entries by relevance to a task, best first. Entries that
+ * score 0 (no meaningful overlap) are dropped entirely rather than padding
+ * the result — an honest empty list beats five entries nobody asked about.
+ * Ties break toward the newer entry, so budget pressure among equally
+ * relevant matches drops the oldest rather than an arbitrary one.
+ */
+export function rankKnowledgeEntries(task: string, entries: readonly KnowledgeEntry[]): KnowledgeEntry[] {
+  return entries
+    .map((entry) => ({ entry, score: scoreKnowledgeEntry(task, entry) }))
+    .filter((match) => match.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (b.entry.date ?? '').localeCompare(a.entry.date ?? '');
+    })
+    .map((match) => match.entry);
 }
