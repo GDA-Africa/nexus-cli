@@ -239,33 +239,47 @@ export async function skillListCommand(): Promise<void> {
  * ────────────────────────────────────────────────────────────── */
 
 /**
- * Fetch the latest @nexus-framework/skills tarball from npm and return a
- * map of { framework → slug[] } by scanning tar entry paths.
+ * Result of fetching a package tarball from the npm registry.
  *
- * Uses only Node built-ins (fetch + zlib + Buffer). No file extraction —
- * we only inspect the path names inside the .tgz to build the skill list.
+ *   { notFound: true }                     — registry responded 404 (package doesn't exist)
+ *   { files, version }                     — success; files maps tar path → decoded .md content
+ *   null                                   — offline, timeout, or any other network failure
  *
- * Returns null if the network is unavailable or the fetch fails.
+ * `notFound` is split out from the generic null case so callers can give the
+ * user an accurate message ("no such package" vs "couldn't reach npm").
  */
-async function fetchLiveSkillRegistry(
+type NpmTarballResult =
+  | { notFound: true }
+  | { files: Map<string, string>; version: string }
+  | null;
+
+/**
+ * Fetch a package tarball from npm and decode every `.md` file inside it.
+ *
+ * Uses only Node built-ins (fetch + zlib + Buffer). Non-.md file bytes are
+ * skipped (not decoded) — only their size is used to advance past them, since
+ * skill packages are text-only and there's no reason to hold binary assets
+ * (icons, etc.) in memory.
+ */
+async function fetchNpmTarball(
+  pkgName: string,
   timeoutMs = 8000,
-): Promise<{ skillMap: Map<string, string[]>; version: string } | null> {
+): Promise<NpmTarballResult> {
   const { createGunzip } = await import('node:zlib');
   const { Readable } = await import('node:stream');
-
-  const REGISTRY_PKG = '@nexus-framework/skills';
 
   try {
     // ── Step 1: resolve latest tarball URL ────────────────────
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const metaRes = await fetch(`https://registry.npmjs.org/${REGISTRY_PKG}/latest`, {
+    const metaRes = await fetch(`https://registry.npmjs.org/${pkgName}/latest`, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
     });
     clearTimeout(timer);
 
+    if (metaRes.status === 404) return { notFound: true };
     if (!metaRes.ok) return null;
 
     const meta = (await metaRes.json()) as { version?: string; dist?: { tarball?: string } };
@@ -283,13 +297,10 @@ async function fetchLiveSkillRegistry(
 
     if (!tgzRes.ok || !tgzRes.body) return null;
 
-    // ── Step 3: decompress and scan tar entry names ────────────
-    // We only need the file paths (tar header block, offset 0, 100 bytes).
-    // We never read file contents — this is purely a path scan.
+    // ── Step 3: decompress ──────────────────────────────────────
     const chunks: Buffer[] = [];
     const gunzip = createGunzip();
 
-    // Pump the fetch body through gunzip
     const bodyBuffer = Buffer.from(await tgzRes.arrayBuffer());
     const readable = Readable.from(bodyBuffer);
     readable.pipe(gunzip);
@@ -306,9 +317,10 @@ async function fetchLiveSkillRegistry(
     // TAR format: each file entry starts with a 512-byte header.
     // Bytes 0–99: null-terminated file name.
     // Bytes 124–135: file size in octal ASCII.
-    // We skip past header + file data (rounded up to 512-byte boundary).
+    // We skip past header + file data (rounded up to 512-byte boundary),
+    // decoding only entries whose name ends in `.md`.
 
-    const skillMap = new Map<string, string[]>();
+    const files = new Map<string, string>();
 
     let offset = 0;
     while (offset + 512 <= tarData.length) {
@@ -324,28 +336,53 @@ async function fetchLiveSkillRegistry(
       // Extract file size (bytes 124–135, octal)
       const sizeStr = header.slice(124, 136).toString('utf8').replace(/\0/g, '').trim();
       const fileSize = parseInt(sizeStr, 8) || 0;
+      const dataStart = offset + 512;
 
-      // Parse skill paths: package/<framework>/<slug>.md
-      // e.g. "package/shared/git-workflow.md" or "package/next.js/routing.md"
-      const match = name.match(/^package\/([^/]+)\/([^/]+)\.md$/);
-      if (match) {
-        const [, framework, slug] = match;
-        if (framework && slug && slug !== 'README') {
-          if (!skillMap.has(framework)) skillMap.set(framework, []);
-          skillMap.get(framework)!.push(slug);
-        }
+      if (name.toLowerCase().endsWith('.md')) {
+        files.set(name, tarData.slice(dataStart, dataStart + fileSize).toString('utf8'));
       }
 
       // Advance past header + file data (rounded up to 512-byte boundary)
-      offset += 512 + Math.ceil(fileSize / 512) * 512;
+      offset = dataStart + Math.ceil(fileSize / 512) * 512;
     }
 
-    return skillMap.size > 0 ? { skillMap, version: registryVersion } : null;
+    return { files, version: registryVersion };
 
   } catch {
     // Offline, timeout, or any network error — return null to trigger fallback
     return null;
   }
+}
+
+/**
+ * Fetch the latest @nexus-framework/skills tarball from npm and return a
+ * map of { framework → slug[] } by scanning the decoded .md file paths.
+ *
+ * Returns null if the network is unavailable, the fetch fails, or (unlikely,
+ * since this is our own registry package) the package isn't found.
+ */
+async function fetchLiveSkillRegistry(
+  timeoutMs = 8000,
+): Promise<{ skillMap: Map<string, string[]>; version: string } | null> {
+  const result = await fetchNpmTarball('@nexus-framework/skills', timeoutMs);
+  if (!result || 'notFound' in result) return null;
+
+  const skillMap = new Map<string, string[]>();
+
+  for (const name of result.files.keys()) {
+    // Parse skill paths: package/<framework>/<slug>.md
+    // e.g. "package/shared/git-workflow.md" or "package/next.js/routing.md"
+    const match = name.match(/^package\/([^/]+)\/([^/]+)\.md$/);
+    if (match) {
+      const [, framework, slug] = match;
+      if (framework && slug && slug !== 'README') {
+        if (!skillMap.has(framework)) skillMap.set(framework, []);
+        skillMap.get(framework)!.push(slug);
+      }
+    }
+  }
+
+  return skillMap.size > 0 ? { skillMap, version: result.version } : null;
 }
 
 /**
@@ -454,16 +491,42 @@ export async function skillRegistryCommand(options: { framework?: string } = {})
  * nexus skill install <pkg>
  * ────────────────────────────────────────────────────────────── */
 
+export interface SkillInstallOptions {
+  /** Narrow to one framework subfolder — only meaningful for @nexus-framework/skills. */
+  framework?: string;
+  /** Which slug to install from a multi-skill package like @nexus-framework/skills. */
+  skill?: string;
+  /** Overwrite an already-installed community skill of the same slug. */
+  force?: boolean;
+}
+
 /**
- * Install skills from the @nexus-framework/skills registry into community/.
+ * Install skills into `.nexus/skills/community/` from any npm package.
  *
- * Currently a stub — will source from npm when @nexus-framework/skills is published.
- * For now, notifies the user of upcoming availability.
+ * Fetches the package tarball straight from the npm registry (no local
+ * install, no project dependency added) and pulls out every `.md` file with
+ * valid SKILL_SPEC frontmatter. Two shapes are supported:
+ *
+ *  - `@nexus-framework/skills` — the official multi-framework registry.
+ *    It ships dozens of skills across every framework, so a bare install
+ *    would dump them all into community/ (they belong in core/, which
+ *    `nexus init`/`nexus upgrade` already populate). Require `--skill`
+ *    (and `--framework` to disambiguate a slug that exists in more than
+ *    one framework) so this only ever installs the one skill asked for.
+ *
+ *  - any other package name — a community skill pack. Every valid `.md`
+ *    file found in the tarball is installed; there's no framework
+ *    ambiguity to resolve because these packages aren't expected to mix
+ *    frameworks the way the official registry does.
  */
-export async function skillInstallCommand(pkg?: string): Promise<void> {
+export async function skillInstallCommand(
+  pkg?: string,
+  options: SkillInstallOptions = {},
+): Promise<void> {
   if (!pkg) {
     logger.error('Package name required. Usage: nexus skill install <package>');
-    logger.info('Example: nexus skill install @nexus-framework/skills-integrations');
+    logger.info('Example: nexus skill install @nexus-framework/skills --skill routing --framework nextjs');
+    logger.info('Example: nexus skill install nexus-skill-grilling');
     process.exit(1);
   }
 
@@ -475,18 +538,121 @@ export async function skillInstallCommand(pkg?: string): Promise<void> {
     process.exit(1);
   }
 
-  // Stub: @nexus-framework/skills registry is in development
-  if (pkg.startsWith('@nexus-framework/skills')) {
-    logger.info(`📦 Package: ${pkg}`);
-    logger.warn('The @nexus-framework/skills registry is coming in a future release.');
-    logger.info('Core framework skills are already installed in .nexus/skills/core/');
-    logger.info('Check .nexus/skills/README.md for available skills.');
-    process.exit(0);
+  logger.info(`Fetching "${pkg}" from npm…`);
+  const result = await fetchNpmTarball(pkg);
+
+  if (result === null) {
+    logger.error(`Could not reach npm to fetch "${pkg}".`);
+    logger.info('Check your network connection and try again.');
+    process.exit(1);
   }
 
-  logger.warn(`Community skill packages from "${pkg}" are not yet supported.`);
-  logger.info('Only @nexus-framework/skills packages will be supported initially.');
-  process.exit(1);
+  if ('notFound' in result) {
+    logger.error(`Package "${pkg}" was not found on npm.`);
+    logger.info('`nexus skill install` works with any published npm package containing SKILL_SPEC-formatted .md files — double-check the name.');
+    process.exit(1);
+  }
+
+  // Alias map: CLI-friendly names → package folder names (matches `skill registry`)
+  const ALIASES: Record<string, string> = { nextjs: 'next.js' };
+
+  const isOfficialRegistry = pkg === '@nexus-framework/skills' || pkg.startsWith('@nexus-framework/skills/');
+
+  const candidates = [...result.files.entries()]
+    .filter(([tarPath]) => path.basename(tarPath).toLowerCase() !== 'readme.md');
+
+  let toInstall: Array<[string, string]>;
+
+  if (isOfficialRegistry) {
+    if (!options.skill) {
+      logger.error('"@nexus-framework/skills" is a multi-framework registry — specify which skill to install.');
+      logger.info('Usage: nexus skill install @nexus-framework/skills --skill <slug> [--framework <fw>]');
+      logger.info('Run `nexus skill registry` to browse available slugs.');
+      process.exit(1);
+    }
+
+    const fw = options.framework
+      ? (ALIASES[options.framework.toLowerCase()] ?? options.framework.toLowerCase())
+      : undefined;
+
+    const matches = candidates.filter(([tarPath]) => {
+      const m = tarPath.match(/^package\/([^/]+)\/([^/]+)\.md$/);
+      if (!m) return false;
+      const [, framework, slug] = m;
+      if (slug !== options.skill) return false;
+      if (fw && framework !== fw) return false;
+      return true;
+    });
+
+    if (matches.length === 0) {
+      logger.error(`No skill "${options.skill}" found in @nexus-framework/skills${fw ? ` for framework "${fw}"` : ''}.`);
+      logger.info('Run `nexus skill registry` to see available slugs.');
+      process.exit(1);
+    }
+
+    if (matches.length > 1) {
+      const frameworks = matches
+        .map(([tarPath]) => tarPath.match(/^package\/([^/]+)\//)?.[1])
+        .filter((f): f is string => Boolean(f));
+      logger.error(`Skill "${options.skill}" exists in multiple frameworks: ${frameworks.join(', ')}.`);
+      logger.info('Narrow it down with --framework <fw>.');
+      process.exit(1);
+    }
+
+    toInstall = matches;
+  } else {
+    toInstall = candidates;
+  }
+
+  if (toInstall.length === 0) {
+    logger.error(`No skill files found in "${pkg}".`);
+    logger.info('A valid skill package must contain one or more .md files with SKILL_SPEC frontmatter.');
+    process.exit(1);
+  }
+
+  logger.info(`📦 Package: ${pkg}${result.version !== '?' ? ` v${result.version}` : ''}`);
+  logger.newline();
+
+  let installed = 0;
+  let skipped = 0;
+  let invalid = 0;
+
+  for (const [tarPath, content] of toInstall) {
+    const meta = parseSkillFrontmatter(content);
+    const problems = validateSkillFrontmatter(meta, content);
+    const errors = problems.filter((p) => p.severity === 'error');
+
+    if (errors.length > 0) {
+      invalid++;
+      logger.warn(`Skipping ${tarPath} — invalid SKILL_SPEC frontmatter:`);
+      for (const problem of errors) {
+        logger.info(`    ${problem.field}: ${problem.message}`);
+      }
+      continue;
+    }
+
+    const destPath = path.join(communityDir, `${meta.slug}.md`);
+
+    if (!options.force && (await fileExists(destPath))) {
+      skipped++;
+      logger.warn(`Skipping "${meta.slug}" — already installed. Use --force to overwrite.`);
+      continue;
+    }
+
+    await fs.writeFile(destPath, content, 'utf-8');
+    installed++;
+    logger.success(`Installed .nexus/skills/community/${meta.slug}.md`);
+  }
+
+  logger.newline();
+
+  if (installed === 0) {
+    logger.error(`Nothing installed from "${pkg}".`);
+    process.exit(1);
+  }
+
+  logger.info(`${installed} installed, ${skipped} skipped, ${invalid} invalid.`);
+  logger.info('Run `nexus skill list` to confirm, or `nexus skill status` to validate.');
 }
 
 /* ──────────────────────────────────────────────────────────────

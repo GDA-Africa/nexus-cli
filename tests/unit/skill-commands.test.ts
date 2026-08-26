@@ -99,6 +99,48 @@ async function buildTgz(paths: string[]): Promise<Buffer> {
 }
 
 /**
+ * Build a minimal POSIX tar buffer containing real file contents, keyed by
+ * tar path (e.g. "package/grilling-tips.md" → "---\nskill: ...").
+ */
+function buildTarWithContent(entries: Record<string, string>): Buffer {
+  const blocks: Buffer[] = [];
+
+  for (const [filePath, content] of Object.entries(entries)) {
+    const data = Buffer.from(content, 'utf8');
+    const header = Buffer.alloc(512, 0);
+
+    header.write(filePath.slice(0, 99), 0, 'utf8');
+    header.write('0000644\0', 100, 'utf8');
+    header.write('0000000\0', 108, 'utf8');
+    header.write('0000000\0', 116, 'utf8');
+    header.write(data.length.toString(8).padStart(11, '0') + '\0', 124, 'utf8');
+    header.write('00000000000\0', 136, 'utf8');
+    header.write('0', 156, 'utf8');
+
+    header.fill(0x20, 148, 156);
+    let checksum = 0;
+    for (let i = 0; i < 512; i++) checksum += header[i]!;
+    header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148, 'utf8');
+
+    blocks.push(header);
+
+    const paddedLen = Math.ceil(data.length / 512) * 512;
+    const dataBlock = Buffer.alloc(paddedLen, 0);
+    data.copy(dataBlock, 0);
+    if (paddedLen > 0) blocks.push(dataBlock);
+  }
+
+  blocks.push(Buffer.alloc(512, 0));
+  blocks.push(Buffer.alloc(512, 0));
+
+  return Buffer.concat(blocks);
+}
+
+async function buildTgzWithContent(entries: Record<string, string>): Promise<Buffer> {
+  return gzip(buildTarWithContent(entries));
+}
+
+/**
  * Create a mock Response object compatible with the fetch API.
  */
 function mockResponse(body: unknown, ok = true, status = 200): Response {
@@ -140,6 +182,49 @@ status: ${status}
 # Skill: ${slug}
 
 Content here.
+`;
+}
+
+/**
+ * Full SKILL_SPEC-conformant skill file — includes every required body
+ * section, so it passes `validateSkillFrontmatter()` with `content` and can
+ * be used to test the real `skillInstallCommand()` acceptance path.
+ */
+function fullSkillFile(slug: string, opts: { framework?: string; category?: string } = {}): string {
+  return `---
+skill: ${slug}
+version: 1.0.0
+framework: ${opts.framework ?? 'shared'}
+category: ${opts.category ?? 'workflow'}
+triggers:
+  - "doing the thing"
+  - "doing another thing"
+author: community
+status: active
+---
+
+# Skill: ${slug}
+
+## When to Read This
+Read this before doing the thing.
+
+## Context
+Some context specific to this project.
+
+## Steps
+1. Do the first step.
+2. Do the second step.
+
+## Patterns We Use
+- A pattern this project follows.
+
+## Anti-Patterns — Never Do This
+- Something that looks reasonable but is wrong here.
+
+## Example
+\`\`\`
+a minimal example
+\`\`\`
 `;
 }
 
@@ -417,34 +502,202 @@ describe('skillStatusCommand()', () => {
  * ────────────────────────────────────────────────────────────── */
 
 describe('skillInstallCommand()', () => {
+  let fetchSpy: MockInstance;
+
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  const META = (version = '1.0.0') => ({
+    version,
+    dist: { tarball: 'https://registry.npmjs.org/pkg/-/pkg-1.0.0.tgz' },
+  });
+
   it('exits with error when no package name is provided', async () => {
     await expect(skillInstallCommand()).rejects.toThrow('process.exit called');
   });
 
   it('exits with error when community/ directory is missing (regression: dirExists bug)', async () => {
-    // No skills tree created — community/ dir does not exist
-    await expect(skillInstallCommand('@nexus-framework/skills-test')).rejects.toThrow('process.exit called');
+    // No skills tree created — community/ dir does not exist. Should fail
+    // before ever touching the network.
+    await expect(skillInstallCommand('nexus-skill-grilling')).rejects.toThrow('process.exit called');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('does NOT exit for missing-dir reason when community/ exists', async () => {
-    await makeSkillsTree(); // creates community/ dir
-    // @nexus-framework/skills packages exit with a "coming soon" message (not an error)
-    // so process.exit IS called, but for a different reason (not the dir-missing check)
-    try {
-      await skillInstallCommand('@nexus-framework/skills-integrations');
-    } catch {
-      // process.exit was called — but we verify it wasn't for the dir-missing check
-    }
-    // The directory check is at the TOP of the function; if it fired, exitSpy would
-    // have been called before reaching the pkg.startsWith check.
-    // We can verify by checking the community/ dir still exists (not removed or anything).
-    const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
-    expect(await fs.pathExists(communityDir)).toBe(true);
-  });
-
-  it('rejects unsupported (non-nexus-framework) packages', async () => {
+  it('installs every valid skill file found in a community package', async () => {
     await makeSkillsTree();
-    await expect(skillInstallCommand('some-random-package')).rejects.toThrow('process.exit called');
+    const tgz = await buildTgzWithContent({
+      'package/grilling-tips.md': fullSkillFile('grilling-tips'),
+      'package/marinades.md': fullSkillFile('marinades'),
+      'package/README.md': '# Not a skill',
+    });
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(META()))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    await skillInstallCommand('nexus-skill-grilling');
+
+    expect(exitSpy).not.toHaveBeenCalled();
+    const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+    expect(await fs.pathExists(path.join(communityDir, 'grilling-tips.md'))).toBe(true);
+    expect(await fs.pathExists(path.join(communityDir, 'marinades.md'))).toBe(true);
+    expect(await fs.pathExists(path.join(communityDir, 'README.md'))).toBe(false);
+  });
+
+  it('exits with a clear error when the package does not exist on npm', async () => {
+    await makeSkillsTree();
+    fetchSpy.mockResolvedValueOnce(mockResponse({}, false, 404));
+    await expect(skillInstallCommand('this-package-does-not-exist')).rejects.toThrow('process.exit called');
+  });
+
+  it('exits with a clear error when npm is unreachable', async () => {
+    await makeSkillsTree();
+    fetchSpy.mockRejectedValueOnce(new Error('network down'));
+    await expect(skillInstallCommand('nexus-skill-grilling')).rejects.toThrow('process.exit called');
+  });
+
+  it('skips files with invalid SKILL_SPEC frontmatter but installs the valid ones', async () => {
+    await makeSkillsTree();
+    const tgz = await buildTgzWithContent({
+      'package/good-skill.md': fullSkillFile('good-skill'),
+      'package/bad-skill.md': '---\nskill: bad-skill\n---\n\nMissing everything else.',
+    });
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(META()))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    await skillInstallCommand('nexus-skill-grilling');
+
+    const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+    expect(await fs.pathExists(path.join(communityDir, 'good-skill.md'))).toBe(true);
+    expect(await fs.pathExists(path.join(communityDir, 'bad-skill.md'))).toBe(false);
+  });
+
+  it('does not overwrite an already-installed skill without --force', async () => {
+    await makeSkillsTree({ community: { 'grilling-tips': fullSkillFile('grilling-tips') } });
+    const tgz = await buildTgzWithContent({
+      'package/grilling-tips.md': fullSkillFile('grilling-tips', { category: 'ui' }),
+    });
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(META()))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    // Nothing installed (the only candidate was skipped) → exits with error
+    await expect(skillInstallCommand('nexus-skill-grilling')).rejects.toThrow('process.exit called');
+
+    const raw = await fs.readFile(
+      path.join(tmpDir, '.nexus', 'skills', 'community', 'grilling-tips.md'),
+      'utf-8',
+    );
+    expect(raw).toContain('category: workflow'); // original content untouched
+  });
+
+  it('overwrites an already-installed skill with --force', async () => {
+    await makeSkillsTree({ community: { 'grilling-tips': fullSkillFile('grilling-tips') } });
+    const tgz = await buildTgzWithContent({
+      'package/grilling-tips.md': fullSkillFile('grilling-tips', { category: 'ui' }),
+    });
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse(META()))
+      .mockResolvedValueOnce(mockResponse(tgz));
+
+    await skillInstallCommand('nexus-skill-grilling', { force: true });
+
+    expect(exitSpy).not.toHaveBeenCalled();
+    const raw = await fs.readFile(
+      path.join(tmpDir, '.nexus', 'skills', 'community', 'grilling-tips.md'),
+      'utf-8',
+    );
+    expect(raw).toContain('category: ui');
+  });
+
+  describe('@nexus-framework/skills (the official multi-framework registry)', () => {
+    it('refuses to install without --skill', async () => {
+      await makeSkillsTree();
+      const tgz = await buildTgzWithContent({
+        'package/next.js/routing.md': fullSkillFile('routing', { framework: 'next.js' }),
+      });
+      fetchSpy
+        .mockResolvedValueOnce(mockResponse(META()))
+        .mockResolvedValueOnce(mockResponse(tgz));
+
+      await expect(skillInstallCommand('@nexus-framework/skills')).rejects.toThrow('process.exit called');
+      const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+      expect(await fs.pathExists(path.join(communityDir, 'routing.md'))).toBe(false);
+    });
+
+    it('installs one named skill with --skill', async () => {
+      await makeSkillsTree();
+      const tgz = await buildTgzWithContent({
+        'package/next.js/routing.md': fullSkillFile('routing', { framework: 'next.js' }),
+        'package/shared/git-workflow.md': fullSkillFile('git-workflow', { framework: 'shared' }),
+      });
+      fetchSpy
+        .mockResolvedValueOnce(mockResponse(META()))
+        .mockResolvedValueOnce(mockResponse(tgz));
+
+      await skillInstallCommand('@nexus-framework/skills', { skill: 'git-workflow' });
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+      expect(await fs.pathExists(path.join(communityDir, 'git-workflow.md'))).toBe(true);
+      expect(await fs.pathExists(path.join(communityDir, 'routing.md'))).toBe(false);
+    });
+
+    it('asks to disambiguate when --skill matches more than one framework', async () => {
+      await makeSkillsTree();
+      const tgz = await buildTgzWithContent({
+        'package/next.js/testing.md': fullSkillFile('testing', { framework: 'next.js' }),
+        'package/react-vite/testing.md': fullSkillFile('testing', { framework: 'react-vite' }),
+      });
+      fetchSpy
+        .mockResolvedValueOnce(mockResponse(META()))
+        .mockResolvedValueOnce(mockResponse(tgz));
+
+      await expect(
+        skillInstallCommand('@nexus-framework/skills', { skill: 'testing' }),
+      ).rejects.toThrow('process.exit called');
+    });
+
+    it('resolves the ambiguity with --framework', async () => {
+      await makeSkillsTree();
+      const tgz = await buildTgzWithContent({
+        'package/next.js/testing.md': fullSkillFile('testing', { framework: 'next.js' }),
+        'package/react-vite/testing.md': fullSkillFile('testing', { framework: 'react-vite' }),
+      });
+      fetchSpy
+        .mockResolvedValueOnce(mockResponse(META()))
+        .mockResolvedValueOnce(mockResponse(tgz));
+
+      await skillInstallCommand('@nexus-framework/skills', { skill: 'testing', framework: 'react-vite' });
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      const raw = await fs.readFile(
+        path.join(tmpDir, '.nexus', 'skills', 'community', 'testing.md'),
+        'utf-8',
+      );
+      expect(raw).toContain('framework: react-vite');
+    });
+
+    it('accepts the "nextjs" CLI alias for --framework', async () => {
+      await makeSkillsTree();
+      const tgz = await buildTgzWithContent({
+        'package/next.js/routing.md': fullSkillFile('routing', { framework: 'next.js' }),
+      });
+      fetchSpy
+        .mockResolvedValueOnce(mockResponse(META()))
+        .mockResolvedValueOnce(mockResponse(tgz));
+
+      await skillInstallCommand('@nexus-framework/skills', { skill: 'routing', framework: 'nextjs' });
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+      expect(await fs.pathExists(path.join(communityDir, 'routing.md'))).toBe(true);
+    });
   });
 });
 

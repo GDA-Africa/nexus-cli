@@ -149,9 +149,12 @@ skillCmd
 
 skillCmd
   .command('install <package>')
-  .description('Install community skills from @nexus-framework/skills or a registry package')
-  .action(async (pkg: string) => {
-    await skillInstallCommand(pkg);
+  .description('Install skills from any npm package (community/) — @nexus-framework/skills needs --skill')
+  .option('--skill <slug>', 'Which skill to install from @nexus-framework/skills (required for that package)')
+  .option('--framework <name>', 'Disambiguate a slug that exists in more than one framework (e.g. nextjs)')
+  .option('--force', 'Overwrite an already-installed community skill of the same slug')
+  .action(async (pkg: string, options: { skill?: string; framework?: string; force?: boolean }) => {
+    await skillInstallCommand(pkg, options);
   });
 
 skillCmd
