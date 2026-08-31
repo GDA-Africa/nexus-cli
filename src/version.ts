@@ -4,4 +4,4 @@
  * Single source of truth for the CLI version.
  */
 
-export const version = '1.5.1';
+export const version = '1.5.2';
