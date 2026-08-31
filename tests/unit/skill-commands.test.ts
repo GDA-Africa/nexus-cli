@@ -699,6 +699,109 @@ describe('skillInstallCommand()', () => {
       expect(await fs.pathExists(path.join(communityDir, 'routing.md'))).toBe(true);
     });
   });
+
+  describe('Local directory installation', () => {
+    it('installs skills from a local directory path', async () => {
+      await makeSkillsTree();
+      const localSkillsDir = path.join(tmpDir, 'custom-local-skills');
+      await fs.ensureDir(localSkillsDir);
+      await fs.writeFile(
+        path.join(localSkillsDir, 'local-workflow.md'),
+        fullSkillFile('local-workflow'),
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(localSkillsDir, 'README.md'),
+        '# Local skills collection',
+        'utf-8',
+      );
+
+      await skillInstallCommand('./custom-local-skills');
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+      expect(await fs.pathExists(path.join(communityDir, 'local-workflow.md'))).toBe(true);
+      expect(await fs.pathExists(path.join(communityDir, 'README.md'))).toBe(false);
+    });
+
+    it('filters by --skill when installing from a local directory', async () => {
+      await makeSkillsTree();
+      const localSkillsDir = path.join(tmpDir, 'custom-local-skills');
+      await fs.ensureDir(localSkillsDir);
+      await fs.writeFile(
+        path.join(localSkillsDir, 'skill-a.md'),
+        fullSkillFile('skill-a'),
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(localSkillsDir, 'skill-b.md'),
+        fullSkillFile('skill-b'),
+        'utf-8',
+      );
+
+      await skillInstallCommand('./custom-local-skills', { skill: 'skill-a' });
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+      expect(await fs.pathExists(path.join(communityDir, 'skill-a.md'))).toBe(true);
+      expect(await fs.pathExists(path.join(communityDir, 'skill-b.md'))).toBe(false);
+    });
+  });
+
+  describe('GitHub repository installation', () => {
+    it('installs from owner/repo format', async () => {
+      await makeSkillsTree();
+      const tgz = await buildTgzWithContent({
+        'nexus-skills-main/packages/core/shared/git-workflow.md': fullSkillFile('git-workflow', { framework: 'shared' }),
+        'nexus-skills-main/packages/core/next.js/routing.md': fullSkillFile('routing', { framework: 'next.js' }),
+      });
+      fetchSpy.mockResolvedValueOnce(mockResponse(tgz));
+
+      await skillInstallCommand('GDA-Africa/nexus-skills', { skill: 'git-workflow' });
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+      expect(await fs.pathExists(path.join(communityDir, 'git-workflow.md'))).toBe(true);
+      expect(await fs.pathExists(path.join(communityDir, 'routing.md'))).toBe(false);
+    });
+
+    it('installs all skills from a community GitHub repository without multi-framework restrictions', async () => {
+      await makeSkillsTree();
+      const tgz = await buildTgzWithContent({
+        'repo-main/skills/deploy-aws.md': fullSkillFile('deploy-aws'),
+        'repo-main/skills/deploy-gcp.md': fullSkillFile('deploy-gcp'),
+      });
+      fetchSpy.mockResolvedValueOnce(mockResponse(tgz));
+
+      await skillInstallCommand('github:acme/cloud-skills');
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+      expect(await fs.pathExists(path.join(communityDir, 'deploy-aws.md'))).toBe(true);
+      expect(await fs.pathExists(path.join(communityDir, 'deploy-gcp.md'))).toBe(true);
+    });
+
+    it('installs from full https://github.com/owner/repo URL', async () => {
+      await makeSkillsTree();
+      const tgz = await buildTgzWithContent({
+        'repo-main/skills/docker-flow.md': fullSkillFile('docker-flow'),
+      });
+      fetchSpy.mockResolvedValueOnce(mockResponse(tgz));
+
+      await skillInstallCommand('https://github.com/acme/docker-skills');
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      const communityDir = path.join(tmpDir, '.nexus', 'skills', 'community');
+      expect(await fs.pathExists(path.join(communityDir, 'docker-flow.md'))).toBe(true);
+    });
+
+    it('exits with error when GitHub repo returns 404', async () => {
+      await makeSkillsTree();
+      fetchSpy.mockResolvedValueOnce(mockResponse({}, false, 404));
+
+      await expect(skillInstallCommand('acme/non-existent-repo')).rejects.toThrow('process.exit called');
+    });
+  });
 });
 
 /* ──────────────────────────────────────────────────────────────

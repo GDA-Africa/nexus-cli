@@ -148,13 +148,13 @@ skillCmd
   });
 
 skillCmd
-  .command('install <package>')
-  .description('Install skills from any npm package (community/) — @nexus-framework/skills needs --skill')
-  .option('--skill <slug>', 'Which skill to install from @nexus-framework/skills (required for that package)')
-  .option('--framework <name>', 'Disambiguate a slug that exists in more than one framework (e.g. nextjs)')
+  .command('install <source>')
+  .description('Install skills from an npm package, GitHub repo (owner/repo), Git URL, or local directory path')
+  .option('--skill <slug>', 'Which skill to install from a multi-skill repository or package')
+  .option('--framework <name>', 'Disambiguate or narrow to a specific framework (e.g. nextjs, shared)')
   .option('--force', 'Overwrite an already-installed community skill of the same slug')
-  .action(async (pkg: string, options: { skill?: string; framework?: string; force?: boolean }) => {
-    await skillInstallCommand(pkg, options);
+  .action(async (source: string, options: { skill?: string; framework?: string; force?: boolean }) => {
+    await skillInstallCommand(source, options);
   });
 
 skillCmd
