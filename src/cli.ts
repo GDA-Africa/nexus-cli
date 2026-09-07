@@ -21,6 +21,8 @@ import {
 } from './commands/agent.js';
 import { brainCommand } from './commands/brain.js';
 import { briefCommand } from './commands/brief.js';
+import { logCommand } from './commands/log.js';
+import { noteCommand } from './commands/note.js';
 import { consolidateCommand } from './commands/consolidate.js';
 import { contextCommand } from './commands/context.js';
 import { doctorCommand } from './commands/doctor.js';
@@ -302,6 +304,12 @@ program.addCommand(wakeCommand());
 
 // ── nexus brain ───────────────────────────────────────────────
 program.addCommand(brainCommand());
+
+// ── nexus log ─────────────────────────────────────────────────
+program.addCommand(logCommand());
+
+// ── nexus note ────────────────────────────────────────────────
+program.addCommand(noteCommand());
 
 // ── nexus mcp ─────────────────────────────────────────────────
 program.addCommand(mcpCommand());

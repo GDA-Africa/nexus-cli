@@ -15,7 +15,6 @@ import { runDoctor } from '../utils/doctor/index.js';
 import { logger } from '../utils/logger.js';
 
 import { syncCommand } from './sync.js';
-
 export function brainCommand(): Command {
   const brain = new Command('brain')
     .description('Inspect brain health and auto-invoke signals');

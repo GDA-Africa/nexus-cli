@@ -26,6 +26,13 @@ import type { DoctorReport } from '../utils/doctor/types.js';
 import { renderGraphDigest } from '../utils/graph/digest.js';
 import { parseProject } from '../utils/graph/parser.js';
 import type { ProjectGraph } from '../utils/graph/types.js';
+import {
+  appendKnowledgeEntry,
+  appendProgressEntry,
+  BrainMemoryError,
+  KNOWLEDGE_CATEGORIES,
+  resolveBrainScope,
+} from '../utils/brain-memory.js';
 import { parseKnowledge, rankKnowledgeEntries, type KnowledgeEntry } from '../utils/knowledge.js';
 import { readActivePlans } from '../utils/plans/active.js';
 import { collectPlanSummaries, rebuildPlansIndex } from '../utils/plans/index-builder.js';
@@ -518,6 +525,44 @@ export class ContextFloorOverflow extends Error {
  * Per-entry cap on knowledge bodies. Entries are freeform prose in an
  * append-only log, so one long entry must never be able to consume the pack.
  */
+export interface AppendProgressInputMcp {
+  message: string;
+  status?: 'completed' | 'in-progress' | 'blocked' | 'failed';
+  scope?: string;
+  date?: string;
+}
+
+export async function brainLogTool(
+  ctx: BrainContext,
+  input: AppendProgressInputMcp,
+): Promise<{ appended: true; entry: string }> {
+  const statusIcons: Record<string, string> = {
+    completed: '✅',
+    'in-progress': '⏳',
+    blocked: '🛑',
+    failed: '✖',
+  };
+  const statusIcon = statusIcons[input.status ?? 'completed'] ?? '❔';
+  const date = input.date ?? new Date().toISOString().split('T')[0];
+
+  try {
+    const nexusDir = resolveBrainScope(input.scope ?? 'root', ctx.projectRoot);
+    const { appended, entry } = await appendProgressEntry(nexusDir, {
+      date,
+      statusIcon,
+      message: input.message,
+    });
+    return { appended, entry };
+  } catch (error) {
+    if (error instanceof BrainMemoryError) {
+      throw new McpToolError(error.message);
+    }
+    throw error;
+  }
+}
+
+
+
 const KNOWLEDGE_BODY_CAP = 1200;
 
 const DEFAULT_MAX_TOKENS = 3000;
@@ -953,56 +998,61 @@ export async function planVerifyTool(
   return { success: allPassed || !!input.waiver, evidence: evidenceBlock };
 }
 
-export const KNOWLEDGE_CATEGORIES = [
-  'architecture',
-  'bug-fix',
-  'pattern',
-  'package',
-  'performance',
-  'convention',
-  'gotcha',
-  'integration',
-] as const;
+
 
 export interface AddKnowledgeInput {
-  category: (typeof KNOWLEDGE_CATEGORIES)[number];
-  title: string;
+  type?: 'knowledge' | 'progress';
+  category?: (typeof KNOWLEDGE_CATEGORIES)[number];
+  title?: string;
   /** 1–3 sentence insight. */
-  body: string;
+  body?: string;
   /** Optional "Why" line appended as **Why:** ... */
   why?: string;
   /** Optional "How to apply" line appended as **How to apply:** ... */
   howToApply?: string;
+  message?: string;
+  status?: string;
+  scope?: string;
 }
 
-/** Append a validated entry to the append-only knowledge base. */
 export async function addKnowledgeEntryTool(
   ctx: BrainContext,
   input: AddKnowledgeInput,
-): Promise<{ heading: string; appended: true }> {
-  const knowledgePath = path.join(ctx.docsDir, 'knowledge.md');
-  if (!(await fs.pathExists(knowledgePath))) {
-    throw new McpToolError('No knowledge base found at .nexus/docs/knowledge.md.');
+): Promise<{ heading?: string; appended: true }> {
+  try {
+    if (input.type === 'progress') {
+      if (!input.message) throw new McpToolError('message is required for progress entries');
+      const statusIcons: Record<string, string> = {
+        completed: '✅',
+        'in-progress': '⏳',
+        blocked: '🛑',
+        failed: '✖',
+      };
+      const statusIcon = statusIcons[input.status ?? 'completed'] ?? '❔';
+      
+      await appendProgressEntry(
+        input.scope ? resolveBrainScope(input.scope) : ctx.nexusDir,
+        {
+          date: new Date().toISOString().split('T')[0],
+          statusIcon,
+          message: input.message,
+        }
+      );
+      return { appended: true };
+    }
+
+    if (!input.category || !input.title || !input.body) {
+      throw new McpToolError('category, title, and body are required for knowledge entries');
+    }
+
+    const { heading, appended } = await appendKnowledgeEntry(ctx.nexusDir, input as any); // Cast for strict types (already validated by Zod)
+    return { heading, appended };
+  } catch (error) {
+    if (error instanceof BrainMemoryError) {
+      throw new McpToolError(error.message);
+    }
+    throw error;
   }
-
-  const heading = `### [${input.category}] ${input.title}`;
-  const entryLines = [heading, `**${todayStamp()}** — ${input.body.trim()}`];
-  if (input.why) entryLines.push(`**Why:** ${input.why.trim()}`);
-  if (input.howToApply) entryLines.push(`**How to apply:** ${input.howToApply.trim()}`);
-
-  const content = await fs.readFile(knowledgePath, 'utf-8');
-  const parsed = parseKnowledge(content);
-
-  if (parsed.entries.some((entry) => entry.category === input.category && entry.title === input.title)) {
-    throw new McpToolError(
-      `An entry "[${input.category}] ${input.title}" already exists. The knowledge base is append-only — pick a new title.`,
-    );
-  }
-
-  const updated = insertBeforePostamble(content, parsed.postamble, entryLines.join('\n'));
-  await fs.writeFile(knowledgePath, updated, 'utf-8');
-
-  return { heading, appended: true };
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -1047,25 +1097,7 @@ function toKnowledgeMatch(entry: KnowledgeEntry): KnowledgeMatch {
   };
 }
 
-/** Insert a new entry before the file footer (trailing `---` + signature), or append. */
-function insertBeforePostamble(content: string, postamble: string[], entry: string): string {
-  const trimmedPostamble = postamble.join('\n');
 
-  if (trimmedPostamble.trim().length > 0 && content.endsWith(trimmedPostamble)) {
-    const head = content.slice(0, content.length - trimmedPostamble.length).trimEnd();
-    return `${head}\n\n${entry}\n\n${trimmedPostamble.trimStart()}`;
-  }
 
-  return `${content.trimEnd()}\n\n${entry}\n`;
-}
 
-/**
- * Skill frontmatter now comes from the single shared parser in
- * `utils/skills/frontmatter.ts`.
- *
- * The parser that used to live here read only inline `triggers: [a, b]`, a form
- * no registry skill uses — so every skill parsed to zero triggers and the
- * skills section of the context pack never returned anything. It also looked
- * for `title:`/`name:`, which NEXUS skills do not carry (they use `skill:`),
- * so titles and descriptions were always null.
- */
+

@@ -245,7 +245,7 @@ client and exits with it. **stdout carries protocol only** — handlers never
 `console.log` and never `process.exit()`; they throw `McpToolError`, which the
 server layer converts into a tool error.
 
-### 19 tools — 15 read, 4 write
+### 20 tools — 15 read, 5 write
 
 **Read**
 
@@ -271,6 +271,7 @@ than merely detectable.
 |------|------|
 | `nexus_plan_tick` | Toggle a checklist step by 1-based index |
 | `nexus_plan_note` | Append a timestamped note |
+| `nexus_brain_log` | Append a timestamped entry to the Progress Log |
 | `nexus_add_knowledge_entry` | Append a formatted entry; rejects duplicate category+title |
 
 ### `nexus_get_context` — how the pack is composed

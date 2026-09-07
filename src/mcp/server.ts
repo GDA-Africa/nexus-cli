@@ -7,7 +7,7 @@
  *
  * stdout is reserved for the MCP protocol — all diagnostics go to stderr.
  *
- * Tool surface (19):
+ * Tool surface (20):
  *   Read:   nexus_wake, nexus_get_vital_signs, nexus_query_knowledge,
  *           nexus_get_active_plan, nexus_list_plans, nexus_get_plan,
  *           nexus_brief, nexus_doctor, nexus_list_skills, nexus_get_skill,
@@ -23,6 +23,7 @@ import { z } from 'zod';
 
 import { PLAN_STATUSES } from '../utils/plans/types.js';
 import { version } from '../version.js';
+import { KNOWLEDGE_CATEGORIES } from '../utils/brain-memory.js';
 
 import { McpToolError, resolveBrainContext, type BrainContext } from './context.js';
 import {
@@ -37,7 +38,6 @@ import {
   getPlanTool,
   getSkillTool,
   getVitalSignsTool,
-  KNOWLEDGE_CATEGORIES,
   listAgentsTool,
   listPlansTool,
   listSkillsTool,
@@ -359,11 +359,17 @@ export function buildMcpServer(options: BuildMcpServerOptions = {}): McpServer {
         'non-obvious: a bug root cause, an architecture insight, a package quirk. Keep the body to ' +
         '1–3 sentences.',
       inputSchema: {
-        category: z.enum(KNOWLEDGE_CATEGORIES).describe('Entry category tag'),
-        title: z.string().min(3).describe('Short entry title'),
-        body: z.string().min(10).describe('1–3 sentence insight'),
-        why: z.string().optional().describe('Optional "Why" rationale line'),
-        howToApply: z.string().optional().describe('Optional "How to apply" guidance line'),
+        type: z.enum(['knowledge', 'progress']).optional().default('knowledge').describe('Whether to append a "knowledge" entry (knowledge.md) or a "progress" entry (docs/index.md Progress Log).'),
+        // Knowledge fields
+        category: z.enum(KNOWLEDGE_CATEGORIES).optional().describe('Entry category tag (required if type=knowledge)'),
+        title: z.string().min(3).optional().describe('Short entry title (required if type=knowledge)'),
+        body: z.string().min(10).optional().describe('1–3 sentence insight (required if type=knowledge)'),
+        why: z.string().optional().describe('Optional "Why" rationale line (only for knowledge)'),
+        howToApply: z.string().optional().describe('Optional "How to apply" guidance line (only for knowledge)'),
+        // Progress fields
+        message: z.string().min(1).optional().describe('The progress entry text (required if type=progress)'),
+        status: z.enum(['completed', 'in-progress', 'blocked', 'failed']).optional().describe('Prepends ✅ / ⏳ / 🛑 / ✖ (only for progress, defaults to completed)'),
+        scope: z.string().optional().describe('Optional scope tag like a package name (only for progress)'),
       },
     },
     wrap(addKnowledgeEntryTool),

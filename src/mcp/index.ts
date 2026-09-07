@@ -1,7 +1,7 @@
 /**
  * NEXUS MCP — Public barrel
  *
- * Re-exports the brain context resolver and all 19 tool handlers as a
+ * Re-exports the brain context resolver and all 20 tool handlers as a
  * transport-agnostic API. `src/mcp/server.ts` wraps these same functions for
  * the stdio MCP protocol; this barrel lets an embedding host (e.g. a Cordis
  * plugin) call them directly and keep native return types and thrown errors
@@ -14,9 +14,11 @@
  */
 
 export { McpToolError, resolveBrainContext, type BrainContext } from './context.js';
+export { BrainMemoryError, KNOWLEDGE_CATEGORIES } from '../utils/brain-memory.js';
 
 export {
   addKnowledgeEntryTool,
+  brainLogTool,
   briefTool,
   ContextFloorOverflow,
   doctorTool,
@@ -27,7 +29,6 @@ export {
   getPlanTool,
   getSkillTool,
   getVitalSignsTool,
-  KNOWLEDGE_CATEGORIES,
   listAgentsTool,
   listPlansTool,
   listSkillsTool,

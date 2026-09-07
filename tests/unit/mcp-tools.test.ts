@@ -255,6 +255,7 @@ describe('addKnowledgeEntryTool', () => {
     expect(content).toContain('**Why:** Smaller payloads');
     // Footer still last
     expect(content.trimEnd().endsWith('*Test footer — last entry 2026-06-03*')).toBe(true);
+    console.log("TEST CONTENT:\\n", content);
     // New entry is parseable
     const result = await queryKnowledgeTool(ctx, { category: 'pattern' });
     expect(result.entries[0]?.title).toBe('MCP tools beat file reads');
