@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import fs from 'fs-extra';
 
+import { computeBrainHash } from '../utils/brain.js';
 import { getNexusDir } from '../utils/brain.js';
 import { logger } from '../utils/logger.js';
 import { removeActivePlan, setActivePlan } from '../utils/plans/active.js';
@@ -23,6 +24,15 @@ import {
   recordIsSatisfied,
 } from '../utils/skills/gate.js';
 import { toSlug } from '../utils/validator.js';
+import {
+  formatEvidenceBlock,
+  generateDefaultVerifyManifest,
+  loadVerifyManifest,
+  parseEvidenceBlock,
+  runVerifyChecks,
+  saveVerifyManifest,
+  type VerifyEvidenceBlock,
+} from '../utils/verify/index.js';
 
 export interface PlanNewOptions {
   type?: 'feature' | 'bug' | 'refactor' | 'spike' | 'chore';
@@ -178,7 +188,87 @@ export async function planNoteCommand(id: string, message: string): Promise<void
   logger.success(`Note added to ${id}.`);
 }
 
-export async function planDoneCommand(id: string, summary?: string): Promise<void> {
+export interface PlanVerifyOptions {
+  waiver?: string;
+  timeoutMs?: number;
+}
+
+export interface PlanDoneOptions {
+  summary?: string;
+  strict?: boolean;
+}
+
+export async function planVerifyCommand(
+  id: string,
+  options: PlanVerifyOptions = {},
+): Promise<{ success: boolean; evidence: VerifyEvidenceBlock }> {
+  const { plansDir, nexusDir } = await resolvePlansContext();
+  const filePath = path.join(plansDir, `${id}.md`);
+  const plan = await readPlanById(filePath, id);
+
+  const projectRoot = path.dirname(nexusDir);
+  let manifest = await loadVerifyManifest(nexusDir);
+  if (!manifest) {
+    manifest = await generateDefaultVerifyManifest(projectRoot);
+    await saveVerifyManifest(nexusDir, manifest);
+    logger.info(`Generated initial .nexus/verify.json with ${manifest.checks.length} check(s).`);
+  }
+
+  logger.info(`Running ${manifest.checks.length} verification check(s) for plan "${id}"...`);
+  const checkResults = await runVerifyChecks(manifest, projectRoot, options.timeoutMs);
+
+  const brainHash = await computeBrainHash(nexusDir);
+  let wakeToken: string | undefined;
+  const sessionPath = path.join(nexusDir, 'state', 'session.json');
+  if (await fs.pathExists(sessionPath)) {
+    try {
+      const parsed = await fs.readJson(sessionPath);
+      if (typeof parsed?.token === 'string') {
+        wakeToken = parsed.token;
+      }
+    } catch {
+      // Ignore session read errors
+    }
+  }
+
+  const evidenceBlock: VerifyEvidenceBlock = {
+    verified_at: new Date().toISOString(),
+    brain_hash: brainHash,
+    wake_token: wakeToken,
+    checks: checkResults,
+    ...(options.waiver ? { waiver: options.waiver } : {}),
+  };
+
+  const formattedBlock = formatEvidenceBlock(evidenceBlock);
+  const nextPlan = setSection(plan, 'Evidence', formattedBlock);
+  await writePlanFile(filePath, nextPlan);
+
+  const allPassed = checkResults.every((c) => c.exit === 0);
+  for (const c of checkResults) {
+    if (c.exit === 0) {
+      logger.success(`✔ [${c.id}] ${c.run} (${c.duration_ms}ms) — ${c.summary}`);
+    } else {
+      logger.error(`✖ [${c.id}] ${c.run} (${c.duration_ms}ms) — ${c.summary}`);
+    }
+  }
+
+  if (allPassed || options.waiver) {
+    logger.success(`Machine verification evidence recorded in .nexus/plans/${id}.md`);
+  } else {
+    logger.warn(`Verification recorded failures. Plan remains unverified until checks pass.`);
+  }
+
+  return { success: allPassed || !!options.waiver, evidence: evidenceBlock };
+}
+
+export async function planDoneCommand(
+  id: string,
+  optionsOrSummary?: PlanDoneOptions | string,
+): Promise<void> {
+  const options: PlanDoneOptions =
+    typeof optionsOrSummary === 'string'
+      ? { summary: optionsOrSummary }
+      : optionsOrSummary ?? {};
   const { plansDir, nexusDir } = await resolvePlansContext();
   const filePath = path.join(plansDir, `${id}.md`);
   const plan = await readPlanById(filePath, id);
@@ -191,9 +281,28 @@ export async function planDoneCommand(id: string, summary?: string): Promise<voi
     };
   }
 
-  if (summary) {
-    const entry = `- ${new Date().toISOString()} — ${summary}`;
+  if (options.summary) {
+    const entry = `- ${new Date().toISOString()} — ${options.summary}`;
     nextPlan = appendSectionEntry(nextPlan, 'Evidence', entry);
+  }
+
+  // v1.2 verification gate: check machine evidence or explicit waiver
+  const evidenceSection = getSection(nextPlan, 'Evidence');
+  const evidenceBody = (evidenceSection?.content ?? '').trim();
+  const evidenceBlock = parseEvidenceBlock(evidenceBody);
+  const isWaived = /\bWAIVER:\s*.+/i.test(evidenceBody) || !!evidenceBlock?.waiver;
+  const isVerified = (evidenceBlock && evidenceBlock.checks.length > 0 && evidenceBlock.checks.every((c) => c.exit === 0)) || isWaived;
+
+  if (!isVerified) {
+    if (options.strict) {
+      logger.error('Cannot mark plan done under strict mode: missing passing machine verification evidence or explicit waiver.');
+      logger.info(`Run verification:  nexus plan verify ${id}`);
+      logger.info(`Or record waiver:  nexus plan note ${id} "WAIVER: <reason>"`);
+      process.exit(1);
+    }
+    logger.warn('⚠ Evidence section lacks valid machine verification — this plan completes UNVERIFIED.');
+    logger.info(`Run verification:  nexus plan verify ${id}`);
+    logger.info(`Or record waiver:  nexus plan note ${id} "WAIVER: <reason>"  (doctor D11 flags unverified done plans)`);
   }
 
   await writePlanFile(filePath, nextPlan);
@@ -202,15 +311,6 @@ export async function planDoneCommand(id: string, summary?: string): Promise<voi
   await appendProgressLog(nexusDir, id, nextPlan.frontmatter.title);
 
   logger.success(`Plan marked done: ${id}`);
-
-  // v1.1 verification gate (advisory here; doctor D11 makes it visible)
-  const evidenceSection = getSection(nextPlan, 'Evidence');
-  if (!evidenceSection || evidenceSection.content.trim().length === 0) {
-    logger.warn('⚠ Evidence section is empty — this plan completes UNVERIFIED.');
-    logger.info(`Record test results:  nexus plan note ${id} "tests: NNN passing"`);
-    logger.info(`Or an explicit waiver: nexus plan note ${id} "WAIVER: …"  (doctor D11 flags unverified done plans)`);
-  }
-
   logger.info('Tip: if you learned something non-obvious, append it to `.nexus/docs/knowledge.md`.');
 }
 

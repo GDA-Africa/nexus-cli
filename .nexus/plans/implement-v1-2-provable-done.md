@@ -10,9 +10,8 @@ source: "design:../../../.nexus/docs/v1_2_provable_done.md"
 parent: null
 estimate: "8d"
 phase: "v1.2-provable-done"
-tags: ["v1.2.0", "verify", "doctor", "d11", "strict", "protocol"]
+tags: ["v1.2.0","verify","doctor","d11","strict","protocol"]
 ---
-
 ## Goal
 Make "done" checkable: a `.nexus/verify.json` manifest of check commands,
 `nexus plan verify` recording machine evidence (command, exit code, output
@@ -27,7 +26,6 @@ makes verification provable; strict mode gives teams the CI dial. Full
 design: v1_2_provable_done.md.
 
 ## Acceptance Criteria
-
 ### M1 — Verify
 - [ ] `.nexus/verify.json` generated at init/adopt/upgrade from the project's
       validation command; JSON Schema published; hand-edits preserved on upgrade
@@ -60,6 +58,39 @@ design: v1_2_provable_done.md.
 - [ ] 7. M3: docs/homepage/llms sync + CHANGELOG + migration note (additive)
 
 ## Evidence
+```json
+{
+  "verified_at": "2026-09-07T09:56:15.486Z",
+  "brain_hash": "cd9e558732811d1820e3350bcf0c38d314aca500fc45c452be81c759a2972a7e",
+  "wake_token": "NX-WAKE-WU4N-2026-08-26",
+  "checks": [
+    {
+      "id": "types",
+      "run": "npx tsc --noEmit",
+      "exit": 0,
+      "duration_ms": 4111,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "summary": "Passed cleanly"
+    },
+    {
+      "id": "tests",
+      "run": "npm run test",
+      "exit": 0,
+      "duration_ms": 10094,
+      "output_sha256": "08c99cd32aef7ed88e62f25eb31da02086fbca962da584ed89c4272d748a6767",
+      "summary": "12 passed"
+    },
+    {
+      "id": "lint",
+      "run": "npm run lint",
+      "exit": 0,
+      "duration_ms": 5721,
+      "output_sha256": "d453163579cd68a816ea7b47d579dd7d00d0ffc45343f8fc3559a379989c04b2",
+      "summary": "Passed cleanly"
+    }
+  ]
+}
+```
 
 ## Notes
 - 2026-07-05 — Drafted from review session findings (D11 bypass, advisory

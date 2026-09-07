@@ -131,7 +131,7 @@ describe('alive brain lifecycle (v1.0 release gate)', () => {
     const ticked = await fs.readFile(planPath, 'utf-8');
     expect(ticked).toContain('[x]');
 
-    await planDoneCommand('ship-the-e2e-feature', 'All steps verified in e2e.');
+    await planDoneCommand('ship-the-e2e-feature', 'WAIVER: all steps verified in e2e lifecycle test.');
 
     const donePlan = await fs.readFile(planPath, 'utf-8');
     expect(donePlan).toContain('status: "done"');

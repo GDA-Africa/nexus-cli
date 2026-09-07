@@ -1,0 +1,20 @@
+{
+  "$schema": "https://nexus-framework.dev/schemas/verify.json",
+  "checks": [
+    {
+      "id": "types",
+      "run": "npx tsc --noEmit",
+      "description": "TypeScript typecheck without emit"
+    },
+    {
+      "id": "tests",
+      "run": "npm run test",
+      "description": "Project unit and integration test suite"
+    },
+    {
+      "id": "lint",
+      "run": "npm run lint",
+      "description": "Project linter suite"
+    }
+  ]
+}

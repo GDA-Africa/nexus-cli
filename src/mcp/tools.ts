@@ -19,6 +19,7 @@ import { issueWakeToken } from '../commands/wake.js';
 import { buildHandoffChain, nextInChain } from '../utils/agents/handoff.js';
 import { collectAgentSummaries, resolveAgent } from '../utils/agents/parser.js';
 import type { AgentSummary } from '../utils/agents/types.js';
+import { computeBrainHash } from '../utils/brain.js';
 import { buildDoctorContext } from '../utils/doctor/context.js';
 import { runDoctor } from '../utils/doctor/index.js';
 import type { DoctorReport } from '../utils/doctor/types.js';
@@ -46,6 +47,14 @@ import {
 import { rankByTriggers } from '../utils/skills/matching.js';
 import type { SkillGate, SkillInvocation } from '../utils/skills/types.js';
 import { CHARS_PER_TOKEN, countTokens } from '../utils/tokens.js';
+import {
+  formatEvidenceBlock,
+  generateDefaultVerifyManifest,
+  loadVerifyManifest,
+  runVerifyChecks,
+  saveVerifyManifest,
+  type VerifyEvidenceBlock,
+} from '../utils/verify/index.js';
 
 import { McpToolError, type BrainContext } from './context.js';
 
@@ -867,6 +876,60 @@ export async function planNoteTool(
   await rebuildPlansIndex(ctx.plansDir);
 
   return { id: input.id, noted: `${stamp} — ${input.message}` };
+}
+
+export interface PlanVerifyToolInput {
+  id: string;
+  waiver?: string;
+  timeoutMs?: number;
+}
+
+export async function planVerifyTool(
+  ctx: BrainContext,
+  input: PlanVerifyToolInput,
+): Promise<{ success: boolean; evidence: VerifyEvidenceBlock }> {
+  const plan = await requirePlan(ctx, input.id);
+  const projectRoot = path.dirname(ctx.nexusDir);
+
+  let manifest = await loadVerifyManifest(ctx.nexusDir);
+  if (!manifest) {
+    manifest = await generateDefaultVerifyManifest(projectRoot);
+    await saveVerifyManifest(ctx.nexusDir, manifest);
+  }
+
+  const checkResults = await runVerifyChecks(manifest, projectRoot, input.timeoutMs);
+  const brainHash = await computeBrainHash(ctx.nexusDir);
+
+  let wakeToken: string | undefined;
+  const sessionPath = path.join(ctx.nexusDir, 'state', 'session.json');
+  if (await fs.pathExists(sessionPath)) {
+    try {
+      const parsed = await fs.readJson(sessionPath);
+      if (typeof parsed?.token === 'string') {
+        wakeToken = parsed.token;
+      }
+    } catch {
+      // Ignore session read error
+    }
+  }
+
+  const evidenceBlock: VerifyEvidenceBlock = {
+    verified_at: new Date().toISOString(),
+    brain_hash: brainHash,
+    wake_token: wakeToken,
+    checks: checkResults,
+    ...(input.waiver ? { waiver: input.waiver } : {}),
+  };
+
+  const formattedBlock = formatEvidenceBlock(evidenceBlock);
+  const next = setSection(plan, 'Evidence', formattedBlock);
+  next.frontmatter.updated = todayStamp();
+
+  await writePlanFile(planPath(ctx, input.id), next);
+  await rebuildPlansIndex(ctx.plansDir);
+
+  const allPassed = checkResults.every((c) => c.exit === 0);
+  return { success: allPassed || !!input.waiver, evidence: evidenceBlock };
 }
 
 export const KNOWLEDGE_CATEGORIES = [

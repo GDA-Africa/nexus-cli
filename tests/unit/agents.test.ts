@@ -34,6 +34,7 @@ import {
 import { buildHandoffChain, nextInChain } from '../../src/utils/agents/handoff.js';
 import { buildDoctorContext } from '../../src/utils/doctor/context.js';
 import { D11_unverified_done } from '../../src/utils/doctor/checks/D11.js';
+import { formatEvidenceBlock } from '../../src/utils/verify/runner.js';
 
 const AGENT_FIXTURE = `---
 nexus_agent: true
@@ -366,8 +367,27 @@ ${evidence}
   });
 
   it('passes with test evidence', async () => {
-    const findings = await runD11('- 2026-06-11 — vitest: 422 tests passing');
+    const evidence = formatEvidenceBlock({
+      verified_at: '2026-06-11T12:00:00Z',
+      brain_hash: 'brain-mock-hash',
+      checks: [
+        {
+          id: 'tests',
+          run: 'vitest run',
+          exit: 0,
+          duration_ms: 422,
+          summary: '422 tests passing',
+        },
+      ],
+    });
+    const findings = await runD11(evidence);
     expect(findings).toHaveLength(0);
+  });
+
+  it('rejects prose mentions of tests like "tests skipped"', async () => {
+    const findings = await runD11('- 2026-06-11 — tests skipped, didn\'t run them');
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.id).toBe('D11');
   });
 
   it('passes with an explicit waiver', async () => {

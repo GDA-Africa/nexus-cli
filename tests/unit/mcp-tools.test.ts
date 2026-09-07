@@ -396,7 +396,7 @@ describe('buildMcpServer (end-to-end)', () => {
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(17);
+    expect(tools).toHaveLength(18);
     const toolNames = tools.map((t) => t.name);
     for (const name of [
       'nexus_list_agents',
@@ -415,6 +415,7 @@ describe('buildMcpServer (end-to-end)', () => {
       'nexus_get_skill',
       'nexus_plan_tick',
       'nexus_plan_note',
+      'nexus_plan_verify',
       'nexus_add_knowledge_entry',
     ]) {
       expect(toolNames).toContain(name);

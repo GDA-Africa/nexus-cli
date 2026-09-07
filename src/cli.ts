@@ -36,6 +36,7 @@ import {
   planShowCommand,
   planStartCommand,
   planTickCommand,
+  planVerifyCommand,
 } from './commands/plan.js';
 import { repairCommand } from './commands/repair.js';
 import {
@@ -248,11 +249,20 @@ planCmd
   });
 
 planCmd
+  .command('verify <id>')
+  .description('Run verification checks from .nexus/verify.json and record machine evidence')
+  .option('--waiver <reason>', 'Record an explicit verification waiver with explanation')
+  .action(async (id: string, options: { waiver?: string }) => {
+    await planVerifyCommand(id, { waiver: options.waiver });
+  });
+
+planCmd
   .command('done <id>')
   .description('Mark a plan done, update active pointer, and append progress log')
   .option('--summary <text>', 'Optional completion summary appended to Evidence')
-  .action(async (id: string, options: { summary?: string }) => {
-    await planDoneCommand(id, options.summary);
+  .option('--strict', 'Fail if the plan lacks passing machine evidence or waiver', false)
+  .action(async (id: string, options: { summary?: string; strict?: boolean }) => {
+    await planDoneCommand(id, { summary: options.summary, strict: options.strict });
   });
 
 // ── nexus pack / unpack ───────────────────────────────────────

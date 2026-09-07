@@ -42,6 +42,7 @@ import {
   listSkillsTool,
   planNoteTool,
   planTickTool,
+  planVerifyTool,
   queryKnowledgeTool,
   wakeTool,
 } from './tools.js';
@@ -314,6 +315,21 @@ export function buildMcpServer(options: BuildMcpServerOptions = {}): McpServer {
       },
     },
     wrap(planNoteTool),
+  );
+
+  server.registerTool(
+    'nexus_plan_verify',
+    {
+      title: 'Verify plan',
+      description:
+        'Run verification checks from .nexus/verify.json and record machine evidence in the plan’s Evidence section.',
+      inputSchema: {
+        id: z.string().min(1).describe('Plan id'),
+        waiver: z.string().optional().describe('Optional explicit verification waiver explanation'),
+        timeoutMs: z.number().int().min(1000).optional().describe('Optional execution timeout per check in milliseconds'),
+      },
+    },
+    wrap(planVerifyTool),
   );
 
   server.registerTool(

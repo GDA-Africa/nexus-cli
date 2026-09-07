@@ -29,20 +29,20 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { parseEvidenceBlock } from '../../verify/runner.js';
 import type { DoctorCheck, DoctorContext, DoctorFinding } from '../types.js';
 
-/** Signals that count as verification evidence (case-insensitive). */
-const EVIDENCE_SIGNALS = /\b(test|tests|passing|passed|coverage|vitest|jest|playwright|cypress|e2e)\b/i;
-/** Explicit human-approved waiver marker. */
-const WAIVER_SIGNAL = /\bwaiv(er|ed)\b/i;
+/** Explicit human-approved waiver marker in markdown prose. */
+const WAIVER_SIGNAL = /\bWAIVER:\s*.+/i;
 
 export const D11_unverified_done: DoctorCheck = {
   id: 'D11',
   name: 'Unverified Done',
-  description: 'Plans marked done must carry test evidence or an explicit waiver in their Evidence section',
+  description: 'Plans marked done must carry machine test evidence or an explicit waiver in their Evidence section',
   async run(ctx: DoctorContext): Promise<DoctorFinding[]> {
     const findings: DoctorFinding[] = [];
     const plansDir = path.join(ctx.cwd, '.nexus', 'plans');
+    const severity = ctx.strict ? 'error' : 'warn';
 
     for (const plan of ctx.plans) {
       if (plan.status !== 'done') continue;
@@ -55,20 +55,45 @@ export const D11_unverified_done: DoctorCheck = {
       }
 
       const evidence = extractSection(content, 'Evidence');
-
-      // No Evidence section at all, or an empty one → unverified
       const body = (evidence ?? '').trim();
-      if (body.length > 0 && (EVIDENCE_SIGNALS.test(body) || WAIVER_SIGNAL.test(body))) {
+
+      // Check for an explicit waiver
+      if (WAIVER_SIGNAL.test(body)) {
         continue;
+      }
+
+      // Check for a machine-recorded verification block
+      const evidenceBlock = parseEvidenceBlock(body);
+      if (evidenceBlock) {
+        if (evidenceBlock.waiver) {
+          continue;
+        }
+
+        const checks = evidenceBlock.checks || [];
+        const hasFailedChecks = checks.some((check) => check.exit !== 0);
+        if (checks.length > 0 && !hasFailedChecks) {
+          continue;
+        }
+
+        if (hasFailedChecks) {
+          findings.push({
+            id: 'D11',
+            severity,
+            description: `Plan "${plan.id}" has failing verification checks recorded in its Evidence section.`,
+            fixHint: `Re-run verification after fixing failures: \`nexus plan verify ${plan.id}\`, or record a waiver with \`nexus plan note ${plan.id} "WAIVER: ..."\`.`,
+            planId: plan.id,
+          });
+          continue;
+        }
       }
 
       findings.push({
         id: 'D11',
-        severity: 'warn',
-        description: `Plan "${plan.id}" is done but its Evidence section has no test results and no waiver.`,
+        severity,
+        description: `Plan "${plan.id}" is done but its Evidence section lacks valid machine verification evidence or an explicit waiver.`,
         fixHint:
-          'Add test evidence via `nexus plan note` (the test-writer agent records pass counts), ' +
-          'or record an explicit waiver: `nexus plan note <id> "WAIVER: tests skipped because …"`.',
+          `Run machine verification: \`nexus plan verify ${plan.id}\`, ` +
+          `or record an explicit waiver: \`nexus plan note ${plan.id} "WAIVER: tests skipped because …"\`.`,
         planId: plan.id,
       });
     }
