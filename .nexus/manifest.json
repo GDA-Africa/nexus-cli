@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-08-25T12:01:34.768Z",
+  "generatedAt": "2026-09-07T18:44:49.983Z",
   "config": {
     "projectName": "nexus-cli",
     "displayName": "NEXUS CLI",
@@ -22,7 +22,7 @@
     }
   },
   "cli": {
-    "version": "1.5.1",
+    "version": "1.6.0",
     "name": "@nexus-framework/cli"
   },
   "localOnly": false
