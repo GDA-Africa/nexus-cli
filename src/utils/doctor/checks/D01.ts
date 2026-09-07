@@ -85,6 +85,8 @@ function readStatus(content: string): 'template' | 'populated' | 'auto' | null {
 }
 
 function countPlaceholders(body: string): number {
+  // Strip out NEXUS system comments (e.g. vital signs markers) so they aren't counted as unfilled scaffold placeholders
+  const strippedBody = body.replace(/<!--\s*NEXUS:[\s\S]*?-->/gi, '');
   const patterns = [
     /<!--[\s\S]*?-->/g, // unfilled scaffold comment, e.g. <!-- High-level system diagram -->
     /to be filled/gi,
@@ -95,7 +97,7 @@ function countPlaceholders(body: string): number {
 
   let count = 0;
   for (const pattern of patterns) {
-    const matches = body.match(pattern);
+    const matches = strippedBody.match(pattern);
     count += matches?.length ?? 0;
   }
 

@@ -81,6 +81,26 @@ describe('Doctor Checks', () => {
     expect(findings).toHaveLength(0);
   });
 
+  it('D01 does not flag populated docs for NEXUS system comments like vital signs', async () => {
+    const docPath = path.join(tmpDir, '.nexus', 'docs', 'index.md');
+    await fs.writeFile(docPath, [
+      '---',
+      'status: "populated"',
+      '---',
+      '',
+      '# Project Index',
+      '',
+      '<!-- NEXUS:VITAL_SIGNS:START — managed by `nexus sync` -->',
+      '## Vital Signs',
+      '<!-- NEXUS:VITAL_SIGNS:END -->',
+      '',
+      'Real content goes here without scaffold placeholders.',
+    ].join('\n'));
+
+    const findings = await D01_frontmatter_status_drift.run({ ...dummyCtx, cwd: tmpDir });
+    expect(findings).toHaveLength(0);
+  });
+
   it('D01 flags populated docs that still contain unfilled scaffold comments', async () => {
     const docPath = path.join(tmpDir, '.nexus', 'docs', '05_business_logic.md');
     await fs.writeFile(docPath, [
