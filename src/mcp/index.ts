@@ -1,7 +1,7 @@
 /**
  * NEXUS MCP — Public barrel
  *
- * Re-exports the brain context resolver and all 17 tool handlers as a
+ * Re-exports the brain context resolver and all 19 tool handlers as a
  * transport-agnostic API. `src/mcp/server.ts` wraps these same functions for
  * the stdio MCP protocol; this barrel lets an embedding host (e.g. a Cordis
  * plugin) call them directly and keep native return types and thrown errors
@@ -34,6 +34,7 @@ export {
   planNoteTool,
   planTickTool,
   planVerifyTool,
+  projectGraphTool,
   queryKnowledgeTool,
   wakeTool,
   type ActivePlanResult,
@@ -46,6 +47,7 @@ export {
   type KnowledgeMatch,
   type PlanTickInput,
   type PlanVerifyToolInput,
+  type ProjectGraphToolInput,
   type QueryKnowledgeInput,
   type SkillSource,
   type SkillSummary,

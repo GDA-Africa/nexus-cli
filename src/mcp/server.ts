@@ -7,12 +7,13 @@
  *
  * stdout is reserved for the MCP protocol — all diagnostics go to stderr.
  *
- * Tool surface (17):
+ * Tool surface (19):
  *   Read:   nexus_wake, nexus_get_vital_signs, nexus_query_knowledge,
  *           nexus_get_active_plan, nexus_list_plans, nexus_get_plan,
  *           nexus_brief, nexus_doctor, nexus_list_skills, nexus_get_skill,
  *           nexus_list_agents, nexus_get_agent, nexus_get_context (v1.1),
- *           nexus_get_handoff (main-thread orchestration)
+ *           nexus_get_handoff (main-thread orchestration),
+ *           nexus_project_graph (2.0 project graph)
  *   Write:  nexus_plan_tick, nexus_plan_note, nexus_add_knowledge_entry
  */
 
@@ -43,6 +44,7 @@ import {
   planNoteTool,
   planTickTool,
   planVerifyTool,
+  projectGraphTool,
   queryKnowledgeTool,
   wakeTool,
 } from './tools.js';
@@ -284,6 +286,22 @@ export function buildMcpServer(options: BuildMcpServerOptions = {}): McpServer {
       },
     },
     wrap(getContextTool),
+  );
+
+  server.registerTool(
+    'nexus_project_graph',
+    {
+      title: 'Project graph',
+      description:
+        'Parse the current project into the derived typed graph — Requirement → Feature → ' +
+        'Task → Evidence — and return it as JSON plus a markdown digest. NEXUS 2.0 project-intelligence ' +
+        'layer: call this to answer which requirements are unimplemented, which tests prove a feature, ' +
+        'and what evidence backs a task.',
+      inputSchema: {
+        root: z.string().optional().describe('Optional project root override (default: resolved brain root)'),
+      },
+    },
+    wrap(projectGraphTool),
   );
 
   // ── Write tools ────────────────────────────────────────────

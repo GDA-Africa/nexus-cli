@@ -24,6 +24,7 @@ import { briefCommand } from './commands/brief.js';
 import { consolidateCommand } from './commands/consolidate.js';
 import { contextCommand } from './commands/context.js';
 import { doctorCommand } from './commands/doctor.js';
+import { graphCommand } from './commands/graph.js';
 import { harnessCommand } from './commands/harness.js';
 import { initCommand } from './commands/init.js';
 import { mcpCommand } from './commands/mcp.js';
@@ -310,6 +311,9 @@ program.addCommand(mcpCommand());
 // It must never be reachable from an automatic path (doctor, brain check, ...).
 program.addCommand(harnessCommand());
 
+// ── nexus graph ───────────────────────────────────────────────
+program.addCommand(graphCommand());
+
 // ── nexus update ──────────────────────────────────────────────
 
 program
@@ -365,9 +369,20 @@ function isJsonContextInvocation(): boolean {
   return process.argv[2] === 'context' && process.argv.includes('--json');
 }
 
+/**
+ * `nexus graph --json` pipes the whole project graph to stdout for JSON
+ * parsing (NEXUS 2.0 project-intelligence consumers, `--file` writers, shells). The
+ * auto-invoke banner and update notice write plain text to that same stdout,
+ * which breaks the parse — so it gets the same clean-stdout carve-out as
+ * `context --json`.
+ */
+function isJsonGraphInvocation(): boolean {
+  return process.argv[2] === 'graph' && process.argv.includes('--json');
+}
+
 /** Stdout must stay clean of anything but the command's own output. */
 function needsCleanStdout(): boolean {
-  return isMcpInvocation() || isJsonContextInvocation();
+  return isMcpInvocation() || isJsonContextInvocation() || isJsonGraphInvocation();
 }
 
 async function runWithUpdateCheck(): Promise<void> {

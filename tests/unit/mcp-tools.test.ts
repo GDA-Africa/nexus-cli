@@ -388,7 +388,7 @@ describe('getContextTool budget', () => {
 });
 
 describe('buildMcpServer (end-to-end)', () => {
-  it('registers all 17 tools and serves calls over a transport', async () => {
+  it('registers all tools and serves calls over a transport', async () => {
     const server = buildMcpServer({ rootDir: tmpDir });
     const client = new Client({ name: 'test-client', version: '0.0.0' });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -396,13 +396,14 @@ describe('buildMcpServer (end-to-end)', () => {
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(18);
+    expect(tools).toHaveLength(19);
     const toolNames = tools.map((t) => t.name);
     for (const name of [
       'nexus_list_agents',
       'nexus_get_agent',
       'nexus_get_context',
       'nexus_get_handoff',
+      'nexus_project_graph',
       'nexus_wake',
       'nexus_get_vital_signs',
       'nexus_query_knowledge',

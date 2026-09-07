@@ -39,7 +39,7 @@ NEXUS has no HTTP API. Its two external contracts are the **CLI command surface*
 
 Every command is defined once in `src/commands/*.ts` and registered onto the Commander program in `src/cli.ts`.
 
-## 🔌 MCP Tool Surface (`src/mcp/server.ts`, 17 tools)
+## 🔌 MCP Tool Surface (`src/mcp/server.ts`, 19 tools)
 
 All tools are read/compose except the four explicitly marked **write**. Every tool has a zod input schema in `src/mcp/tools.ts`; malformed input is rejected before the handler runs.
 
@@ -59,8 +59,10 @@ All tools are read/compose except the four explicitly marked **write**. Every to
 | `nexus_list_agents` | List `.nexus/agents/` definitions with role/status/triggers |
 | `nexus_get_agent` | Full definition for one named agent |
 | `nexus_get_handoff` | Next agent in the pipeline (implementer → test-writer → reviewer → doc-keeper) — main-thread orchestrated |
+| `nexus_project_graph` | Parse the project into the typed graph (Requirement → Feature → Task → Evidence) + markdown digest |
 | `nexus_plan_tick` **(write)** | Mark a checklist step done/reopened; returns the next unchecked step |
 | `nexus_plan_note` **(write)** | Append a note to a plan |
+| `nexus_plan_verify` **(write)** | Run `verify.json` checks and record machine evidence in a plan |
 | `nexus_add_knowledge_entry` **(write)** | Append a validated entry to `knowledge.md` |
 
 Server identity: `name: 'nexus-brain'` (see `src/mcp/server.ts`). Registered for clients via the generated `.mcp.json` (`npx -y @nexus-framework/cli mcp`).

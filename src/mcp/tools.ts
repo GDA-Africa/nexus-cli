@@ -23,6 +23,9 @@ import { computeBrainHash } from '../utils/brain.js';
 import { buildDoctorContext } from '../utils/doctor/context.js';
 import { runDoctor } from '../utils/doctor/index.js';
 import type { DoctorReport } from '../utils/doctor/types.js';
+import { renderGraphDigest } from '../utils/graph/digest.js';
+import { parseProject } from '../utils/graph/parser.js';
+import type { ProjectGraph } from '../utils/graph/types.js';
 import { parseKnowledge, rankKnowledgeEntries, type KnowledgeEntry } from '../utils/knowledge.js';
 import { readActivePlans } from '../utils/plans/active.js';
 import { collectPlanSummaries, rebuildPlansIndex } from '../utils/plans/index-builder.js';
@@ -294,6 +297,24 @@ export async function listSkillsTool(ctx: BrainContext): Promise<{ skills: Skill
   }
 
   return { skills };
+}
+
+/**
+ * `nexus_project_graph` — parse the current project into the derived typed
+ * graph (Requirement → Feature → Task → Evidence) and return it plus a markdown
+ * digest. NEXUS 2.0 Phase 2, spike #1.
+ */
+export interface ProjectGraphToolInput {
+  /** Optional project root override. Defaults to the resolved brain's root. */
+  root?: string;
+}
+
+export async function projectGraphTool(
+  ctx: BrainContext,
+  input: ProjectGraphToolInput = {},
+): Promise<{ graph: ProjectGraph; digest: string }> {
+  const graph = await parseProject(input.root ?? ctx.projectRoot);
+  return { graph, digest: renderGraphDigest(graph) };
 }
 
 /** Read one skill by name, honoring custom > core > community precedence. */

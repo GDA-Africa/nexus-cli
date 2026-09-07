@@ -245,7 +245,7 @@ client and exits with it. **stdout carries protocol only** — handlers never
 `console.log` and never `process.exit()`; they throw `McpToolError`, which the
 server layer converts into a tool error.
 
-### 17 tools — 14 read, 3 write
+### 19 tools — 15 read, 4 write
 
 **Read**
 
@@ -262,6 +262,7 @@ server layer converts into a tool error.
 | `nexus_list_skills` / `nexus_get_skill` | Skill discovery and retrieval |
 | `nexus_list_agents` / `nexus_get_agent` | Role discovery |
 | `nexus_get_handoff` | Which agent the **main thread** should dispatch next |
+| `nexus_project_graph` | The typed project graph — Requirement → Feature → Task → Evidence |
 
 **Write** — schema-validated, so malformed brain state is impossible rather
 than merely detectable.
