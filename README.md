@@ -7,9 +7,9 @@
 Give every project a structured brain. AI agents read it, call it as MCP tools — and since v1.1, **specialize into brain-grounded roles**.
 
 [![npm](https://img.shields.io/npm/v/@nexus-framework/cli?style=flat-square&logo=npm&logoColor=white&label=npm&color=CB3837)](https://www.npmjs.com/package/@nexus-framework/cli)
-[![MCP](https://img.shields.io/badge/MCP-17_brain_tools-8A2BE2?style=flat-square)](https://modelcontextprotocol.io)
+[![MCP](https://img.shields.io/badge/MCP-19_brain_tools-8A2BE2?style=flat-square)](https://modelcontextprotocol.io)
 [![Agents](https://img.shields.io/badge/agents-core_four-34d399?style=flat-square)](https://nexus.glenhalton.com/docs)
-[![Tests](https://img.shields.io/badge/tests-807_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/tests-841_passing-22c55e?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
 [![Website](https://img.shields.io/badge/nexus.glenhalton.com-8A2BE2?style=flat-square&logo=googlechrome&logoColor=white)](https://nexus.glenhalton.com)
@@ -24,7 +24,7 @@ Scaffolding tools generate files. NEXUS generates **understanding**.
 
 Run `nexus init` and your project gets a structured documentation system AI agents can parse, a persistent knowledge base they write to after discoveries, a project brain that tracks priorities and progress, and an alive brain that monitors repo state, tracks work across sessions, and surfaces issues before they compound.
 
-**v1.0 made the brain callable.** Every generated project ships a `.mcp.json` that registers the `nexus-brain` MCP server — Claude Code, Claude Cowork, OpenAI Codex, Cursor, and any MCP client get the brain as 17 schema-validated tools instead of a pile of files they're told to read. One `nexus_wake` call returns the session handshake, the active plan, its next step, and drift counts. Writes go through validated tools, so malformed brain state becomes impossible rather than merely detectable.
+**v1.0 made the brain callable.** Every generated project ships a `.mcp.json` that registers the `nexus-brain` MCP server — Claude Code, Claude Cowork, OpenAI Codex, Cursor, and any MCP client get the brain as 19 schema-validated tools instead of a pile of files they're told to read. One `nexus_wake` call returns the session handshake, the active plan, its next step, and drift counts. Writes go through validated tools, so malformed brain state becomes impossible rather than merely detectable.
 
 **v1.1 staffs it.** The brain defines specialized, brain-grounded agents in `.nexus/agents/` — implementer, test-writer, reviewer, doc-keeper — each with its own context recipe and least-privilege tool allowlist, plus a verification gate (doctor `D11`) so plans can't be marked done without evidence.
 
@@ -32,7 +32,7 @@ Run `nexus init` and your project gets a structured documentation system AI agen
 
 **v1.2 delegates the UI.** `nexus init` is the interview; [Chameleon](https://chameleon.glenhalton.com) (`@chameleon-ui-lib/react`) is the generator. Opt in once with `nexus use chameleon --global` and NEXUS resolves what you want into an AppSpec, hands it over, and overlays the brain, tooling, and tests around what Chameleon produces. It is never a hard dependency: Chameleon is resolved from your environment at generation time, and absent or unsupported, generation falls back to NEXUS with a printed reason. `--ui none` is always one keystroke away.
 
-**v1.4 opens it up.** The 17 brain tools behind `nexus mcp` are now importable directly from `@nexus-framework/cli`'s `./mcp` subpath as plain TypeScript, no server process required. Any host that embeds NEXUS (an editor, an agent runtime) can call a tool handler and get a real object back.
+**v1.4 opens it up.** The 19 brain tools behind `nexus mcp` are now importable directly from `@nexus-framework/cli`'s `./mcp` subpath as plain TypeScript, no server process required. Any host that embeds NEXUS (an editor, an agent runtime) can call a tool handler and get a real object back.
 
 **v1.5 checks its own math.** Three new doctor checks (`D14`–`D16`) catch a project's own docs claiming something the code no longer does, and `nexus harness verify` confirms a local AI model is actually receiving what NEXUS sends it, instead of assuming the connection works.
 
@@ -92,7 +92,7 @@ Interactive setup:
 
 | Command | What it does |
 |---------|-------------|
-| `nexus mcp` | **Start the brain MCP server (stdio).** 17 schema-validated tools for Claude Code, Codex, Cursor & any MCP client |
+| `nexus mcp` | **Start the brain MCP server (stdio).** 19 schema-validated tools for Claude Code, Codex, Cursor & any MCP client |
 | `nexus agent <sub>` | **v1.1 — Contextualized Agents.** Manage brain-grounded roles: `list · new · install · remove · status · sync` |
 | `nexus wake` | Issue a session handshake token proving the brain was read |
 | `nexus sync` | Capture live repo state → Vital Signs block in project brain |
@@ -102,10 +102,14 @@ Interactive setup:
 | `nexus plan start <id>` | Mark a plan as active work |
 | `nexus plan tick <id>` | Toggle a step checkbox |
 | `nexus plan note <id>` | Add a timestamped note |
+| `nexus plan verify <id>` | Run machine verification from `.nexus/verify.json` and record evidence (`--waiver`) |
 | `nexus plan done <id>` | Complete a plan — appends to progress log |
 | `nexus doctor` | Run sixteen drift checks against your project structure (incl. `D11` verification gate, `D12` Chameleon block, `D13` alignment gate, `D14` context load, `D15` manifest invariants, `D16` artifact drift). `--strict` escalates advisory findings to errors for CI |
 | `nexus brief` | Human-readable status digest |
 | `nexus consolidate` | Roll knowledge.md up into a generated summary (`--check`, `--archive`) |
+| `nexus log` | Append an entry to the Progress Log (docs/index.md) |
+| `nexus note` | Append an entry to the Knowledge Base (docs/knowledge.md) |
+| `nexus graph` | Parse the project into the derived ProjectGraph digest (`--json`) |
 | `nexus brain status` | Live brain health dashboard |
 | `nexus brain check` | On-demand drift detection |
 
@@ -196,7 +200,7 @@ automatically:
 { "mcpServers": { "nexus-brain": { "command": "npx", "args": ["-y", "@nexus-framework/cli", "mcp"] } } }
 ```
 
-Agents get 17 schema-validated tools instead of "please read these files":
+Agents get 19 schema-validated tools instead of "please read these files":
 
 - `nexus_wake` — handshake token + active plan + next step + doctor counts, one call
 - `nexus_query_knowledge` — targeted gotcha/pattern retrieval, not whole-file reads

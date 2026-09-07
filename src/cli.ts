@@ -21,15 +21,15 @@ import {
 } from './commands/agent.js';
 import { brainCommand } from './commands/brain.js';
 import { briefCommand } from './commands/brief.js';
-import { logCommand } from './commands/log.js';
-import { noteCommand } from './commands/note.js';
 import { consolidateCommand } from './commands/consolidate.js';
 import { contextCommand } from './commands/context.js';
 import { doctorCommand } from './commands/doctor.js';
 import { graphCommand } from './commands/graph.js';
 import { harnessCommand } from './commands/harness.js';
 import { initCommand } from './commands/init.js';
+import { logCommand } from './commands/log.js';
 import { mcpCommand } from './commands/mcp.js';
+import { noteCommand } from './commands/note.js';
 import { packCommand, unpackCommand } from './commands/pack.js';
 import {
   planDoneCommand,

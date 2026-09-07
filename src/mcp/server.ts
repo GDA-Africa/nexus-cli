@@ -21,9 +21,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 
+import { KNOWLEDGE_CATEGORIES } from '../utils/brain-memory.js';
 import { PLAN_STATUSES } from '../utils/plans/types.js';
 import { version } from '../version.js';
-import { KNOWLEDGE_CATEGORIES } from '../utils/brain-memory.js';
 
 import { McpToolError, resolveBrainContext, type BrainContext } from './context.js';
 import {

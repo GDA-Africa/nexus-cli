@@ -1,5 +1,7 @@
 import path from 'node:path';
+
 import fs from 'fs-extra';
+
 import { getNexusDir } from './brain.js';
 import { parseKnowledge } from './knowledge.js';
 export class BrainMemoryError extends Error {}

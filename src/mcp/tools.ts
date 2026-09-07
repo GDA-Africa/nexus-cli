@@ -19,13 +19,6 @@ import { issueWakeToken } from '../commands/wake.js';
 import { buildHandoffChain, nextInChain } from '../utils/agents/handoff.js';
 import { collectAgentSummaries, resolveAgent } from '../utils/agents/parser.js';
 import type { AgentSummary } from '../utils/agents/types.js';
-import { computeBrainHash } from '../utils/brain.js';
-import { buildDoctorContext } from '../utils/doctor/context.js';
-import { runDoctor } from '../utils/doctor/index.js';
-import type { DoctorReport } from '../utils/doctor/types.js';
-import { renderGraphDigest } from '../utils/graph/digest.js';
-import { parseProject } from '../utils/graph/parser.js';
-import type { ProjectGraph } from '../utils/graph/types.js';
 import {
   appendKnowledgeEntry,
   appendProgressEntry,
@@ -33,6 +26,13 @@ import {
   KNOWLEDGE_CATEGORIES,
   resolveBrainScope,
 } from '../utils/brain-memory.js';
+import { computeBrainHash } from '../utils/brain.js';
+import { buildDoctorContext } from '../utils/doctor/context.js';
+import { runDoctor } from '../utils/doctor/index.js';
+import type { DoctorReport } from '../utils/doctor/types.js';
+import { renderGraphDigest } from '../utils/graph/digest.js';
+import { parseProject } from '../utils/graph/parser.js';
+import type { ProjectGraph } from '../utils/graph/types.js';
 import { parseKnowledge, rankKnowledgeEntries, type KnowledgeEntry } from '../utils/knowledge.js';
 import { readActivePlans } from '../utils/plans/active.js';
 import { collectPlanSummaries, rebuildPlansIndex } from '../utils/plans/index-builder.js';

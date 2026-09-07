@@ -28,6 +28,9 @@ describe('git.ts sensor', () => {
 
   it('should return valid git info on a git repo', async () => {
     // Setup git repo
+    // Generous timeout: this test drives several git subprocesses (init,
+    // config, commit, checkout, commit, log) and can exceed vitest's default
+    // 5000ms when the full suite runs in parallel in a slow/sandboxed env.
     await execa('git', ['init'], { cwd: tmpDir });
     // Config git locally
     await execa('git', ['config', 'user.name', 'Test User'], { cwd: tmpDir });
@@ -60,5 +63,5 @@ describe('git.ts sensor', () => {
     await fs.writeFile(path.join(tmpDir, 'file2.txt'), 'dirty-world');
     data = await captureGitSensor(tmpDir);
     expect(data.isDirty).toBe(true);
-  });
+  }, 30_000);
 });

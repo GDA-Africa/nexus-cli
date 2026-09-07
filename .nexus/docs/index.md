@@ -1,11 +1,11 @@
 # NEXUS CLI — Project Index
 
 **Project:** NEXUS CLI (`@nexus-framework/cli`)  
-**Published Version:** v1.4.0 (per `package.json` / npm dist-tag — see note below; Release History table below is stale, last logged at v1.1.3)  
+**Published Version:** v1.6.0 (cut locally — `package.json` + `src/version.ts` → 1.6.0, CHANGELOG + RELEASE_HEADLINES + README/NEXUS.md updated, gated green by full `release:check`). **v1.5.2 remains the last version on npm** until `main` is pushed and CI publishes/tags v1.6.0.  
 **Working Branch:** `main`  
-**Active Initiative:** 🚀 **v1.0 "Alive Brain"** + **Auto-Invoke Layer** — see [`../../../.nexus/docs/v1_alive_brain.md`](../../../.nexus/docs/v1_alive_brain.md)  
+**Active Initiative:** 🟣 **v1.2 "Provable Done"** (`nexus plan verify` + D11 v2 machine evidence — implemented, unshipped) **+ NEXUS 2.0** (project-graph spike landed: `nexus graph` + `nexus_project_graph`, 19 MCP tools) — design docs at root `.nexus/docs/`  
 **Brain Layout:** v1.0 (hand-bootstrapped 2026-05-02 — `.nexus/plans/`, `.nexus/state/`, Vital Signs block)  
-**Coverage:** 762/762 tests passing across 57 files (unit + integration + e2e), measured 2026-08-24 via `npm test`
+**Coverage:** 841 tests passing across 63 files (unit + integration + e2e), measured 2026-09-07 via `npm test`
 
 ---
 
@@ -27,49 +27,45 @@ _Last sync: 2026-08-31T12:09:04.054Z · branch `main` · 0 commits ahead of main
 
 ## 🎯 Current Objective
 
-**Current phase:** 🟢 Context Economics & Harness Profiles ("Track A" of
-`release-v1-2`, plus doctor hardening) — landed on `main` 2026-08-24, **not
-yet released to npm** (still v1.4.0; the version bump is a deliberate,
-separate step this project holds back on purpose).
+**Current phase:** 🟣 **v1.6.0 prep** — 5 commits landed on `main` 2026-09-07
+behind `origin/main` (unshipped) and are being bundled for the next release:
+**v1.2 "Provable Done"** (`nexus plan verify` + `.nexus/verify.json` manifest +
+D11 v2 machine evidence), **NEXUS 2.0 Phase 2 project-graph spike #1**
+(`nexus graph` + `nexus_project_graph` at 19 MCP tools), plus `nexus log` /
+`nexus note` and a D01 placeholder-counting fix. See Release History and the
+2026-09-07 Progress Log entry below for the per-commit breakdown.
 
-**What landed today (13 commits):** `nexus_get_context` moved from an
-unguarded char budget to a token budget with `admit()`-gated sections, a
-`ContextFloorOverflow` throw instead of a silently gutted pack, and
-`evicted[]`/`budget{}`/`contract_version` reporting; the generated protocol
-now tells agents to call `nexus_get_context` first instead of contradicting
-itself and sending them to read `index.md` + `knowledge.md` in full; a new
-optional `.nexus/harnesses.yml` lets a project declare each harness's
-context window and `orientation_budget`, and `toolInstructionContent`
-generates a structurally different (not just shorter) instruction file per
-profile — native-pointer, static-fallback, or the unchanged standard variant;
-`nexus context "<task>" --json --max-tokens=N` exposes the same composer
-with no MCP server required. Alongside that, 7 shipped bugs were fixed
-(`nexus doctor` could never exit 0 on a real project — D08/D02 were
-unreachable because nothing wrote `.nexus/state/last-sync.json`; `--severity
-error` silently zeroed the exit code; `doctor --fix` still exited 1 after a
-successful fix; D07/D11 double-reported one fault; D04 only counted entries,
-missing that `knowledge.md` is unusable by byte size long before it hits the
-entry threshold; D14 charged the brain-file fallback path even when MCP made
-it unreachable), and two new doctor checks shipped: **D15** (manifest
-declarations vs. observable repo facts — test framework, package manager,
-frameworks) and **D16** (artifact drift — plans dashboard / `_active.json`
-vs. plan files on disk). Doctor is now **16 checks, D01–D16**.
+**What landed (5 unshipped commits, `origin/main..HEAD`):**
+- `f1dc45b` fix(doctor): strip Vital Signs comments before counting template
+  placeholders in D01 (kills false-positive D01 warnings on populated docs).
+- `851008d` feat(verify): **v1.2 Provable Done** — `.nexus/verify.json` manifest
+  generator/loader/runner, `nexus plan verify <id>` with machine-evidence blocks,
+  Doctor **D11 v2** (parseable evidence or explicit waiver — the gameable v1
+  keyword regex is gone), `nexus_plan_verify` MCP tool, unit + e2e suites.
+- `56ba694` feat(graph): **NEXUS 2.0 Phase 2 spike #1** — project-graph parser
+  (`src/utils/graph/`), `nexus graph` command (markdown digest / `--json` / `-f` /
+  `--root`), `nexus_project_graph` MCP tool (tool surface **18 → 19**: 15 read,
+  4 write). Measured against the nexus-cli corpus: 9 requirements, 2 features,
+  14 tasks, 84 evidence, 462 files, 64 test targets, 80 edges — **0 dangling**.
+- `367ebad` docs(nexus): recorded the spike in the Progress Log + knowledge.
+- `08ecc82` feat: **`nexus log` and `nexus note`** top-level commands (Progress
+  Log / Knowledge base), unified `nexus_add_knowledge_entry` MCP tool,
+  `insertBeforePostamble` newline bug fix.
 
-**State:** No active plan is running this work — it landed directly.
-`.nexus/plans/` does hold open plans on disk (`release-v1-2`,
-`implement-v1-2-provable-done`, `bootstrap-nexus-cli-roadmap`) that the
-auto-generated `plans/index.md` dashboard does not list; that drift is
-exactly what the new D16 check exists to catch (see `knowledge.md`), and is
-left as-is here rather than hand-patched.
+**State:** **v1.6.0 is now cut locally** — `package.json` + `src/version.ts` bumped
+→ **1.6.0**, CHANGELOG `## [1.6.0]` section added, RELEASE_HEADLINES entry added,
+README/NEXUS.md/04_api_contracts updated (19 MCP tools), and the release-prep
++sanity validated (841 tests · 23 commands · 19 MCP tools · 16 doctor checks,
+full `release:check` clean except the expected pre-push unpushed-commits warning).
+v1.5.2 is still the last **published** version on npm until `main` is pushed and
+CI publishes v1.6.0. **Remaining:** push `main` (CI publishes + tags v1.6.0 — do
+not hand-tag), then deploy the homepage from the monorepo.
 
-**Next queued initiative — unchanged by today's work:** 🟣 v1.2 "Provable
-Done" (Track B of `release-v1-2`) — verify manifest, D11 v2, `doctor
---strict` — design drafted, plan
-([`implement-v1-2-provable-done`](../plans/implement-v1-2-provable-done.md))
-still `status: draft`, awaiting Halton approval. **Why:** review session
-2026-07-05 found D11 v1 is a gameable keyword regex ("tests skipped"
-passes), D09/D11 severities never gate CI, and evidence is unverifiable
-prose. v1.2 Provable Done = machine evidence + `doctor --strict`.
+**Next queued initiative:** 🔮 **NEXUS 2.0 Phase 2 — spike #2** (the follow-on
+to the landed project-graph spike; see `<repo-root>/.nexus/docs/v2_project_graph.md`),
+then shipping **v1.6.0**. The remaining v1.2 "Provable Done" follow-on
+(standalone wake+verify spec repo + zero-dep reference impl) stays in the
+backlog.
 
 ---
 
@@ -147,15 +143,19 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | `nexus pack [path]` | `src/commands/pack.ts` | Zip `.nexus/` into a portable `nexus-backup-<timestamp>.zip` |
 | `nexus unpack [path]` | `src/commands/pack.ts` | Extract a backup zip and verify the restored `.nexus/` structure |
 | `nexus update` | `src/commands/update.ts` | Check npm registry and auto-install the latest NEXUS CLI version |
-| `nexus mcp [path]` ⬅ **NEW v1.0.0** | `src/commands/mcp.ts` | Stdio MCP server — 17 schema-validated brain tools (`src/mcp/{context,tools,server}.ts`) for Claude Code, Codex, Cursor & any MCP client |
+| `nexus mcp [path]` ⬅ **NEW v1.0.0** | `src/commands/mcp.ts` | Stdio MCP server — 19 schema-validated brain tools (`src/mcp/{context,tools,server}.ts`) for Claude Code, Codex, Cursor & any MCP client |
 | `nexus context "<task>"` ⬅ **NEW 2026-08-24** | `src/commands/context.ts` | Same bounded context-pack composer as `nexus_get_context` (MCP), callable as a plain process — `--json`, `--max-tokens=N`, `--agent=<name>`; no MCP server required |
+| `nexus graph [path]` ⬅ **NEW v1.6.0 (candidate)** | `src/commands/graph.ts` | Parse a real project into a typed entity graph (Requirement → Feature → Task → Evidence) — markdown digest by default, `--json`, `-f/--file`, `--root`. NEXUS 2.0 Phase 2 spike #1 |
+| `nexus plan verify <id>` ⬅ **NEW v1.6.0 (candidate)** | `src/commands/plan.ts` | Machine-evidence verification of a completed plan against `.nexus/verify.json` — the v1.2 "Provable Done" headline |
+| `nexus log ...` ⬅ **NEW v1.6.0 (candidate)** | `src/commands/log.ts` | Read/append the brain's Progress Log (`index.md` Progress Log section) |
+| `nexus note ...` ⬅ **NEW v1.6.0 (candidate)** | `src/commands/note.ts` | Read/append long-term memory in `knowledge.md` |
 
 ### Source Modules (src/)
 
 | Module | Files | Description |
 |--------|-------|-------------|
-| **Entry Points** | `cli.ts`, `index.ts`, `version.ts` | Commander.js CLI, public API, version 0.4.0 |
-| **Commands** | `commands/init.ts`, `adopt.ts`, `upgrade.ts`, `repair.ts`, `skill.ts`, `pack.ts`, `update.ts` | 7 CLI commands (+ 6 skill subcommands) |
+| **Entry Points** | `cli.ts`, `index.ts`, `version.ts` | Commander.js CLI, public API, version 1.6.0 |
+| **Commands** | `commands/init.ts`, `adopt.ts`, `upgrade.ts`, `repair.ts`, `skill.ts`, `pack.ts`, `update.ts`, `mcp.ts`, `context.ts`, `plan.ts`, `graph.ts`, `log.ts`, `note.ts`, `use.ts`, `harness.ts` | 20+ CLI commands incl. skill/plan subcommands (graph/log/note are v1.6.0 candidates) |
 | **Prompts** | `prompts/index.ts` + 7 modules | Project type, data strategy, patterns, frameworks, features, persona, skill-config |
 | **Generators** | `generators/index.ts` + 8 modules | Structure, docs, config, tests, CI/CD, landing page, AI config, skills |
 | **Types** | `types/config.ts` + 3 modules | NexusConfig (+ enableSkills), NexusManifest, NexusPersona, GeneratedFile, TemplateContext |
@@ -204,6 +204,10 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | `nexus pack [path]` | `src/commands/pack.ts` | Zip `.nexus/` into a portable `nexus-backup-<timestamp>.zip` |
 | `nexus unpack [path]` | `src/commands/pack.ts` | Extract a backup zip and verify the restored `.nexus/` structure |
 | `nexus update` | `src/commands/update.ts` | Check npm registry and auto-install the latest NEXUS CLI version |
+| `nexus graph [path]` ⬅ **NEW v1.6.0 (candidate)** | `src/commands/graph.ts` | NEXUS 2.0 project-graph spike — parse a project into a typed entity graph |
+| `nexus plan verify <id>` ⬅ **NEW v1.6.0 (candidate)** | `src/commands/plan.ts` | v1.2 "Provable Done" — machine-evidence verification against `.nexus/verify.json` |
+| `nexus log ...` ⬅ **NEW v1.6.0 (candidate)** | `src/commands/log.ts` | Read/append the Progress Log |
+| `nexus note ...` ⬅ **NEW v1.6.0 (candidate)** | `src/commands/note.ts` | Read/append long-term memory (`knowledge.md`) |
 
 | System | Description |
 |--------|-------------|
@@ -241,7 +245,7 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | `tests/unit/skill-commands.test.ts` ⬅ **NEW v0.3.1** | 26 | All 6 skill subcommands with real temp dirs + cwd mock, dirExists regression |
 | `tests/unit/update-check.test.ts` ⬅ **NEW v0.3.1** | 16 | checkForUpdate mock fetch, semver table, offline/timeout/404 fallback |
 | `tests/unit/pack.test.ts` ⬅ **NEW v0.3.1** | 11 | packCommand guard, zip naming, non-zero size, round-trip pack→unpack, findLatestBackup |
-| **Total** | **364** | **All passing ✅** |
+| **Total** | **364** (auto log from v0.4-era; per-file rows stale) | **Measured 2026-09-07: 841 tests passing across 63 files** ✅ |
 
 ---
 
@@ -287,10 +291,17 @@ Result: a project brain that not only records state but detects drift, tracks wo
 | **1.3.0** | **Aug 21, 2026** | **Skills II — skills gain a second kind, procedure the agent runs, not just reference it reads. New alignment gate (D13) makes a recorded `## Grilling` interview a precondition for feature work. D14 measures the instruction bytes every agent carries per turn. Fixed a shipped data-loss bug in the upgrade path.** |
 | **1.4.0** | **Aug 22, 2026** | **A public MCP surface — the 17 brain tools behind `nexus mcp` are now importable directly from `@nexus-framework/cli`'s new `./mcp` subpath as native TypeScript, no server process required. Additive only, no behavior changed.** |
 | **1.5.0** | **Aug 24, 2026** | **Reliability and local-model support — three new doctor checks (D14 context load, D15 manifest invariants, D16 artifact drift), harness profiles so instruction files are sized to what a local AI model can actually handle, and the new `nexus harness verify` command. `contract_version` finally documented. 807 unit tests.** |
+| **1.5.1** | **Sep 2026** | **MCP knowledge retrieval ranked by task relevance instead of recency** (`83bcd39`), changelog/release hygiene. |
+| **1.5.2** | **Sep 2026** | **`nexus skill install <pkg>` implements for real** — generalized the live-registry fetcher into `fetchNpmTarball`, installs community skills straight from the npm registry (was a "not yet supported" stub). Skill install now accepts npm packages, GitHub repos, Git URLs, and local paths. 841 tests. |
+| **1.6.0** ⬅ **unshipped / being prepared** | **Sep 7, 2026** | **v1.2 "Provable Done" + NEXUS 2.0 Phase 2 spike #1** — `.nexus/verify.json` + `nexus plan verify` + **D11 v2** machine evidence (gameable v1 keyword regex dropped), `nexus graph` + `nexus_project_graph` (**19 MCP tools**, up from 17), `nexus log` / `nexus note` commands, unified `nexus_add_knowledge_entry`, D01 Vital-Signs-comment fix. 5 commits on `main` behind `origin/main` (`f1dc45b`, `851008d`, `56ba694`, `367ebad`, `08ecc82`). 841 tests.** |
 
 ---
 
 ## ✅ Progress Log
+
+- 2026-09-07 — ✅ **v1.6.0 cut (local, pre-push).** Bumped `package.json` + `src/version.ts` → **1.6.0**; added the `## [1.6.0]` CHANGELOG section and the `1.6.0` RELEASE_HEADLINES entry; README + NEXUS.md + 04_api_contracts updated to document `nexus log` / `nexus note` / `nexus graph` / `nexus plan verify` and the corrected **19 MCP tools (15 read, 4 write)**; fixed `nexus-cli` lint debt (6 `import/order` errors in the new-commit files, via `eslint --fix`) and the stale README test badge (`807` → **841**); removed stray scratch files. Synced both brains. **Gate:** `tsc --noEmit` clean, `npm run lint` 0 errors, **841/841 tests** (63 files), full `release:check` reports **841 tests · 23 commands · 19 MCP tools · 16 doctor checks** with no drift except the expected unpushed-commits warning. **Remaining:** push `main` (CI publishes + tags v1.6.0 — do not hand-tag), then deploy the homepage. `NPM_TOKEN` must be current or the publish job fails.
+
+- 2026-09-07 — ✅ **v1.6.0 prep — brain sync for the 5 unshipped commits on `main`.** Bundled release candidates `f1dc45b`, `851008d`, `56ba694`, `367ebad`, `08ecc82` behind `origin/main` as the next version. **v1.2 "Provable Done" implemented** (`851008d`): `.nexus/verify.json` manifest generator/loader/runner, `nexus plan verify <id>` with machine-evidence blocks, **doctor D11 v2** (parseable evidence or explicit waiver — the gameable v1 keyword regex dropped), `nexus_plan_verify` MCP tool, unit + e2e suites. **NEXUS 2.0 Phase 2 spike #1** (`56ba694`, recorded separately below; tool surface **18 → 19**). **`nexus log` and `nexus note`** top-level commands with a unified `nexus_add_knowledge_entry` MCP tool (`08ecc82`). **D01 fix** (`f1dc45b`): strip Vital Signs comments before counting template placeholders, killing false positives on populated docs. Bumped this index's Published Version → **v1.5.2**, Coverage → **841/841 tests across 63 files** (measured 2026-09-07 via `npm test`), Current Objective + What's Next → v1.6.0 prep then NEXUS 2.0 Phase 2 spike #2, and added v1.5.1/v1.5.2/v1.6.0 rows to the Release History. Remaining v1.6.0 prep: version bump (`package.json` + `src/version.ts` → 1.6.0), CHANGELOG, publish to npm. Still open from original v1.2 scope: `doctor --strict`/`--verify`, configurable `wake.hashInputs`.
 
 - 2026-09-07 — ✅ **NEXUS 2.0 Phase 2 — project-graph spike #1 (`nexus graph`)**. Built the first working slice of the investigation §9 data model: `src/utils/graph/` (`types`, `parser`, `digest`) parses a real project's on-disk state — plans, brain docs, verify/state JSON, and a file walk — into a typed `ProjectGraph` (Requirement → Feature → Task → Evidence, plus File/TestTarget and an explicit `Edge{from,to,kind}` array). New `nexus graph` command (markdown digest, `--json`, `-f/--file`, `--root`) and a `nexus_project_graph` MCP tool (tool surface 18 → **19**: 15 read, 4 write). Consistency invariant proven against the nexus-cli corpus: 9 requirements, 2 features, 14 tasks, 84 evidence, 462 files, 64 test targets, 80 edges — **0 dangling** (`from`/`to` all resolve, all `Task.evidenceIds` resolve). Clean-stdout carve-out added for `graph --json`. **Suite 762 → 841** (7 new graph tests incl. consistency, malformed-markdown tolerance, digest, slug; mcp-tools updated to 19). `tsc --noEmit` + lint clean. Design/scope + measured results recorded in `<repo-root>/.nexus/docs/v2_project_graph.md` (root brain, uncommitted). Commit `56ba694`.
 
@@ -362,13 +373,33 @@ Result: a project brain that not only records state but detects drift, tracks wo
 
 ## ⏭️ What's Next
 
-### 🟣 NEXT INITIATIVE: v1.2 — Provable Done (awaiting approval)
+### 🟢 IMMEDIATE: Ship v1.6.0
 
-- **Design:** root `.nexus/docs/v1_2_provable_done.md` (2026-07-05)
-- **Plan:** [`implement-v1-2-provable-done`](../plans/implement-v1-2-provable-done.md) — status `draft`, run `nexus plan start` after Halton approves
-- **Scope:** `.nexus/verify.json` manifest + `nexus plan verify` machine evidence + **D11 v2** (parseable evidence or waiver — keyword regex dropped) + `doctor --strict` / `--verify` + configurable `wake.hashInputs` (protocol-extraction groundwork)
-- **Open questions:** 3 for Halton in design doc §5 (strict plan-done, evidence location, CI re-run default)
-- **Follow-on (v1.3):** standalone wake+verify spec repo + zero-dep reference implementation
+**Cut locally and gated green.** The 5 commits on `main` (`f1dc45b`, `851008d`,
+`56ba694`, `367ebad`, `08ecc82`) are bundled as **v1.6.0**: `package.json` +
+`src/version.ts` bumped → 1.6.0, CHANGELOG + RELEASE_HEADLINES + README/NEXUS.md
+updated (19 MCP tools), 841 tests / 23 commands / 19 tools / 16 checks verified
+via full `release:check`. Contents: **v1.2 "Provable Done"** (`nexus plan verify`
++ `.nexus/verify.json` + **D11 v2**) and **NEXUS 2.0 Phase 2 spike #1**
+(`nexus graph` + `nexus_project_graph`, 19 MCP tools) plus `nexus log` /
+`nexus note` and the D01 fix. **Remaining human step:** push `main` (CI
+publishes v1.6.0 to npm + tags — do not hand-tag), confirm `NPM_TOKEN` is
+current, then deploy the homepage.
+
+### 🔮 NEXT INITIATIVE: NEXUS 2.0 Phase 2 — spike #2 (after v1.6.0 ships)
+
+- **Design:** root `.nexus/docs/v2_project_graph.md` (investigation §16 item 1 landed as spike #1; spike #2 is the follow-on slice)
+- **Why:** the landed project-graph spike (#1) proved the consistency invariant (0 dangling edges on the corpus); spike #2 advances the §9 data model / next investigation item
+- **Options from the "What's Next" backlog:** `nexus skill generate` (scan codebase, auto-draft custom skills), `nexus add <feature>`, plugin system for custom generators
+- **Follow-on backlog:** the standalone wake+verify spec repo + zero-dep reference implementation (v1.3 of the Provable-Done thread)
+
+### ✅ DONE: v1.2 "Provable Done" (implemented, unshipped)
+
+Implemented in `851008d` but not yet released. Now v1.6.0 candidate content
+rather than "awaiting approval": `.nexus/verify.json` manifest + `nexus plan
+verify` machine evidence + **D11 v2** are all landed on `main`. Remaining
+pieces of the original v1.2 scope that are still open: `doctor --strict` /
+`--verify` and configurable `wake.hashInputs`.
 
 ### ✅ SHIPPED: v1.1 — Contextualized Agents (v1.1.3 on npm)
 

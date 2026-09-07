@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-09-07
+**Capture, verify, and see the graph.** This release adds command-line capture
+tools to the Progress Log and Knowledge Base, an evolving project-graph spike
+that can render a derived ProjectGraph, machine-verifiable "Provable Done"
+evidence, and a doctor fix.
+
+### 🖊 New capture commands
+
+- `nexus log` appends an entry to the Progress Log (`docs/index.md`) via
+  `--message` / `--status` / `--scope` / `--date`.
+- `nexus note` appends an entry to the Knowledge Base (`docs/knowledge.md`) via
+  `--category` / `--title` / `--body` / `--why` / `--how-to-apply` / `--scope`,
+  validated against `KNOWLEDGE_CATEGORIES`.
+
+### 🕸 Project graph spike
+
+- NEXUS 2.0 project-graph spike 1: `nexus graph` prints a digest (or `--json`)
+  of the derived `ProjectGraph` across Requirement, Feature, Task, and Evidence.
+
+### ✅ Provable Done
+
+- `nexus plan verify` plus D11 v2: machine evidence now flows through a
+  `.nexus/verify.json` manifest.
+
+### 🩺 Doctor fix
+
+- Fixed a D01 bug that counted template placeholders before stripping vital-signs
+  comments.
+
+The MCP tool surface grew to **19 tools** (15 read, 4 write).
+
 ## [1.5.2] - 2026-08-31
 **Skill installation expanded.** This release enhances the logic for skill installation.
 

@@ -56,7 +56,7 @@ unverifiable, unbounded, and gets more expensive as the project grows.
 NEXUS gives every project a **brain**: a `.nexus/` directory of plain markdown
 that is simultaneously human-readable, git-diffable, and machine-callable. Then
 it makes the brain *addressable* — the `nexus-brain` MCP server exposes it as
-17 schema-validated tools, so an agent asks a question and gets a bounded,
+19 schema-validated tools, so an agent asks a question and gets a bounded,
 task-scoped answer instead of a pile of files.
 
 Four capabilities, in the order they were added:
@@ -245,7 +245,7 @@ client and exits with it. **stdout carries protocol only** — handlers never
 `console.log` and never `process.exit()`; they throw `McpToolError`, which the
 server layer converts into a tool error.
 
-### 20 tools — 15 read, 5 write
+### 19 tools — 15 read, 4 write
 
 **Read**
 
@@ -271,7 +271,7 @@ than merely detectable.
 |------|------|
 | `nexus_plan_tick` | Toggle a checklist step by 1-based index |
 | `nexus_plan_note` | Append a timestamped note |
-| `nexus_brain_log` | Append a timestamped entry to the Progress Log |
+| `nexus_plan_verify` | Run verification checks from `.nexus/verify.json` and record machine evidence |
 | `nexus_add_knowledge_entry` | Append a formatted entry; rejects duplicate category+title |
 
 ### `nexus_get_context` — how the pack is composed
