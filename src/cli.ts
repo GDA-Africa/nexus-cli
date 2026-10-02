@@ -25,7 +25,7 @@ import { consolidateCommand } from './commands/consolidate.js';
 import { contextCommand } from './commands/context.js';
 import { doctorCommand } from './commands/doctor.js';
 import { graphCommand } from './commands/graph.js';
-import { harnessCommand } from './commands/harness.js';
+import { harnessCommand, runHarnessLauncher } from './commands/harness.js';
 import { initCommand } from './commands/init.js';
 import { logCommand } from './commands/log.js';
 import { mcpCommand } from './commands/mcp.js';
@@ -179,7 +179,11 @@ skillCmd
 
 const agentCmd = program
   .command('agent')
-  .description('Manage brain-grounded agent definitions in .nexus/agents/ (v1.1)');
+  .description('Manage brain-grounded agent definitions in .nexus/agents/ or launch interactive agent')
+  .option('--tui', 'Launch interactive terminal agent (default)', false)
+  .action(async () => {
+    await runHarnessLauncher({ tui: true });
+  });
 
 agentCmd.command('list').description('List all agents (custom / core / community)').action(agentListCommand);
 agentCmd.command('new [name]').description('Scaffold a new custom agent').action(agentNewCommand);

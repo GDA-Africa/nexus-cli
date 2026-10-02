@@ -15,7 +15,8 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 
-import { runHarnessVerify } from '../../src/commands/harness.js';
+import { runHarnessLauncher, renderNexusBanner, runHarnessVerify } from '../../src/commands/harness.js';
+import { setActivePlan } from '../../src/utils/plans/active.js';
 import { loadHarnessesConfig } from '../../src/utils/harnesses/index.js';
 import type { OllamaClient, OllamaGenerateCall } from '../../src/utils/harnesses/ollama-client.js';
 
@@ -194,3 +195,141 @@ describe('runHarnessVerify', () => {
     expect(loggedErrors(logSpy).some((m) => m.includes('Could not verify "ollama-local"'))).toBe(true);
   });
 });
+
+describe('renderNexusBanner', () => {
+  it('renders banner with project info, active plan, and web mode', () => {
+    const banner = renderNexusBanner({
+      projectName: 'my-cool-app',
+      projectRoot: '/path/to/my-cool-app',
+      activePlan: 'feature-oauth',
+      mode: 'web',
+      port: 3080,
+    });
+
+    expect(banner).toContain('NEXUS HARNESS');
+    expect(banner).toContain('my-cool-app');
+    expect(banner).toContain('/path/to/my-cool-app');
+    expect(banner).toContain('feature-oauth');
+    expect(banner).toContain('Web UI (http://localhost:3080)');
+  });
+
+  it('renders banner with desktop and tui modes', () => {
+    const desktopBanner = renderNexusBanner({
+      projectName: 'test',
+      projectRoot: '/test',
+      mode: 'desktop',
+    });
+    expect(desktopBanner).toContain('Desktop App');
+
+    const tuiBanner = renderNexusBanner({
+      projectName: 'test',
+      projectRoot: '/test',
+      mode: 'tui',
+    });
+    expect(tuiBanner).toContain('Interactive Terminal Agent');
+  });
+});
+
+describe('runHarnessLauncher', () => {
+  let tmpDir: string;
+  let cwdSpy: MockInstance;
+  let logSpy: MockInstance;
+  let exitSpy: MockInstance;
+
+  beforeEach(async () => {
+    tmpDir = path.join(os.tmpdir(), `nexus-launcher-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await fs.ensureDir(tmpDir);
+    cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(tmpDir);
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`process.exit(${code})`);
+    }) as never);
+  });
+
+  afterEach(async () => {
+    cwdSpy.mockRestore();
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    await fs.remove(tmpDir);
+  });
+
+  it('exits 1 when no .nexus directory is found', async () => {
+    await expect(runHarnessLauncher()).rejects.toThrow('process.exit(1)');
+    expect(loggedErrors(logSpy).some((m) => m.includes('No .nexus directory found'))).toBe(true);
+  });
+
+  it('launches web profile by default with patch and active plan', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus', 'plans'));
+    await fs.writeJson(path.join(tmpDir, 'package.json'), { name: 'super-project' });
+    await setActivePlan(path.join(tmpDir, '.nexus', 'plans'), 'plan-alpha');
+
+    const runner = vi.fn().mockResolvedValue(undefined);
+
+    await runHarnessLauncher({ runner });
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    const [command, args, opts] = runner.mock.calls[0] as [string, string[], { cwd: string; env: Record<string, string> }];
+
+    expect(command).toBeDefined();
+    expect(args).toContain('--profile');
+    expect(args).toContain('web');
+    expect(args).toContain('--port');
+    expect(args).toContain('3080');
+    expect(args).toContain('--patch');
+
+    // Check patch file created
+    const patchIdx = args.indexOf('--patch');
+    const patchFile = args[patchIdx + 1];
+    expect(await fs.pathExists(patchFile!)).toBe(true);
+    const patchContent = await fs.readFile(patchFile!, 'utf-8');
+    expect(patchContent).toContain('@deepseek-ai/dsh-experimental-nexus-brain-context');
+    expect(patchContent).toContain(tmpDir);
+
+    // Environment and cwd
+    expect(opts.cwd).toBe(tmpDir);
+    expect(opts.env.NEXUS_PROJECT_ROOT).toBe(tmpDir);
+
+    // Banner logged with active plan
+    const printedLogs = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(printedLogs).toContain('super-project');
+    expect(printedLogs).toContain('plan-alpha');
+  });
+
+  it('launches tui mode with --tui', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const runner = vi.fn().mockResolvedValue(undefined);
+    await runHarnessLauncher({ tui: true, runner });
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    const [, args] = runner.mock.calls[0] as [string, string[], unknown];
+    expect(args).toContain('--profile');
+    expect(args).toContain('default');
+  });
+
+  it('launches desktop mode with --desktop', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const runner = vi.fn().mockResolvedValue(undefined);
+    await runHarnessLauncher({ desktop: true, runner });
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    const [, args] = runner.mock.calls[0] as [string, string[], unknown];
+    expect(args).toContain('--profile');
+    expect(args).toContain('desktop');
+  });
+
+  it('passes custom port and --no-open', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const runner = vi.fn().mockResolvedValue(undefined);
+    await runHarnessLauncher({ port: '8088', open: false, runner });
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    const [, args] = runner.mock.calls[0] as [string, string[], unknown];
+    expect(args).toContain('--port');
+    expect(args).toContain('8088');
+    expect(args).toContain('--no-open');
+  });
+});
+
