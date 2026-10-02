@@ -355,5 +355,18 @@ describe('runHarnessLauncher', () => {
     expect(args).toContain('--profile');
     expect(args).toContain('web');
   });
+
+  it('launches headless mode with task when task is provided', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const runner = vi.fn().mockResolvedValue(undefined);
+    await runHarnessLauncher({ task: 'Run integration test suite', runner });
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    const [, args] = runner.mock.calls[0] as [string, string[], unknown];
+    expect(args).toContain('--profile');
+    expect(args).toContain('headless');
+    expect(args).toContain('Run integration test suite');
+  });
 });
 

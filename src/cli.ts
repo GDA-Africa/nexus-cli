@@ -179,10 +179,11 @@ skillCmd
 
 const agentCmd = program
   .command('agent')
-  .description('Manage brain-grounded agent definitions in .nexus/agents/ or launch interactive agent')
-  .option('--tui', 'Launch interactive terminal agent (default)', false)
-  .action(async () => {
-    await runHarnessLauncher({ tui: true });
+  .description('Run autonomous headless agent on a task or manage brain-grounded agents')
+  .argument('[task...]', 'Task to execute headlessly with project brain context')
+  .action(async (taskArgs: string[]) => {
+    const task = taskArgs && taskArgs.length > 0 ? taskArgs.join(' ') : 'Review active plan and report status';
+    await runHarnessLauncher({ task });
   });
 
 agentCmd.command('list').description('List all agents (custom / core / community)').action(agentListCommand);
@@ -191,6 +192,16 @@ agentCmd.command('install <name>').description('Install a community agent from t
 agentCmd.command('remove <name>').description('Remove a community agent (refuses core/custom)').action(agentRemoveCommand);
 agentCmd.command('status').description('Validate agent frontmatter and context recipes').action(agentStatusCommand);
 agentCmd.command('sync').description('Regenerate client outputs (.claude/agents/ + Agent Roles blocks)').action(agentSyncCommand);
+
+// ── nexus code ───────────────────────────────────────────────
+// NEXUS v3: Full interactive Claude Code-style terminal TUI REPL
+
+program
+  .command('code')
+  .description('Launch interactive terminal coding agent (NEXUS v3 TUI REPL)')
+  .action(async () => {
+    await runHarnessLauncher({ tui: true });
+  });
 
 // ── nexus plan ───────────────────────────────────────────────
 

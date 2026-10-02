@@ -42,6 +42,7 @@ export interface HarnessLauncherCliOptions {
   tui?: boolean;
   desktop?: boolean;
   open?: boolean;
+  task?: string;
   /** Injectable runner for unit tests. */
   runner?: (command: string, args: string[], options: Record<string, unknown>) => Promise<unknown>;
 }
@@ -53,12 +54,6 @@ export interface HarnessVerifyCliOptions {
   toolCallAttempts?: number;
   dryRun?: boolean;
   json?: boolean;
-  /**
-   * Not a CLI flag — no operator ever sets this. Lets tests exercise this
-   * command's full validation/render/write-back path with a fake client
-   * instead of a real network call, the same way `verifyHarness` itself
-   * takes an injectable `client`.
-   */
   client?: OllamaClient;
 }
 
@@ -66,7 +61,8 @@ export function renderNexusBanner(info: {
   projectName: string;
   projectRoot: string;
   activePlan?: string;
-  mode: 'web' | 'tui' | 'desktop';
+  mode: 'web' | 'tui' | 'desktop' | 'headless';
+  task?: string;
   port?: number | string;
 }): string {
   const art = [
@@ -78,13 +74,26 @@ export function renderNexusBanner(info: {
   ].join('\n');
 
   const title = chalk.bold.white('NEXUS HARNESS') + ' — ' + chalk.dim('AI-Native Project Partner');
+  const modeText =
+    info.mode === 'web'
+      ? chalk.bold(`Web UI (http://localhost:${info.port})`)
+      : info.mode === 'desktop'
+        ? chalk.bold('Desktop App')
+        : info.mode === 'headless'
+          ? chalk.bold.yellow('Autonomous Headless Agent')
+          : chalk.bold('Interactive Terminal Agent');
+
   const details = [
     `${chalk.cyan('⚡ Project:')}    ${chalk.bold(info.projectName)} (${chalk.dim(info.projectRoot)})`,
     `${chalk.cyan('📋 Active Plan:')} ${info.activePlan ? chalk.bold.green(info.activePlan) : chalk.dim('No active plan')}`,
-    `${chalk.cyan('🚀 Mode:')}        ${info.mode === 'web' ? chalk.bold(`Web UI (http://localhost:${info.port})`) : info.mode === 'desktop' ? chalk.bold('Desktop App') : chalk.bold('Interactive Terminal Agent')}`,
-  ].join('\n');
+    `${chalk.cyan('🚀 Mode:')}        ${modeText}`,
+  ];
 
-  return `\n${art}\n  ${title}\n\n${details}\n`;
+  if (info.task) {
+    details.push(`${chalk.cyan('🎯 Task:')}        ${chalk.bold.white(info.task)}`);
+  }
+
+  return `\n${art}\n  ${title}\n\n${details.join('\n')}\n`;
 }
 
 export function harnessCommand(): Command {
@@ -165,11 +174,13 @@ export async function runHarnessLauncher(options: HarnessLauncherCliOptions = {}
     // Ignore plan read errors
   }
 
-  const mode: 'web' | 'tui' | 'desktop' = options.desktop
-    ? 'desktop'
-    : options.tui
-      ? 'tui'
-      : 'web';
+  const mode: 'web' | 'tui' | 'desktop' | 'headless' = options.task
+    ? 'headless'
+    : options.desktop
+      ? 'desktop'
+      : options.tui
+        ? 'tui'
+        : 'web';
 
   const port = options.port ?? '3080';
 
@@ -179,6 +190,7 @@ export async function runHarnessLauncher(options: HarnessLauncherCliOptions = {}
       projectRoot,
       activePlan,
       mode,
+      task: options.task,
       port,
     }),
   );
@@ -234,6 +246,11 @@ export async function runHarnessLauncher(options: HarnessLauncherCliOptions = {}
     }
   } else if (mode === 'desktop') {
     args.push('--profile', 'desktop', '--patch', patchPath);
+  } else if (mode === 'headless') {
+    args.push('--profile', 'headless', '--patch', patchPath);
+    if (options.task) {
+      args.push(options.task);
+    }
   } else {
     // tui mode
     args.push('--profile', 'default', '--patch', patchPath);
