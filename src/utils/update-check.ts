@@ -29,6 +29,7 @@ export interface UpdateInfo {
 // The check walks from the target version downward to find the best match.
 
 const RELEASE_HEADLINES: Record<string, string> = {
+  '2.0.0': '🚀 NEXUS 2.0: nexus harness web GUI, nexus agent autonomous headless execution, and project-graph architecture',
   '1.6.0': '📝 nexus log + nexus note, NEXUS 2.0 project graph, and v1.2 Provable Done verification',
   '1.5.0': '🩺 Doctor checks D14 to D16 catch stale docs, plus nexus harness verify for local AI models',
   '1.4.0': '🔓 Public MCP surface, the ./mcp subpath for embedding the brain directly in a host',

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-02
+**NEXUS 2.0: AI-Native Execution Harness, Autonomous Headless Agent, and Glass GUI.**
+This major release establishes the NEXUS execution platform, connecting the project
+brain directly to execution harnesses, autonomous agents, and local AI runtimes.
+
+### 🚀 Execution Platform & CLI Launchers
+
+- `nexus harness` launches the interactive Web GUI (powered by `@nexus-framework/harness`),
+  pre-wired with ambient `.nexus/` brain context, the Nexus Glass dark theme, subagent
+  inspectors, and in-process `nexus_*` tools.
+- `nexus agent "<task>"` executes tasks headlessly and autonomously via the one-shot
+  headless driver (`dsh --profile headless`), automatically injecting active plans, skills,
+  and long-term memory into the agent loop.
+- `nexus code` establishes the launcher reservation for the planned NEXUS v3 interactive
+  terminal TUI REPL.
+
 ## [1.6.0] - 2026-09-07
 **Capture, verify, and see the graph.** This release adds command-line capture
 tools to the Progress Log and Knowledge Base, an evolving project-graph spike
