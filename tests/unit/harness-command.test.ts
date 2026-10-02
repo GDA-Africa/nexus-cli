@@ -331,5 +331,29 @@ describe('runHarnessLauncher', () => {
     expect(args).toContain('8088');
     expect(args).toContain('--no-open');
   });
+
+  it('falls back to on-demand npx @nexus-framework/harness when local repository binary is absent', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const pathExistsSpy = vi.spyOn(fs, 'pathExists').mockImplementation(async (filePath) => {
+      if (typeof filePath === 'string' && filePath.includes('bin.js')) {
+        return false;
+      }
+      return true;
+    });
+
+    const runner = vi.fn().mockResolvedValue(undefined);
+    await runHarnessLauncher({ runner });
+
+    pathExistsSpy.mockRestore();
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    const [command, args] = runner.mock.calls[0] as [string, string[], unknown];
+    expect(command).toBe('npx');
+    expect(args[0]).toBe('-y');
+    expect(args[1]).toBe('@nexus-framework/harness');
+    expect(args).toContain('--profile');
+    expect(args).toContain('web');
+  });
 });
 

@@ -224,7 +224,7 @@ export async function runHarnessLauncher(options: HarnessLauncherCliOptions = {}
     args.push(resolvedBin);
   } else {
     command = 'npx';
-    args.push('-y', '@deepseek-ai/dsh');
+    args.push('-y', '@nexus-framework/harness');
   }
 
   if (mode === 'web') {
