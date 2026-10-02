@@ -68,6 +68,7 @@ import { detectBrainNeeds, type BrainDetectionResult } from './utils/brain-detec
 import { getNexusDir } from './utils/brain.js';
 import { buildDoctorContext } from './utils/doctor/context.js';
 import { runDoctor } from './utils/doctor/index.js';
+import { logger } from './utils/logger.js';
 import { checkForUpdate } from './utils/update-check.js';
 import { version } from './version.js';
 
@@ -182,7 +183,13 @@ const agentCmd = program
   .description('Run autonomous headless agent on a task or manage brain-grounded agents')
   .argument('[task...]', 'Task to execute headlessly with project brain context')
   .action(async (taskArgs: string[]) => {
-    const task = taskArgs && taskArgs.length > 0 ? taskArgs.join(' ') : 'Review active plan and report status';
+    const task = taskArgs && taskArgs.length > 0 ? taskArgs.join(' ') : undefined;
+    if (!task) {
+      logger.info('Usage: nexus agent "<task>"');
+      logger.info('Executes a one-shot headless task with full project brain context.');
+      logger.info('The complete interactive terminal TUI is planned for NEXUS v3 via "nexus code".');
+      return;
+    }
     await runHarnessLauncher({ task });
   });
 
@@ -200,6 +207,7 @@ program
   .command('code')
   .description('Launch interactive terminal coding agent (NEXUS v3 TUI REPL)')
   .action(async () => {
+    logger.info('Launching terminal agent interface (NEXUS v3 TUI preview)...');
     await runHarnessLauncher({ tui: true });
   });
 

@@ -336,7 +336,7 @@ describe('runHarnessLauncher', () => {
     await fs.ensureDir(path.join(tmpDir, '.nexus'));
 
     const pathExistsSpy = vi.spyOn(fs, 'pathExists').mockImplementation(async (filePath) => {
-      if (typeof filePath === 'string' && filePath.includes('bin.js')) {
+      if (typeof filePath === 'string' && (filePath.includes('bin.js') || filePath.includes('nexus-harness.js'))) {
         return false;
       }
       return true;
