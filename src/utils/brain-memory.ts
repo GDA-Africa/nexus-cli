@@ -57,7 +57,7 @@ export async function appendProgressEntry(nexusDir: string, input: AppendProgres
  * @throws {BrainMemoryError} If the Progress Log section is not found.
  */
 export function insertProgressEntryIntoMarkdown(content: string, entryLine: string): string {
-  const lines = content.split('\\n');
+  const lines = content.split('\n');
   let headingIndex = -1;
 
   // Find the last "Progress Log" heading, walking backwards
@@ -102,8 +102,8 @@ export function insertProgressEntryIntoMarkdown(content: string, entryLine: stri
   }
   rebuiltLines.push(...lines.slice(insertionPoint));      // Content after insertion point
 
-  let result = rebuiltLines.join('\\n');
-  if (!result.endsWith('\\n')) result += '\\n'; // Ensure trailing newline
+  let result = rebuiltLines.join('\n');
+  if (!result.endsWith('\n')) result += '\n'; // Ensure trailing newline
   return result;
 }
 

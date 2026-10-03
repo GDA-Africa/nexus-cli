@@ -253,7 +253,7 @@ export async function doctorTool(
  * ────────────────────────────────────────────────────────────── */
 
 const SKILL_DIRS = ['custom', 'core', 'community'] as const;
-export type SkillSource = (typeof SKILL_DIRS)[number];
+export type SkillSource = (typeof SKILL_DIRS)[number] | 'verified';
 
 export interface SkillSummary {
   name: string;
@@ -270,7 +270,7 @@ export interface SkillSummary {
   status: string;
 }
 
-/** List every installed skill across custom/, core/, community/. */
+/** List every installed skill across custom/, core/, community/, plus verified registry skills. */
 export async function listSkillsTool(ctx: BrainContext): Promise<{ skills: SkillSummary[] }> {
   const skills: SkillSummary[] = [];
   const seen = new Set<string>();
@@ -303,6 +303,35 @@ export async function listSkillsTool(ctx: BrainContext): Promise<{ skills: Skill
     }
   }
 
+  // Fallback: append verified skills from @nexus-framework/skills registry
+  try {
+    const { listSkills, getSkillContent, listFrameworks } = await import('@nexus-framework/skills');
+    const frameworks = ['shared', ...listFrameworks().filter((f: string) => f !== 'shared')];
+    for (const fw of frameworks) {
+      const slugs = listSkills(fw);
+      for (const slug of slugs) {
+        if (seen.has(slug)) continue;
+        seen.add(slug);
+        const content = getSkillContent(fw, slug);
+        if (!content) continue;
+        const fm = parseSkillFrontmatter(content);
+        skills.push({
+          name: slug,
+          source: 'verified',
+          title: fm.title,
+          description: fm.description,
+          triggers: fm.triggers,
+          category: fm.category,
+          invocation: fm.invocation,
+          gate: fm.gate,
+          status: fm.status,
+        });
+      }
+    }
+  } catch {
+    // Registry is optional if package not present in environment
+  }
+
   return { skills };
 }
 
@@ -324,7 +353,7 @@ export async function projectGraphTool(
   return { graph, digest: renderGraphDigest(graph) };
 }
 
-/** Read one skill by name, honoring custom > core > community precedence. */
+/** Read one skill by name, honoring custom > core > community > verified precedence. */
 export async function getSkillTool(
   ctx: BrainContext,
   input: { name: string },
@@ -338,8 +367,31 @@ export async function getSkillTool(
     }
   }
 
+  // Fallback to verified registry (@nexus-framework/skills)
+  try {
+    const { getSkillContent, listFrameworks } = await import('@nexus-framework/skills');
+    const slug = input.name.replace(/\.md$/, '');
+
+    // Check shared first
+    const sharedContent = getSkillContent('shared', slug);
+    if (sharedContent) {
+      return { name: input.name, source: 'verified', markdown: sharedContent };
+    }
+
+    // Check other frameworks
+    for (const fw of listFrameworks()) {
+      if (fw === 'shared') continue;
+      const content = getSkillContent(fw, slug);
+      if (content) {
+        return { name: input.name, source: 'verified', markdown: content };
+      }
+    }
+  } catch {
+    // If not found in verified registry, proceed to throw
+  }
+
   throw new McpToolError(
-    `Skill "${input.name}" not found in .nexus/skills/{custom,core,community}. Use nexus_list_skills to browse.`,
+    `Skill "${input.name}" not found in .nexus/skills/{custom,core,community} or verified registry. Use nexus_list_skills to browse.`,
   );
 }
 

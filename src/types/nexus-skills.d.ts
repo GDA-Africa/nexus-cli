@@ -29,4 +29,9 @@ declare module '@nexus-framework/skills' {
    * e.g. ['next.js', 'react-vite', 'sveltekit', 'shared', ...]
    */
   export function listFrameworks(): string[];
+
+  /**
+   * Get the directory path for skills (root or specific framework).
+   */
+  export function getSkillsDir(framework?: string): string;
 }
