@@ -71,7 +71,7 @@
   "dependencies": {
     "@inquirer/prompts": "^7.3.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@nexus-framework/skills": "file:../nexus-skills/packages/core",
+    "@nexus-framework/skills": "^0.5.0",
     "archiver": "^7.0.1",
     "boxen": "^8.0.1",
     "chalk": "^5.3.0",
