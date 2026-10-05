@@ -105,8 +105,8 @@ export function parseStringList(block: string, key: string): string[] {
 
   for (const line of lines) {
     if (line.trim().length === 0) continue;
-    const item = line.match(/^[ \t]+-[ \t]+(.*)$/)?.[1];
-    if (item === undefined) break; // dedented back to a sibling key — list is over
+    const item = line.match(/^[ \t]*-[ \t]+(.*)$/)?.[1];
+    if (item === undefined) break; // not a list item — list is over
     const value = item.trim().replace(/^["']|["']$/g, '').trim();
     if (value.length > 0) items.push(value);
   }
