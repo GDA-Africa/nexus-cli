@@ -5,7 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-10-07
+
+**NEXUS 2.0.1: AI-Native Execution Harness, Autonomous Headless Agent, and Glass GUI.**
+This is a patch release that includes the following improvements:
+
+### Nexus Harness Update Check
+
+- `nexus harness` now shows a prompt asking the user to update the harness if it is outdated.
+  if the user does not want the prompt to show they can pass `--no-update-check` to the `nexus harness` command.
+
 ## [2.0.0] - 2026-10-02
+
 **NEXUS 2.0: AI-Native Execution Harness, Autonomous Headless Agent, and Glass GUI.**
 This major release establishes the NEXUS execution platform, connecting the project
 brain directly to execution harnesses, autonomous agents, and local AI runtimes.
@@ -22,6 +33,7 @@ brain directly to execution harnesses, autonomous agents, and local AI runtimes.
   terminal TUI REPL.
 
 ## [1.6.0] - 2026-09-07
+
 **Capture, verify, and see the graph.** This release adds command-line capture
 tools to the Progress Log and Knowledge Base, an evolving project-graph spike
 that can render a derived ProjectGraph, machine-verifiable "Provable Done"
@@ -53,9 +65,11 @@ evidence, and a doctor fix.
 The MCP tool surface grew to **19 tools** (15 read, 4 write).
 
 ## [1.5.2] - 2026-08-31
+
 **Skill installation expanded.** This release enhances the logic for skill installation.
 
 ## [1.5.1] - 2026-08-24
+
 **Knowledge Retrieval** This release enhances the logic for knowledge retrieval
 
 ## [1.5.0] - 2026-08-24
@@ -121,8 +135,8 @@ No behavior changed; this is additive surface only.
 
 ## [1.3.0] - 2026-08-21
 
-**Skills II.** Skills stop being only *reference the agent reads* and gain a
-second kind — *procedure the agent runs*. On top of that: a gate that makes
+**Skills II.** Skills stop being only _reference the agent reads_ and gain a
+second kind — _procedure the agent runs_. On top of that: a gate that makes
 alignment a precondition for feature work, a budget for the instructions every
 agent carries on every turn, and the fix for a shipped data-loss bug.
 
@@ -191,15 +205,15 @@ regex treated as frontmatter and the scan then ran over the entire document
 body. **Any document containing a `---` rule plus the words `status: template`
 somewhere in its prose was classified as a template and overwritten.**
 
-Worse than first diagnosed: a document whose *own frontmatter said
-`status: populated`* was also affected, since the real frontmatter fence
+Worse than first diagnosed: a document whose _own frontmatter said
+`status: populated`_ was also affected, since the real frontmatter fence
 supplies the opening `---`. Both predicates could return `true` for one file,
 and the replace gate only asks `isTemplate`.
 
 Both predicates now read a single `status` value from the leading frontmatter
 block only — anchored to the start of the string, no `m` flag. Verified by
 running old and new predicates over every brain doc in the NEXUS monorepo: two
-files flip from *replace* to *preserve*, and zero genuine templates are
+files flip from _replace_ to _preserve_, and zero genuine templates are
 misclassified. **Preserve-by-default is the contract; when in doubt, do not
 overwrite.**
 
@@ -221,8 +235,8 @@ Two frontmatter parsers existed with different bugs. There is now one,
 Substring containment is replaced by token-overlap scoring with **ranked**
 admission, so budget pressure drops the least relevant skill rather than an
 arbitrary one. The verbatim path is preserved as the strongest signal but now
-requires word boundaries — plain `includes` fired `"api"` on *rapid* and
-`"test"` on *latest*.
+requires word boundaries — plain `includes` fired `"api"` on _rapid_ and
+`"test"` on _latest_.
 
 `SKILL_SPEC` v1 §6 claimed matching was semantic; it was not. §7 now documents
 what the code actually does.
@@ -299,12 +313,12 @@ nexus init my-app --ui none    # always one keystroke away
 ```
 
 Resolution order: `--ui` flag → project `.nexus/config.json` → global
-`~/.config/nexus/config.json` → `none`. A saved preference is *stated* during
+`~/.config/nexus/config.json` → `none`. A saved preference is _stated_ during
 `init`, never asked about again.
 
 - **No hard dependency.** Chameleon is resolved from your environment at
   generation time (`NEXUS_CHAMELEON_BIN` → project `node_modules/.bin` → `npx
-  --no-install`). Absent, older, or broken, generation falls back to NEXUS with
+--no-install`). Absent, older, or broken, generation falls back to NEXUS with
   a printed reason — every project still builds with `--ui none`.
 - **Capability-gated, not version-gated.** NEXUS asks what Chameleon can do and
   disables the paths that aren't available, so new Chameleon releases light up
@@ -333,7 +347,6 @@ after. New `D12` doctor check flags a project where it went missing.
 > Published from a branch that also carried the v1.2 Chameleon work, so this
 > release contains more than the fix described below. See [1.2.0] for what was
 > actually in it. Prefer 1.2.0.
-
 
 ### 🛡 Fixed: "undefined" leaking into generated files
 
@@ -469,6 +482,7 @@ v1.0.0 closes the Alive Brain initiative: the brain now senses (`sync`), tracks
 and proves itself read (`wake`).
 
 #### `nexus consolidate`
+
 - Rolls `knowledge.md` up into a generated `knowledge-summary.md`, grouped by category
 - Append-only stays append-only — consolidation adds a summary layer, never deletes
 - `--check` — CI gate: exits non-zero when the summary is out of date with the raw file
@@ -477,12 +491,14 @@ and proves itself read (`wake`).
 - Deterministic Markdown processing — no LLM calls
 
 #### `nexus wake`
+
 - Session handshake: issues a deterministic token (`NX-WAKE-XXXX-YYYY-MM-DD`) derived from brain content + date
 - Records the handshake in `.nexus/state/session.json`; `nexus doctor` (D09) flags commits made without one
 - `--quiet` prints only the token (for shell rc scripting); `--no-active-plan` for CI
 - Enforcement is downstream and advisory — skipping is visible, not impossible
 
 #### Scaffolding & upgrade
+
 - `nexus init` / `nexus adopt` scaffold the full v1.0 layout, including `.nexus/state/`
 - Generated AI instruction files gain a **Session Handshake (REQUIRED)** section referencing `nexus wake`
 - New generated `CLAUDE.md` at project root (alongside `AGENTS.md`, `.cursorrules`, etc.)
@@ -491,6 +507,7 @@ and proves itself read (`wake`).
   (previously `_active.json` and the starter plan could be clobbered on upgrade)
 
 #### Fixes
+
 - **Upgrade data loss (critical, found dogfooding 2026-06-11):** `nexus upgrade`
   destroyed hand-written brain docs. `isCorrupted()` treated missing YAML
   frontmatter as corruption (force-replaced in both upgrade and repair), and
@@ -516,6 +533,7 @@ The project brain stops being a journal and becomes a runtime. Four new command 
 capture repo state, track work, audit for drift, and surface their own needs.
 
 #### `nexus sync`
+
 - Reads git, tests, files, and packages via five sensor modules (`src/utils/sensors/`)
 - Writes a `<!-- NEXUS:VITAL_SIGNS -->` block into `.nexus/docs/index.md`
 - Idempotent — runs in under two seconds, safe at any frequency
@@ -523,6 +541,7 @@ capture repo state, track work, audit for drift, and surface their own needs.
 - `nexus upgrade` injects fences into existing `index.md` if missing
 
 #### `nexus plan`
+
 - Persisted work tracking across sessions: plans live in `.nexus/plans/` as human-readable markdown
 - Lifecycle state machine: `draft → approved → in_progress → blocked | done | abandoned`
 - Subcommands: `new`, `list`, `show`, `start`, `tick`, `note`, `done`
@@ -532,6 +551,7 @@ capture repo state, track work, audit for drift, and surface their own needs.
 - `nexus init`, `nexus adopt`, and `nexus upgrade` scaffold `.nexus/plans/`
 
 #### `nexus doctor`
+
 - Ten modular drift checks (D01–D10): frontmatter status, stale phases, progress log gaps,
   knowledge bloat, stale knowledge references, plan staleness, plan evidence, Vital Signs age,
   handshake tracking, and skills drift
@@ -541,17 +561,20 @@ capture repo state, track work, audit for drift, and surface their own needs.
 - Per-project configuration via `.nexus/doctor.config.json`
 
 #### `nexus brief`
+
 - Human-readable digest: what shipped, what is active, what is drifting, what to do next
 - Sources: `nexus sync --json`, `nexus doctor --json`, plan state, last 7 days of git log
 - `--since`, `--md`, and `--write` flags
 
 #### `nexus brain` (auto-invoke layer)
+
 - Detects when the brain needs updating: stale sync, unresolved doctor findings, stale plans, missing Vital Signs
 - Surfaces the right action at the right moment — after commands, never blocking
 - Subcommands: `status`, `check`, `config`
 - Configurable via `.nexus/auto-invoke.config.json`: mode (`silent` | `interactive`), interval, per-command overrides
 
 ### Tests
+
 - 347 unit and integration tests (up from 306 in v0.3.2)
 
 ---
@@ -584,4 +607,3 @@ Knowledge system, `nexus upgrade`, `nexus repair`, token-optimized templates, 17
 ## [0.1.0] - 2026-02-07
 
 Initial release: `nexus init`, `nexus adopt`, five frameworks, AI config generation, 73 tests.
-
