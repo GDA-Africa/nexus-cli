@@ -24,6 +24,13 @@ import fs from 'fs-extra';
 import { McpToolError, resolveBrainContext, type BrainContext } from '../mcp/context.js';
 import { getNexusDir } from '../utils/brain.js';
 import {
+  checkForHarnessUpdate,
+  detectInstalledHarnessVersion,
+  downloadHarnessUpdate,
+  promptHarnessUpdate,
+  type HarnessUpdateInfo,
+} from '../utils/harness-update.js';
+import {
   applyMeasuredValues,
   DEFAULT_BASE_URL,
   DEFAULT_TOOL_CALL_ATTEMPTS,
@@ -43,8 +50,15 @@ export interface HarnessLauncherCliOptions {
   desktop?: boolean;
   open?: boolean;
   task?: string;
+  updateCheck?: boolean;
   /** Injectable runner for unit tests. */
   runner?: (command: string, args: string[], options: Record<string, unknown>) => Promise<unknown>;
+  /** Injectable update checker for unit tests. */
+  checkUpdate?: (current: string | null) => Promise<HarnessUpdateInfo | null>;
+  /** Injectable update prompter for unit tests. */
+  promptUpdate?: (info: HarnessUpdateInfo) => Promise<boolean>;
+  /** Injectable update installer for unit tests. */
+  installUpdate?: (cmd: string) => Promise<boolean>;
 }
 
 export interface HarnessVerifyCliOptions {
@@ -103,6 +117,7 @@ export function harnessCommand(): Command {
     .option('--tui', 'Launch interactive terminal agent instead of web interface', false)
     .option('--desktop', 'Launch the packaged desktop application', false)
     .option('--no-open', 'Do not automatically open the browser on launch')
+    .option('--no-update-check', 'Do not check for harness updates before launch')
     .action(async (options: HarnessLauncherCliOptions) => {
       await runHarnessLauncher(options);
     });
@@ -135,6 +150,39 @@ export function harnessCommand(): Command {
     });
 
   return harness;
+}
+
+/**
+ * Resolve candidate binaries for the Nexus harness.
+ */
+export async function resolveHarnessBin(projectRoot: string): Promise<string | null> {
+  const candidateBins = [
+    path.join(projectRoot, 'nexus-harness', 'apps', 'nexus-harness', 'bin', 'nexus-harness.js'),
+    path.resolve(projectRoot, '..', 'nexus-harness', 'apps', 'nexus-harness', 'bin', 'nexus-harness.js'),
+    path.resolve(fileURLToPath(import.meta.url), '../../../../nexus-harness/apps/nexus-harness/bin/nexus-harness.js'),
+    path.join(projectRoot, 'nexus-harness', 'apps', 'cli', 'lib', 'bin.js'),
+    path.resolve(projectRoot, '..', 'nexus-harness', 'apps', 'cli', 'lib', 'bin.js'),
+    path.resolve(fileURLToPath(import.meta.url), '../../../../nexus-harness/apps/cli/lib/bin.js'),
+    path.join(projectRoot, 'node_modules', '@nexus-framework', 'harness', 'bin', 'nexus-harness.js'),
+  ];
+
+  try {
+    const cliRoot = path.resolve(fileURLToPath(import.meta.url), '../../..');
+    const scope = path.dirname(cliRoot);
+    const nodeModules = path.dirname(scope);
+    if (path.basename(scope) === '@nexus-framework' && path.basename(nodeModules) === 'node_modules') {
+      candidateBins.push(path.join(nodeModules, '@nexus-framework', 'harness', 'bin', 'nexus-harness.js'));
+    }
+  } catch {
+    // ignore
+  }
+
+  for (const candidate of candidateBins) {
+    if (await fs.pathExists(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 /**
@@ -249,21 +297,29 @@ export async function runHarnessLauncher(options: HarnessLauncherCliOptions = {}
   );
   await fs.writeFile(patchPath, patchLines.join('\n'), 'utf-8');
 
-  // Candidate binaries
-  const candidateBins = [
-    path.join(projectRoot, 'nexus-harness', 'apps', 'nexus-harness', 'bin', 'nexus-harness.js'),
-    path.resolve(projectRoot, '..', 'nexus-harness', 'apps', 'nexus-harness', 'bin', 'nexus-harness.js'),
-    path.resolve(fileURLToPath(import.meta.url), '../../../../nexus-harness/apps/nexus-harness/bin/nexus-harness.js'),
-    path.join(projectRoot, 'nexus-harness', 'apps', 'cli', 'lib', 'bin.js'),
-    path.resolve(projectRoot, '..', 'nexus-harness', 'apps', 'cli', 'lib', 'bin.js'),
-    path.resolve(fileURLToPath(import.meta.url), '../../../../nexus-harness/apps/cli/lib/bin.js'),
-  ];
+  // Resolve candidate harness binary
+  let resolvedBin = await resolveHarnessBin(projectRoot);
 
-  let resolvedBin: string | null = null;
-  for (const candidate of candidateBins) {
-    if (await fs.pathExists(candidate)) {
-      resolvedBin = candidate;
-      break;
+  // Check for harness updates before opening
+  const shouldCheckUpdates = options.updateCheck ?? (options.checkUpdate ? true : !process.env.VITEST);
+  if (shouldCheckUpdates) {
+    const currentVersion = await detectInstalledHarnessVersion(projectRoot, resolvedBin);
+    const checkFn = options.checkUpdate ?? checkForHarnessUpdate;
+    const updateInfo = await checkFn(currentVersion);
+
+    if (updateInfo?.hasUpdate) {
+      const promptFn = options.promptUpdate ?? promptHarnessUpdate;
+      const shouldDownload = await promptFn(updateInfo);
+
+      if (shouldDownload) {
+        const installFn =
+          options.installUpdate ??
+          ((cmd: string) => downloadHarnessUpdate(cmd, { runner: options.runner }));
+        const success = await installFn(updateInfo.installCmd);
+        if (success) {
+          resolvedBin = await resolveHarnessBin(projectRoot);
+        }
+      }
     }
   }
 

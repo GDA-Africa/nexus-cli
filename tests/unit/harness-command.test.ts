@@ -368,5 +368,111 @@ describe('runHarnessLauncher', () => {
     expect(args).toContain('headless');
     expect(args).toContain('Run integration test suite');
   });
+
+  it('checks for harness updates, asks user, and downloads before launching when user accepts', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const checkUpdate = vi.fn().mockResolvedValue({
+      current: '1.0.0',
+      latest: '1.1.1',
+      hasUpdate: true,
+      installCmd: 'npm install -g @nexus-framework/harness',
+    });
+    const promptUpdate = vi.fn().mockResolvedValue(true);
+    const installUpdate = vi.fn().mockResolvedValue(true);
+    const runner = vi.fn().mockResolvedValue(undefined);
+
+    await runHarnessLauncher({
+      checkUpdate,
+      promptUpdate,
+      installUpdate,
+      runner,
+    });
+
+    expect(checkUpdate).toHaveBeenCalledTimes(1);
+    expect(promptUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        current: '1.0.0',
+        latest: '1.1.1',
+        hasUpdate: true,
+      }),
+    );
+    expect(installUpdate).toHaveBeenCalledWith('npm install -g @nexus-framework/harness');
+    expect(runner).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips downloading and launches harness when user declines update prompt', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const checkUpdate = vi.fn().mockResolvedValue({
+      current: '1.0.0',
+      latest: '1.1.1',
+      hasUpdate: true,
+      installCmd: 'npm install -g @nexus-framework/harness',
+    });
+    const promptUpdate = vi.fn().mockResolvedValue(false);
+    const installUpdate = vi.fn().mockResolvedValue(true);
+    const runner = vi.fn().mockResolvedValue(undefined);
+
+    await runHarnessLauncher({
+      checkUpdate,
+      promptUpdate,
+      installUpdate,
+      runner,
+    });
+
+    expect(checkUpdate).toHaveBeenCalledTimes(1);
+    expect(promptUpdate).toHaveBeenCalledTimes(1);
+    expect(installUpdate).not.toHaveBeenCalled();
+    expect(runner).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips prompt and downloads when no update is available', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const checkUpdate = vi.fn().mockResolvedValue({
+      current: '1.1.1',
+      latest: '1.1.1',
+      hasUpdate: false,
+      installCmd: 'npm install -g @nexus-framework/harness',
+    });
+    const promptUpdate = vi.fn().mockResolvedValue(true);
+    const installUpdate = vi.fn().mockResolvedValue(true);
+    const runner = vi.fn().mockResolvedValue(undefined);
+
+    await runHarnessLauncher({
+      checkUpdate,
+      promptUpdate,
+      installUpdate,
+      runner,
+    });
+
+    expect(checkUpdate).toHaveBeenCalledTimes(1);
+    expect(promptUpdate).not.toHaveBeenCalled();
+    expect(installUpdate).not.toHaveBeenCalled();
+    expect(runner).toHaveBeenCalledTimes(1);
+  });
+
+  it('bypasses update check entirely when updateCheck is false', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const checkUpdate = vi.fn().mockResolvedValue({
+      current: '1.0.0',
+      latest: '1.1.1',
+      hasUpdate: true,
+      installCmd: 'npm install -g @nexus-framework/harness',
+    });
+    const runner = vi.fn().mockResolvedValue(undefined);
+
+    await runHarnessLauncher({
+      updateCheck: false,
+      checkUpdate,
+      runner,
+    });
+
+    expect(checkUpdate).not.toHaveBeenCalled();
+    expect(runner).toHaveBeenCalledTimes(1);
+  });
 });
+
 

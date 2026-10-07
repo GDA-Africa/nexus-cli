@@ -58,7 +58,7 @@ const RELEASE_HEADLINES: Record<string, string> = {
  * Detect how the CLI was installed to use the same package manager for updates.
  * Falls back to `npm install -g` if detection fails.
  */
-function detectInstallCommand(pkg: string): string {
+export function detectInstallCommand(pkg: string): string {
   // Check if running inside a yarn global install
   const execPath = process.env['npm_execpath'] ?? '';
   if (execPath.includes('yarn')) {
