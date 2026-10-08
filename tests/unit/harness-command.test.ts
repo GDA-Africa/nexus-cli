@@ -304,7 +304,20 @@ describe('runHarnessLauncher', () => {
     expect(runner).toHaveBeenCalledTimes(1);
     const [, args] = runner.mock.calls[0] as [string, string[], unknown];
     expect(args).toContain('--profile');
-    expect(args).toContain('default');
+    expect(args).toContain('headless');
+  });
+
+  it('launches tui mode with task when provided', async () => {
+    await fs.ensureDir(path.join(tmpDir, '.nexus'));
+
+    const runner = vi.fn().mockResolvedValue(undefined);
+    await runHarnessLauncher({ tui: true, task: 'Analyze codebase', runner });
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    const [, args] = runner.mock.calls[0] as [string, string[], unknown];
+    expect(args).toContain('--profile');
+    expect(args).toContain('headless');
+    expect(args).toContain('Analyze codebase');
   });
 
   it('launches desktop mode with --desktop', async () => {

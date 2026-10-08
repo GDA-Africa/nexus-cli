@@ -115,6 +115,7 @@ export function harnessCommand(): Command {
     .description('Launch the Nexus execution harness or verify harness profiles')
     .option('-p, --port <port>', 'Port to bind the local web interface (default: 3080)', '3080')
     .option('--tui', 'Launch interactive terminal agent instead of web interface', false)
+    .option('--task <task>', 'Task to execute in terminal agent mode')
     .option('--desktop', 'Launch the packaged desktop application', false)
     .option('--no-open', 'Do not automatically open the browser on launch')
     .option('--no-update-check', 'Do not check for harness updates before launch')
@@ -222,12 +223,12 @@ export async function runHarnessLauncher(options: HarnessLauncherCliOptions = {}
     // Ignore plan read errors
   }
 
-  const mode: 'web' | 'tui' | 'desktop' | 'headless' = options.task
-    ? 'headless'
-    : options.desktop
-      ? 'desktop'
-      : options.tui
-        ? 'tui'
+  const mode: 'web' | 'tui' | 'desktop' | 'headless' = options.desktop
+    ? 'desktop'
+    : options.tui
+      ? 'tui'
+      : options.task
+        ? 'headless'
         : 'web';
 
   const port = options.port ?? '3080';
@@ -339,6 +340,31 @@ export async function runHarnessLauncher(options: HarnessLauncherCliOptions = {}
     args.push('-y', '@nexus-framework/harness');
   }
 
+  let task = options.task;
+  if (mode === 'tui' && !task) {
+    if (process.stdin.isTTY && !options.runner) {
+      try {
+        const { input } = await import('@inquirer/prompts');
+        const response = await input({
+          message: 'What task would you like the agent to work on?',
+        });
+        if (response && response.trim().length > 0) {
+          task = response.trim();
+        }
+      } catch {
+        // User cancelled prompt (Ctrl+C / Esc)
+        return;
+      }
+    }
+  }
+
+  if (mode === 'tui' && !task && !options.runner) {
+    logger.info('Terminal agent requires a task. Specify one with:');
+    logger.info('  nexus agent "<task>"');
+    logger.info('  or: nexus harness --tui --task "<task>"');
+    return;
+  }
+
   if (mode === 'web') {
     args.push('--profile', 'web', '--patch', patchPath, '--port', String(port));
     if (options.open === false) {
@@ -346,14 +372,12 @@ export async function runHarnessLauncher(options: HarnessLauncherCliOptions = {}
     }
   } else if (mode === 'desktop') {
     args.push('--profile', 'desktop', '--patch', patchPath);
-  } else if (mode === 'headless') {
-    args.push('--profile', 'headless', '--patch', patchPath);
-    if (options.task) {
-      args.push(options.task);
-    }
   } else {
-    // tui mode
-    args.push('--profile', 'default', '--patch', patchPath);
+    // headless and tui modes both execute headlessly via the harness headless profile
+    args.push('--profile', 'headless', '--patch', patchPath);
+    if (task) {
+      args.push(task);
+    }
   }
 
   if (options.runner) {
