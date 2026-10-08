@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-10-08
+
+**NEXUS 2.0.3: Terminal Agent Driver Alignment and Interactive Task Execution.**
+
+This patch release resolves runtime profile resolution when launching the terminal execution agent and adds interactive task prompting:
+
+### 🛠️ Terminal Agent & Launcher Improvements
+
+- **Headless Profile Driver Alignment**: Routed `nexus harness --tui` and terminal execution to the harness `--profile headless` driver, resolving the missing `default` profile error.
+- **Interactive Task Prompting**: When launching `nexus harness --tui` (or `nexus code`) without a task in an interactive terminal, the CLI now prompts with `@inquirer/prompts` to ask what task the agent should execute.
+- **Direct Task Flag**: Added `--task <task>` support to `nexus harness` (e.g. `nexus harness --tui --task "<task>"`).
+
 ## [2.0.2] - 2026-10-07
 
 **NEXUS 2.0.2: AI-Native Execution Harness, Autonomous Headless Agent, and Glass GUI.**
